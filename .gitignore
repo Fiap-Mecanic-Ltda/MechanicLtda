@@ -1,0 +1,15 @@
+/.obj
+# Compilação e Debug
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+
+# Visual Studio e Arquivos Locais
+.vs/
+v17/
+filecontentindex/
+
+# AI e Design
+copilot-chat/
+.copilot-chat/
+design/
