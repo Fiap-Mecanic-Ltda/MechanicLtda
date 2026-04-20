@@ -1,12 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using MechanicLtda.Domain.Entities;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 
 namespace MechanicLtda.Infrastructure
 {
-    public class BancoAPIContext
+    public class BancoAPIContext : IdentityDbContext<Usuario>
     {
+        public BancoAPIContext(DbContextOptions<BancoAPIContext> options) : base(options) { }
+
+        public DbSet<Usuario> Usuarios { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+        }
     }
 }
