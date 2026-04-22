@@ -7,7 +7,7 @@ using MechanicLtda.Domain.Interfaces.Services;
 using Moq;
 using Xunit;
 
-namespace MechanicLtda.Domain.Tests;
+namespace MechanicLtda.Application.Tests;
 
 public class UsuarioAppServiceTests
 {
