@@ -11,7 +11,7 @@ namespace MechanicLtda.API.Extensions
     {
         public static IServiceCollection AddDependencyInjection(this IServiceCollection services)
         {
-            // Notificador é Scoped para que as notificações vivam por requisição
+            // Notificador — Scoped para que as notificações vivam por requisição
             services.AddScoped<INotificadorService, NotificadorService>();
 
             // Repositórios
@@ -22,6 +22,7 @@ namespace MechanicLtda.API.Extensions
             services.AddScoped<IUsuarioService, UsuarioService>();
 
             // App Services
+            services.AddScoped<IAuthAppService, AuthAppService>();
             services.AddScoped<IUsuarioAppService, UsuarioAppService>();
             services.AddScoped<IClienteAppService, ClienteAppService>();
 
