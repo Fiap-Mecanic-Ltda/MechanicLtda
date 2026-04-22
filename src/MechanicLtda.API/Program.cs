@@ -6,11 +6,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerWithAuth();
 
 builder.Services.AddDatabase(builder.Configuration);
 builder.Services.AddDependencyInjection();
 builder.Services.AddAutoMapperProfiles();
+builder.Services.AddJwtAuthentication(builder.Configuration);
 
 var app = builder.Build();
 
