@@ -14,6 +14,7 @@ namespace MechanicLtda.Infrastructure
         public DbSet<Cliente> Clientes { get; set; }
         public DbSet<Veiculo> Veiculos { get; set; }
         public DbSet<OrdemServico> OrdensServico { get; set; }
+        public DbSet<ItemOrdemServico> ItensOrdemServico { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
