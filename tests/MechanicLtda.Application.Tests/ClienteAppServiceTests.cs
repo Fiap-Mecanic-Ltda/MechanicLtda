@@ -17,8 +17,8 @@ public class ClienteAppServiceTests
     public ClienteAppServiceTests()
     {
         _serviceMock = new Mock<IClienteService>();
-        _mapperMock  = new Mock<IMapper>();
-        _sut         = new ClienteAppService(_serviceMock.Object, _mapperMock.Object);
+        _mapperMock = new Mock<IMapper>();
+        _sut = new ClienteAppService(_serviceMock.Object, _mapperMock.Object);
     }
 
     #region AdicionarAsync
@@ -29,8 +29,8 @@ public class ClienteAppServiceTests
         // Arrange
         var dto = new ClienteCreateDto { Nome = "João", Email = "joao@email.com", Telefone = "11999999999" };
 
-        var clienteCriado = new Cliente { Id = Guid.NewGuid(), Nome = dto.Nome, Email = dto.Email };
-        var clienteDto    = new ClienteDto { Nome = dto.Nome, Email = dto.Email };
+        var clienteCriado = new Cliente { Id = 1, Nome = dto.Nome, Email = dto.Email };
+        var clienteDto = new ClienteDto { Nome = dto.Nome, Email = dto.Email };
 
         _serviceMock
             .Setup(s => s.AdicionarAsync(dto.Nome, dto.Email, dto.Telefone))
@@ -74,10 +74,10 @@ public class ClienteAppServiceTests
     public async Task AtualizarAsync_QuandoSucesso_DeveRetornarResponseSemErros()
     {
         // Arrange
-        var id  = Guid.NewGuid();
+        var id = 1;
         var dto = new ClienteUpdateDto { Nome = "Atualizado", Email = "atualizado@email.com", Ativo = true };
 
-        var entidade   = new Cliente { Id = id, Nome = dto.Nome, Email = dto.Email };
+        var entidade = new Cliente { Id = id, Nome = dto.Nome, Email = dto.Email };
         var clienteDto = new ClienteDto { Nome = dto.Nome, Email = dto.Email };
 
         _mapperMock.Setup(m => m.Map<Cliente>(dto)).Returns(entidade);
@@ -96,7 +96,7 @@ public class ClienteAppServiceTests
     public async Task AtualizarAsync_QuandoClienteNaoEncontrado_DeveRetornarResponseComErro()
     {
         // Arrange
-        var id  = Guid.NewGuid();
+        var id = 99;
         var dto = new ClienteUpdateDto { Nome = "x", Email = "x@email.com" };
 
         _mapperMock.Setup(m => m.Map<Cliente>(dto)).Returns(new Cliente());
@@ -121,8 +121,8 @@ public class ClienteAppServiceTests
         // Arrange
         var clientes = new List<Cliente>
         {
-            new() { Id = Guid.NewGuid(), Nome = "c1", Email = "c1@email.com" },
-            new() { Id = Guid.NewGuid(), Nome = "c2", Email = "c2@email.com" }
+            new() { Id = 1, Nome = "c1", Email = "c1@email.com" },
+            new() { Id = 2, Nome = "c2", Email = "c2@email.com" }
         };
 
         var dtos = clientes.Select(c => new ClienteDto { Nome = c.Nome, Email = c.Email });
@@ -161,9 +161,9 @@ public class ClienteAppServiceTests
     public async Task ObterPorIdAsync_QuandoClienteExiste_DeveRetornarResponseSemErros()
     {
         // Arrange
-        var id      = Guid.NewGuid();
+        var id = 1;
         var cliente = new Cliente { Id = id, Nome = "João", Email = "joao@email.com" };
-        var dto     = new ClienteDto { Id = id, Nome = "João", Email = "joao@email.com" };
+        var dto = new ClienteDto { Id = id, Nome = "João", Email = "joao@email.com" };
 
         _serviceMock.Setup(s => s.ObterPorIdAsync(id.ToString())).ReturnsAsync(cliente);
         _mapperMock.Setup(m => m.Map<ClienteDto>(cliente)).Returns(dto);
@@ -180,7 +180,7 @@ public class ClienteAppServiceTests
     public async Task ObterPorIdAsync_QuandoClienteNaoExiste_DeveRetornarResponseComErro()
     {
         // Arrange
-        var id = Guid.NewGuid().ToString();
+        var id = "999";
 
         _serviceMock.Setup(s => s.ObterPorIdAsync(id)).ReturnsAsync((Cliente?)null);
 
@@ -200,7 +200,7 @@ public class ClienteAppServiceTests
     public async Task RemoverAsync_QuandoSucesso_DeveRetornarTrue()
     {
         // Arrange
-        var id = Guid.NewGuid().ToString();
+        var id = "1";
         _serviceMock.Setup(s => s.RemoverAsync(id)).Returns(Task.CompletedTask);
 
         // Act
@@ -215,7 +215,7 @@ public class ClienteAppServiceTests
     public async Task RemoverAsync_QuandoClienteNaoEncontrado_DeveRetornarResponseComErro()
     {
         // Arrange
-        var id = Guid.NewGuid().ToString();
+        var id = "999";
         _serviceMock
             .Setup(s => s.RemoverAsync(id))
             .ThrowsAsync(new KeyNotFoundException("Cliente não encontrado."));
