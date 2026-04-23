@@ -20,6 +20,7 @@ namespace MechanicLtda.API.Extensions
 
             // Domain Services
             services.AddScoped<IUsuarioService, UsuarioService>();
+            services.AddScoped<IClienteService, ClienteService>();
 
             // App Services
             services.AddScoped<IAuthAppService, AuthAppService>();
