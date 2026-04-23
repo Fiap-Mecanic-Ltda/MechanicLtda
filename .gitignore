@@ -8,10 +8,13 @@
 .vs/
 v17/
 filecontentindex/
+*.csproj.user   
 
 # AI e Design
 copilot-chat/
 .copilot-chat/
 design/
-src/MechanicLtda.API/MechanicLtda.API.csproj.user
-src/MechanicLtda.API/MechanicLtda.API.csproj.user
+.github/
+
+
+
