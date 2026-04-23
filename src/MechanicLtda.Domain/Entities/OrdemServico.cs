@@ -33,7 +33,6 @@ namespace MechanicLtda.Domain.Entities
         [ForeignKey(nameof(ClienteId))]
         public Cliente Cliente { get; set; }
 
-        // Preparado para 1:N com ItensServico (futura implementação)
-        // public ICollection<ItemServico> ItensServico { get; set; } = [];
+        public ICollection<ItemOrdemServico> ItensOrdemServico { get; set; } = [];
     }
 }
