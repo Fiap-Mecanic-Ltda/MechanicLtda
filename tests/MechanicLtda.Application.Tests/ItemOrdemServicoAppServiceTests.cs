@@ -24,24 +24,24 @@ public class ItemOrdemServicoAppServiceTests
     // ─── helpers ────────────────────────────────────────────────────────────────
 
     private static ItemOrdemServico CriarEntidade(int id = 1, int ordemServicoId = 1,
-        int quantidade = 2, decimal valorUnitario = 100m) =>
+        int? estoqueId = null, int quantidade = 2, decimal valorUnitario = 100m) =>
         new()
         {
             Id             = id,
             OrdemServicoId = ordemServicoId,
-            EstoqueId      = null,
+            EstoqueId      = estoqueId,
             Quantidade     = quantidade,
             ValorUnitario  = valorUnitario,
             ValorTotal     = quantidade * valorUnitario
         };
 
     private static ItemOrdemServicoDto CriarDto(int id = 1, int ordemServicoId = 1,
-        int quantidade = 2, decimal valorUnitario = 100m) =>
+        int? estoqueId = null, int quantidade = 2, decimal valorUnitario = 100m) =>
         new()
         {
             Id             = id,
             OrdemServicoId = ordemServicoId,
-            EstoqueId      = null,
+            EstoqueId      = estoqueId,
             Quantidade     = quantidade,
             ValorUnitario  = valorUnitario,
             ValorTotal     = quantidade * valorUnitario
@@ -55,9 +55,9 @@ public class ItemOrdemServicoAppServiceTests
     public async Task AdicionarAsync_QuandoSucesso_DeveRetornarResponseSemErros()
     {
         // Arrange
-        var createDto  = new ItemOrdemServicoCreateDto { Quantidade = 2, ValorUnitario = 100m };
-        var entidade   = CriarEntidade();
-        var itemDto    = CriarDto();
+        var createDto = new ItemOrdemServicoCreateDto { Quantidade = 2, ValorUnitario = 100m };
+        var entidade  = CriarEntidade();
+        var itemDto   = CriarDto();
 
         _serviceMock
             .Setup(s => s.AdicionarAsync(1, createDto.EstoqueId, createDto.Quantidade, createDto.ValorUnitario))
@@ -76,6 +76,31 @@ public class ItemOrdemServicoAppServiceTests
     }
 
     [Fact]
+    public async Task AdicionarAsync_ComEstoqueId_QuandoSucesso_DeveRetornarResponseSemErros()
+    {
+        // Arrange
+        var createDto = new ItemOrdemServicoCreateDto { EstoqueId = 5, Quantidade = 3, ValorUnitario = 50m };
+        var entidade  = CriarEntidade(estoqueId: 5, quantidade: 3, valorUnitario: 50m);
+        var itemDto   = CriarDto(estoqueId: 5, quantidade: 3, valorUnitario: 50m);
+
+        _serviceMock
+            .Setup(s => s.AdicionarAsync(1, 5, 3, 50m))
+            .ReturnsAsync(entidade);
+
+        _mapperMock
+            .Setup(m => m.Map<ItemOrdemServicoDto>(entidade))
+            .Returns(itemDto);
+
+        // Act
+        var response = await _sut.AdicionarAsync(1, createDto);
+
+        // Assert
+        Assert.False(response.hasErrors);
+        Assert.Equal(5, response.getResponse.EstoqueId);
+        _serviceMock.Verify(s => s.AdicionarAsync(1, 5, 3, 50m), Times.Once);
+    }
+
+    [Fact]
     public async Task AdicionarAsync_QuandoOSNaoEncontrada_DeveRetornarResponseComErro()
     {
         // Arrange
@@ -87,6 +112,24 @@ public class ItemOrdemServicoAppServiceTests
 
         // Act
         var response = await _sut.AdicionarAsync(99, createDto);
+
+        // Assert
+        Assert.True(response.hasErrors);
+        Assert.Null(response.getResponse);
+    }
+
+    [Fact]
+    public async Task AdicionarAsync_QuandoEstoqueSemSaldo_DeveRetornarResponseComErro()
+    {
+        // Arrange
+        var createDto = new ItemOrdemServicoCreateDto { EstoqueId = 3, Quantidade = 10, ValorUnitario = 50m };
+
+        _serviceMock
+            .Setup(s => s.AdicionarAsync(It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<int>(), It.IsAny<decimal>()))
+            .ThrowsAsync(new InvalidOperationException("Saldo insuficiente no estoque 'Filtro de Óleo'."));
+
+        // Act
+        var response = await _sut.AdicionarAsync(1, createDto);
 
         // Assert
         Assert.True(response.hasErrors);
@@ -298,7 +341,7 @@ public class ItemOrdemServicoAppServiceTests
     public async Task ObterPorIdAsync_QuandoItemEncontrado_DeveRetornarResponseSemErros()
     {
         // Arrange
-        var id      = "1";
+        var id       = "1";
         var entidade = CriarEntidade();
         var itemDto  = CriarDto();
 
