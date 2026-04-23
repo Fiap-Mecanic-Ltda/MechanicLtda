@@ -12,8 +12,10 @@ namespace MechanicLtda.Domain.Entities
         [ForeignKey(nameof(OrdemServicoId))]
         public OrdemServico OrdemServico { get; set; }
 
-        // Será obrigatório quando a entidade Estoque for implementada
         public int? EstoqueId { get; set; }
+
+        [ForeignKey(nameof(EstoqueId))]
+        public Estoque? Estoque { get; set; }
 
         [Required]
         public int Quantidade { get; set; }

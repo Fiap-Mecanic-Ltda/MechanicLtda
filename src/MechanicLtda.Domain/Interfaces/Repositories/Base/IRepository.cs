@@ -1,4 +1,4 @@
-﻿namespace MechanicLtda.Infrastructure.Repositories.Base
+﻿namespace MechanicLtda.Domain.Interfaces.Repositories.Base
 {
     public interface IRepository<TEntity> : IDisposable where TEntity : class
     {
