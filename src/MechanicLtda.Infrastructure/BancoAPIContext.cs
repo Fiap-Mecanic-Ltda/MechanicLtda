@@ -9,6 +9,7 @@ namespace MechanicLtda.Infrastructure
         public BancoAPIContext(DbContextOptions<BancoAPIContext> options) : base(options) { }
 
         public DbSet<Usuario> Usuarios { get; set; }
+        public DbSet<Cliente> Clientes { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

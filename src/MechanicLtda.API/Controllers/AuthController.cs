@@ -39,27 +39,27 @@ namespace MechanicLtda.API.Controllers
             }
         }
 
-        [AllowAnonymous]
-        [HttpPost("registrar")]
-        public async Task<IActionResult> Registrar([FromBody] RegistrarViewModel model)
-        {
-            try
-            {
-                if (!ModelState.IsValid)
-                    return CustomResponse(ModelState);
+        //[AllowAnonymous]
+        //[HttpPost("registrar")]
+        //public async Task<IActionResult> Registrar([FromBody] RegistrarViewModel model)
+        //{
+        //    try
+        //    {
+        //        if (!ModelState.IsValid)
+        //            return CustomResponse(ModelState);
 
-                return CustomResponse(await _authAppService.RegistrarAsync(
-                    model.UserName,
-                    model.Email,
-                    model.Senha,
-                    model.Tipo));
-            }
-            catch (Exception ex)
-            {
-                GravaException(ex, "Falha ao registrar usuário", _logger);
-                return CustomResponse();
-            }
-        }
+        //        return CustomResponse(await _authAppService.RegistrarAsync(
+        //            model.UserName,
+        //            model.Email,
+        //            model.Senha,
+        //            model.Tipo));
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        GravaException(ex, "Falha ao registrar usuário", _logger);
+        //        return CustomResponse();
+        //    }
+        //}
 
         [HttpPut("alterar-senha")]
         public async Task<IActionResult> AlterarSenha([FromBody] AlterarSenhaViewModel model)

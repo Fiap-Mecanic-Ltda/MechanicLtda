@@ -1,12 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using MechanicLtda.Domain.Entities;
+using MechanicLtda.Infrastructure.Repositories.Base;
 
 namespace MechanicLtda.Domain.Interfaces.Repositories
 {
-    public interface IClienteRepository
+    public interface IClienteRepository : IRepository<Cliente>
     {
+        Task<bool> EmailExisteAsync(string email);
+        Task<Cliente?> ObterPorEmailAsync(string email);
     }
 }
