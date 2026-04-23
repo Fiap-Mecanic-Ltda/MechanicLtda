@@ -19,9 +19,9 @@ public class ClienteServiceTests
 
     public ClienteServiceTests()
     {
-        _repositoryMock    = new Mock<IClienteRepository>();
-        _notificadorMock   = new Mock<INotificadorService>();
-        _loggerMock        = new Mock<ILogger<ClienteService>>();
+        _repositoryMock = new Mock<IClienteRepository>();
+        _notificadorMock = new Mock<INotificadorService>();
+        _loggerMock = new Mock<ILogger<ClienteService>>();
         _configurationMock = new Mock<IConfiguration>();
 
         _sut = new ClienteService(
@@ -37,17 +37,17 @@ public class ClienteServiceTests
     public async Task AdicionarAsync_QuandoEmailNaoExiste_DeveRetornarClienteCriado()
     {
         // Arrange
-        var nome     = "João Silva";
-        var email    = "joao@email.com";
+        var nome = "João Silva";
+        var email = "joao@email.com";
         var telefone = "11999999999";
 
         var clienteEsperado = new Cliente
         {
-            Id          = Guid.NewGuid(),
-            Nome        = nome,
-            Email       = email,
-            Telefone    = telefone,
-            Ativo       = true,
+            Id = 1,
+            Nome = nome,
+            Email = email,
+            Telefone = telefone,
+            Ativo = true,
             DataCriacao = DateTime.Now
         };
 
@@ -91,10 +91,10 @@ public class ClienteServiceTests
     public async Task AdicionarAsync_QuandoTelefoneNulo_DeveRetornarClienteCriado()
     {
         // Arrange
-        var nome  = "Maria";
+        var nome = "Maria";
         var email = "maria@email.com";
 
-        var clienteEsperado = new Cliente { Id = Guid.NewGuid(), Nome = nome, Email = email, Ativo = true };
+        var clienteEsperado = new Cliente { Id = 2, Nome = nome, Email = email, Ativo = true };
 
         _repositoryMock.Setup(r => r.EmailExisteAsync(email)).ReturnsAsync(false);
         _repositoryMock.Setup(r => r.AdicionarAsync(It.IsAny<Cliente>())).ReturnsAsync(clienteEsperado);
@@ -115,11 +115,11 @@ public class ClienteServiceTests
     public async Task AtualizarAsync_QuandoClienteExisteEEmailDisponivel_DeveRetornarClienteAtualizado()
     {
         // Arrange
-        var id = Guid.NewGuid();
+        var id = 1;
         var cliente = new Cliente
         {
-            Id    = id,
-            Nome  = "Novo Nome",
+            Id = id,
+            Nome = "Novo Nome",
             Email = "novo@email.com",
             Ativo = true
         };
@@ -149,7 +149,7 @@ public class ClienteServiceTests
     public async Task AtualizarAsync_QuandoClienteNaoEncontrado_DeveLancarKeyNotFoundException()
     {
         // Arrange
-        var cliente = new Cliente { Id = Guid.NewGuid(), Email = "x@email.com" };
+        var cliente = new Cliente { Id = 99, Email = "x@email.com" };
 
         _repositoryMock
             .Setup(r => r.ObterPorIdAsync(cliente.Id.ToString()))
@@ -166,11 +166,11 @@ public class ClienteServiceTests
     public async Task AtualizarAsync_QuandoEmailEmUsoDeOutroCliente_DeveLancarInvalidOperationException()
     {
         // Arrange
-        var id           = Guid.NewGuid();
-        var outroId      = Guid.NewGuid();
-        var emailEmUso   = "emuso@email.com";
+        var id = 1;
+        var outroId = 2;
+        var emailEmUso = "emuso@email.com";
 
-        var cliente      = new Cliente { Id = id,      Email = emailEmUso };
+        var cliente = new Cliente { Id = id, Email = emailEmUso };
         var outroCliente = new Cliente { Id = outroId, Email = emailEmUso };
 
         _repositoryMock.Setup(r => r.ObterPorIdAsync(id.ToString())).ReturnsAsync(cliente);
@@ -185,8 +185,8 @@ public class ClienteServiceTests
     public async Task AtualizarAsync_QuandoMesmoEmailDoProprioCliente_DeveAtualizarSemErro()
     {
         // Arrange
-        var id      = Guid.NewGuid();
-        var email   = "mesmo@email.com";
+        var id = 1;
+        var email = "mesmo@email.com";
         var cliente = new Cliente { Id = id, Nome = "Atualizado", Email = email, Ativo = true };
 
         _repositoryMock
@@ -219,8 +219,8 @@ public class ClienteServiceTests
         // Arrange
         var lista = new List<Cliente>
         {
-            new() { Id = Guid.NewGuid(), Nome = "Cliente 1", Email = "c1@email.com" },
-            new() { Id = Guid.NewGuid(), Nome = "Cliente 2", Email = "c2@email.com" }
+            new() { Id = 1, Nome = "Cliente 1", Email = "c1@email.com" },
+            new() { Id = 2, Nome = "Cliente 2", Email = "c2@email.com" }
         };
 
         _repositoryMock.Setup(r => r.ObterTodosAsync()).ReturnsAsync(lista);
@@ -253,7 +253,7 @@ public class ClienteServiceTests
     public async Task ObterPorIdAsync_QuandoClienteExiste_DeveRetornarCliente()
     {
         // Arrange
-        var id      = Guid.NewGuid();
+        var id = 1;
         var cliente = new Cliente { Id = id, Nome = "João", Email = "joao@email.com" };
 
         _repositoryMock.Setup(r => r.ObterPorIdAsync(id.ToString())).ReturnsAsync(cliente);
@@ -270,7 +270,7 @@ public class ClienteServiceTests
     public async Task ObterPorIdAsync_QuandoClienteNaoExiste_DeveRetornarNull()
     {
         // Arrange
-        var id = Guid.NewGuid().ToString();
+        var id = "999";
 
         _repositoryMock.Setup(r => r.ObterPorIdAsync(id)).ReturnsAsync((Cliente?)null);
 
@@ -289,8 +289,8 @@ public class ClienteServiceTests
     public async Task RemoverAsync_QuandoClienteExiste_DeveChamarRepositorio()
     {
         // Arrange
-        var id      = Guid.NewGuid().ToString();
-        var cliente = new Cliente { Id = Guid.Parse(id) };
+        var id = "1";
+        var cliente = new Cliente { Id = 1 };
 
         _repositoryMock.Setup(r => r.ObterPorIdAsync(id)).ReturnsAsync(cliente);
         _repositoryMock.Setup(r => r.RemoverAsync(id)).Returns(Task.CompletedTask);
@@ -306,7 +306,7 @@ public class ClienteServiceTests
     public async Task RemoverAsync_QuandoClienteNaoExiste_DeveLancarKeyNotFoundException()
     {
         // Arrange
-        var id = Guid.NewGuid().ToString();
+        var id = "999";
 
         _repositoryMock.Setup(r => r.ObterPorIdAsync(id)).ReturnsAsync((Cliente?)null);
 
