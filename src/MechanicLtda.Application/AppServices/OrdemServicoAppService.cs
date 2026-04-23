@@ -1,0 +1,112 @@
+using AutoMapper;
+using MechanicLtda.Application.AppServices.Interfaces;
+using MechanicLtda.Application.DTOs;
+using MechanicLtda.Domain.Entities;
+using MechanicLtda.Domain.Interfaces.Services;
+
+namespace MechanicLtda.Application.AppServices
+{
+    public class OrdemServicoAppService : IOrdemServicoAppService
+    {
+        private readonly IOrdemServicoService _ordemServicoService;
+        private readonly IMapper _mapper;
+
+        public OrdemServicoAppService(IOrdemServicoService ordemServicoService, IMapper mapper)
+        {
+            _ordemServicoService = ordemServicoService;
+            _mapper = mapper;
+        }
+
+        public async Task<ResponseDto<OrdemServicoDto>> AdicionarAsync(OrdemServicoCreateDto dto)
+        {
+            var response = new ResponseDto<OrdemServicoDto>();
+            try
+            {
+                var ordemServico = await _ordemServicoService.AdicionarAsync(
+                    dto.DescricaoProblema,
+                    dto.ValorTotalEstimado,
+                    dto.VeiculoId,
+                    dto.ClienteId);
+
+                return response.setResponse(_mapper.Map<OrdemServicoDto>(ordemServico));
+            }
+            catch (Exception ex) { return response.addError(ex); }
+        }
+
+        public async Task<ResponseDto<OrdemServicoDto>> AtualizarAsync(string id, OrdemServicoUpdateDto dto)
+        {
+            var response = new ResponseDto<OrdemServicoDto>();
+            try
+            {
+                var ordemServico = _mapper.Map<OrdemServico>(dto);
+                ordemServico.Id = int.Parse(id);
+                var resultado = await _ordemServicoService.AtualizarAsync(ordemServico);
+                return response.setResponse(_mapper.Map<OrdemServicoDto>(resultado));
+            }
+            catch (Exception ex) { return response.addError(ex); }
+        }
+
+        public async Task<ResponseDto<OrdemServicoDto>> MoverParaEmValidacaoAsync(string id)
+        {
+            var response = new ResponseDto<OrdemServicoDto>();
+            try
+            {
+                if (!int.TryParse(id, out var ordemId))
+                    return response.addError("Id inválido.");
+
+                var resultado = await _ordemServicoService.MoverParaEmValidacaoAsync(ordemId);
+                return response.setResponse(_mapper.Map<OrdemServicoDto>(resultado));
+            }
+            catch (KeyNotFoundException ex) { return response.addError(ex.Message); }
+            catch (InvalidOperationException ex) { return response.addError(ex.Message); }
+            catch (Exception ex) { return response.addError(ex); }
+        }
+
+        public async Task<ResponseDto<IEnumerable<OrdemServicoDto>>> ObterTodosAsync()
+        {
+            var response = new ResponseDto<IEnumerable<OrdemServicoDto>>();
+            try
+            {
+                var ordens = await _ordemServicoService.ObterTodosAsync();
+                return response.setResponse(_mapper.Map<IEnumerable<OrdemServicoDto>>(ordens));
+            }
+            catch (Exception ex) { return response.addError(ex); }
+        }
+
+        public async Task<ResponseDto<IEnumerable<OrdemServicoDto>>> ObterPorClienteIdAsync(string clienteId)
+        {
+            var response = new ResponseDto<IEnumerable<OrdemServicoDto>>();
+            try
+            {
+                var ordens = await _ordemServicoService.ObterPorClienteIdAsync(clienteId);
+                return response.setResponse(_mapper.Map<IEnumerable<OrdemServicoDto>>(ordens));
+            }
+            catch (Exception ex) { return response.addError(ex); }
+        }
+
+        public async Task<ResponseDto<OrdemServicoDto>> ObterPorIdAsync(string id)
+        {
+            var response = new ResponseDto<OrdemServicoDto>();
+            try
+            {
+                var ordemServico = await _ordemServicoService.ObterPorIdAsync(id)
+                    ?? throw new KeyNotFoundException($"Ordem de Serviço com Id '{id}' não encontrada.");
+                return response.setResponse(_mapper.Map<OrdemServicoDto>(ordemServico));
+            }
+            catch (KeyNotFoundException ex) { return response.addError(ex.Message); }
+            catch (Exception ex) { return response.addError(ex); }
+        }
+
+        public async Task<ResponseDto<bool>> RemoverAsync(string id)
+        {
+            var response = new ResponseDto<bool>();
+            try
+            {
+                await _ordemServicoService.RemoverAsync(id);
+                return response.setResponse(true);
+            }
+            catch (KeyNotFoundException ex) { return response.addError(ex.Message); }
+            catch (Exception ex) { return response.addError(ex); }
+        }
+    }
+}
