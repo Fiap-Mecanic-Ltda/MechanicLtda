@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace MechanicLtda.API.Controllers
 {
-    [ApiVersion("1.0")]
     public class VeiculoController : BaseController
     {
         private readonly ILogger<VeiculoController> _logger;
