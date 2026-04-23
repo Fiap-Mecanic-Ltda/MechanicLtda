@@ -31,7 +31,6 @@ namespace MechanicLtda.Domain.Services
 
                 var cliente = new Cliente
                 {
-                    Id = Guid.NewGuid(),
                     Nome = nome,
                     Email = email,
                     Telefone = telefone,
