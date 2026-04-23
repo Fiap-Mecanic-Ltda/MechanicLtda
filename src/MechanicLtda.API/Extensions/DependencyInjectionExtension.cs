@@ -20,6 +20,7 @@ namespace MechanicLtda.API.Extensions
             services.AddScoped<IVeiculoRepository, VeiculoRepository>();
             services.AddScoped<IOrdemServicoRepository, OrdemServicoRepository>();
             services.AddScoped<IItemOrdemServicoRepository, ItemOrdemServicoRepository>();
+            services.AddScoped<IEstoqueRepository, EstoqueRepository>();
 
             // Domain Services
             services.AddScoped<IUsuarioService, UsuarioService>();
@@ -27,6 +28,7 @@ namespace MechanicLtda.API.Extensions
             services.AddScoped<IVeiculoService, VeiculoService>();
             services.AddScoped<IOrdemServicoService, OrdemServicoService>();
             services.AddScoped<IItemOrdemServicoService, ItemOrdemServicoService>();
+            services.AddScoped<IEstoqueService, EstoqueService>();
 
             // App Services
             services.AddScoped<IAuthAppService, AuthAppService>();
@@ -35,6 +37,7 @@ namespace MechanicLtda.API.Extensions
             services.AddScoped<IVeiculoAppService, VeiculoAppService>();
             services.AddScoped<IOrdemServicoAppService, OrdemServicoAppService>();
             services.AddScoped<IItemOrdemServicoAppService, ItemOrdemServicoAppService>();
+            services.AddScoped<IEstoqueAppService, EstoqueAppService>();
 
             return services;
         }

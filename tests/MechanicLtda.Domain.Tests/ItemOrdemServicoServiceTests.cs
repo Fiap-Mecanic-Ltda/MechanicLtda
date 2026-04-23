@@ -11,12 +11,13 @@ namespace MechanicLtda.Domain.Tests;
 
 public class ItemOrdemServicoServiceTests
 {
-    private readonly Mock<IItemOrdemServicoRepository> _itemRepositoryMock;
-    private readonly Mock<IOrdemServicoRepository>     _ordemServicoRepositoryMock;
-    private readonly Mock<INotificadorService>          _notificadorMock;
+    private readonly Mock<IItemOrdemServicoRepository>      _itemRepositoryMock;
+    private readonly Mock<IOrdemServicoRepository>          _ordemServicoRepositoryMock;
+    private readonly Mock<INotificadorService>              _notificadorMock;
     private readonly Mock<ILogger<ItemOrdemServicoService>> _loggerMock;
-    private readonly Mock<IConfiguration>              _configurationMock;
-    private readonly ItemOrdemServicoService           _sut;
+    private readonly Mock<IConfiguration>                  _configurationMock;
+    private readonly Mock<IEstoqueService>                 _estoqueServiceMock;
+    private readonly ItemOrdemServicoService               _sut;
 
     public ItemOrdemServicoServiceTests()
     {
@@ -25,13 +26,15 @@ public class ItemOrdemServicoServiceTests
         _notificadorMock            = new Mock<INotificadorService>();
         _loggerMock                 = new Mock<ILogger<ItemOrdemServicoService>>();
         _configurationMock          = new Mock<IConfiguration>();
+        _estoqueServiceMock         = new Mock<IEstoqueService>();
 
         _sut = new ItemOrdemServicoService(
             _loggerMock.Object,
             _configurationMock.Object,
             _notificadorMock.Object,
             _itemRepositoryMock.Object,
-            _ordemServicoRepositoryMock.Object);
+            _ordemServicoRepositoryMock.Object,
+            _estoqueServiceMock.Object);
     }
 
     // ─── helpers ────────────────────────────────────────────────────────────────
@@ -57,6 +60,17 @@ public class ItemOrdemServicoServiceTests
             Quantidade     = quantidade,
             ValorUnitario  = valorUnitario,
             ValorTotal     = quantidade * valorUnitario
+        };
+
+    private static Estoque CriarEstoque(int id = 1, int quantidadeAtual = 10, int quantidadeMinima = 2) =>
+        new()
+        {
+            Id                    = id,
+            Nome                  = "Item de Teste",
+            Tipo                  = Domain.Enums.TipoEstoque.Peca,
+            QuantidadeAtual       = quantidadeAtual,
+            QuantidadeMinima      = quantidadeMinima,
+            DataUltimaAtualizacao = DateTime.UtcNow
         };
 
     // Configura o mock de atualização da OS (trigger interno do service)
@@ -98,7 +112,7 @@ public class ItemOrdemServicoServiceTests
 
         ConfigurarTriggerAtualizacaoOS(ordemServico, [itemEsperado]);
 
-        // Act
+        // Act — estoqueId: null → não deve acionar subtração
         var resultado = await _sut.AdicionarAsync(
             ordemServicoId: 1, estoqueId: null, quantidade: 3, valorUnitario: 50m);
 
@@ -106,6 +120,7 @@ public class ItemOrdemServicoServiceTests
         Assert.NotNull(resultado);
         Assert.Equal(150m, resultado.ValorTotal);
         _itemRepositoryMock.Verify(r => r.AdicionarAsync(It.IsAny<ItemOrdemServico>()), Times.Once);
+        _estoqueServiceMock.Verify(e => e.SubtrairQuantidadeAsync(It.IsAny<int>(), It.IsAny<int>()), Times.Never);
     }
 
     [Fact]
@@ -121,6 +136,7 @@ public class ItemOrdemServicoServiceTests
             () => _sut.AdicionarAsync(ordemServicoId: 99, estoqueId: null, quantidade: 1, valorUnitario: 10m));
 
         _itemRepositoryMock.Verify(r => r.AdicionarAsync(It.IsAny<ItemOrdemServico>()), Times.Never);
+        _estoqueServiceMock.Verify(e => e.SubtrairQuantidadeAsync(It.IsAny<int>(), It.IsAny<int>()), Times.Never);
     }
 
     [Fact]
@@ -160,7 +176,7 @@ public class ItemOrdemServicoServiceTests
     public async Task AdicionarAsync_DeveTriggerAtualizacaoValorTotalEstimadoDaOS()
     {
         // Arrange
-        var ordemServico = CriarOrdemServico();
+        var ordemServico   = CriarOrdemServico();
         var itemAdicionado = CriarItem(quantidade: 2, valorUnitario: 75m);
         itemAdicionado.ValorTotal = 150m;
 
@@ -210,7 +226,7 @@ public class ItemOrdemServicoServiceTests
 
         _itemRepositoryMock
             .Setup(r => r.ObterPorOrdemServicoIdAsync(1))
-            .ReturnsAsync([item1, item2]);  // ambos os itens já na OS
+            .ReturnsAsync([item1, item2]);
 
         OrdemServico osAtualizada = null!;
         _ordemServicoRepositoryMock
@@ -223,6 +239,122 @@ public class ItemOrdemServicoServiceTests
 
         // Assert
         Assert.Equal(350m, osAtualizada.ValorTotalEstimado); // 200 + 150
+    }
+
+    [Fact]
+    public async Task AdicionarAsync_ComEstoqueId_DeveSubtrairDoEstoque()
+    {
+        // Arrange
+        var ordemServico  = CriarOrdemServico();
+        var item          = CriarItem(quantidade: 3, valorUnitario: 50m);
+        var estoqueRetorno = CriarEstoque(id: 5, quantidadeAtual: 7); // 10 - 3 = 7
+
+        _ordemServicoRepositoryMock
+            .Setup(r => r.ObterPorIdAsync("1"))
+            .ReturnsAsync(ordemServico);
+
+        _estoqueServiceMock
+            .Setup(e => e.SubtrairQuantidadeAsync(5, 3))
+            .ReturnsAsync(estoqueRetorno);
+
+        _itemRepositoryMock
+            .Setup(r => r.AdicionarAsync(It.IsAny<ItemOrdemServico>()))
+            .ReturnsAsync(item);
+
+        ConfigurarTriggerAtualizacaoOS(ordemServico, [item]);
+
+        // Act
+        var resultado = await _sut.AdicionarAsync(
+            ordemServicoId: 1, estoqueId: 5, quantidade: 3, valorUnitario: 50m);
+
+        // Assert
+        Assert.NotNull(resultado);
+        _estoqueServiceMock.Verify(e => e.SubtrairQuantidadeAsync(5, 3), Times.Once);
+        _itemRepositoryMock.Verify(r => r.AdicionarAsync(It.IsAny<ItemOrdemServico>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task AdicionarAsync_ComEstoqueId_DeveVincularEstoqueIdNoItem()
+    {
+        // Arrange
+        var ordemServico   = CriarOrdemServico();
+        var estoqueRetorno = CriarEstoque(id: 7, quantidadeAtual: 5);
+        ItemOrdemServico itemCriado = null!;
+
+        _ordemServicoRepositoryMock
+            .Setup(r => r.ObterPorIdAsync("1"))
+            .ReturnsAsync(ordemServico);
+
+        _estoqueServiceMock
+            .Setup(e => e.SubtrairQuantidadeAsync(7, 2))
+            .ReturnsAsync(estoqueRetorno);
+
+        _itemRepositoryMock
+            .Setup(r => r.AdicionarAsync(It.IsAny<ItemOrdemServico>()))
+            .Callback<ItemOrdemServico>(i => itemCriado = i)
+            .ReturnsAsync((ItemOrdemServico i) => i);
+
+        _itemRepositoryMock
+            .Setup(r => r.ObterPorOrdemServicoIdAsync(1))
+            .ReturnsAsync([]);
+
+        _ordemServicoRepositoryMock
+            .Setup(r => r.AtualizarAsync(It.IsAny<OrdemServico>()))
+            .ReturnsAsync(ordemServico);
+
+        // Act
+        await _sut.AdicionarAsync(ordemServicoId: 1, estoqueId: 7, quantidade: 2, valorUnitario: 100m);
+
+        // Assert
+        Assert.NotNull(itemCriado);
+        Assert.Equal(7, itemCriado.EstoqueId);
+    }
+
+    [Fact]
+    public async Task AdicionarAsync_QuandoEstoqueSemSaldo_DeveLancarInvalidOperationException()
+    {
+        // Arrange
+        var ordemServico = CriarOrdemServico();
+
+        _ordemServicoRepositoryMock
+            .Setup(r => r.ObterPorIdAsync("1"))
+            .ReturnsAsync(ordemServico);
+
+        _estoqueServiceMock
+            .Setup(e => e.SubtrairQuantidadeAsync(3, 10))
+            .ThrowsAsync(new InvalidOperationException("Saldo insuficiente no estoque."));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _sut.AdicionarAsync(ordemServicoId: 1, estoqueId: 3, quantidade: 10, valorUnitario: 50m));
+
+        _itemRepositoryMock.Verify(r => r.AdicionarAsync(It.IsAny<ItemOrdemServico>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AdicionarAsync_SemEstoqueId_NaoDeveAcionarSubtracao()
+    {
+        // Arrange
+        var ordemServico = CriarOrdemServico();
+        var item         = CriarItem();
+
+        _ordemServicoRepositoryMock
+            .Setup(r => r.ObterPorIdAsync("1"))
+            .ReturnsAsync(ordemServico);
+
+        _itemRepositoryMock
+            .Setup(r => r.AdicionarAsync(It.IsAny<ItemOrdemServico>()))
+            .ReturnsAsync(item);
+
+        ConfigurarTriggerAtualizacaoOS(ordemServico, [item]);
+
+        // Act
+        await _sut.AdicionarAsync(ordemServicoId: 1, estoqueId: null, quantidade: 2, valorUnitario: 100m);
+
+        // Assert
+        _estoqueServiceMock.Verify(
+            e => e.SubtrairQuantidadeAsync(It.IsAny<int>(), It.IsAny<int>()),
+            Times.Never);
     }
 
     #endregion
