@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using MechanicLtda.Domain.Interfaces.Repositories.Base;
+using Microsoft.EntityFrameworkCore;
 
 namespace MechanicLtda.Infrastructure.Repositories.Base
 {

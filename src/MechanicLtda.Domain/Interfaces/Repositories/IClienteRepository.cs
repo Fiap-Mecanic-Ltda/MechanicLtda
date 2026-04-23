@@ -1,5 +1,5 @@
 ﻿using MechanicLtda.Domain.Entities;
-using MechanicLtda.Infrastructure.Repositories.Base;
+using MechanicLtda.Domain.Interfaces.Repositories.Base;
 
 namespace MechanicLtda.Domain.Interfaces.Repositories
 {

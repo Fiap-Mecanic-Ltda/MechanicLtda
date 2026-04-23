@@ -10,7 +10,8 @@ namespace MechanicLtda.Domain.Services
     public class ItemOrdemServicoService : BaseService, IItemOrdemServicoService
     {
         private readonly IItemOrdemServicoRepository _itemRepository;
-        private readonly IOrdemServicoRepository _ordemServicoRepository;
+        private readonly IOrdemServicoRepository     _ordemServicoRepository;
+        private readonly IEstoqueService             _estoqueService;
         private readonly ILogger<ItemOrdemServicoService> _logger;
 
         public ItemOrdemServicoService(
@@ -18,19 +19,27 @@ namespace MechanicLtda.Domain.Services
             IConfiguration configuration,
             INotificadorService notificadorService,
             IItemOrdemServicoRepository itemRepository,
-            IOrdemServicoRepository ordemServicoRepository) : base(notificadorService, configuration)
+            IOrdemServicoRepository ordemServicoRepository,
+            IEstoqueService estoqueService) : base(notificadorService, configuration)
         {
-            _itemRepository = itemRepository;
+            _logger                 = logger;
+            _itemRepository         = itemRepository;
             _ordemServicoRepository = ordemServicoRepository;
-            _logger = logger;
+            _estoqueService         = estoqueService;
         }
 
-        public async Task<ItemOrdemServico> AdicionarAsync(int ordemServicoId, int? estoqueId, int quantidade, decimal valorUnitario)
+        public async Task<ItemOrdemServico> AdicionarAsync(
+            int ordemServicoId, int? estoqueId, int quantidade, decimal valorUnitario)
         {
             try
             {
                 _ = await _ordemServicoRepository.ObterPorIdAsync(ordemServicoId.ToString())
-                    ?? throw new KeyNotFoundException($"Ordem de Serviço com Id '{ordemServicoId}' não encontrada.");
+                    ?? throw new KeyNotFoundException(
+                        $"Ordem de Serviço com Id '{ordemServicoId}' não encontrada.");
+
+                // Realiza a baixa no estoque quando um EstoqueId for informado
+                if (estoqueId.HasValue)
+                    await _estoqueService.SubtrairQuantidadeAsync(estoqueId.Value, quantidade);
 
                 var item = new ItemOrdemServico
                 {
@@ -42,11 +51,11 @@ namespace MechanicLtda.Domain.Services
 
                 item.CalcularValorTotal();
 
-                var itemAdicionado = await _itemRepository.AdicionarAsync(item);
+                var itemCriado = await _itemRepository.AdicionarAsync(item);
 
                 await AtualizarValorTotalOrdemServicoAsync(ordemServicoId);
 
-                return itemAdicionado;
+                return itemCriado;
             }
             catch (Exception ex)
             {

@@ -19,6 +19,9 @@ namespace MechanicLtda.API.Extensions
             CreateMap<OrdemServicoUpdateViewModel, OrdemServicoUpdateDto>();
             CreateMap<ItemOrdemServicoCreateViewModel, ItemOrdemServicoCreateDto>();
             CreateMap<ItemOrdemServicoUpdateViewModel, ItemOrdemServicoUpdateDto>();
+            CreateMap<EstoqueCreateViewModel, EstoqueCreateDto>();
+            CreateMap<EstoqueUpdateViewModel, EstoqueUpdateDto>();
+            CreateMap<EstoqueReposicaoViewModel, EstoqueReposicaoDto>();
 
             // DTO → Entidade  (Application → Domain)
             CreateMap<UsuarioCreateDto, Usuario>();
@@ -26,6 +29,8 @@ namespace MechanicLtda.API.Extensions
             CreateMap<VeiculoUpdateDto, Veiculo>();
             CreateMap<OrdemServicoUpdateDto, OrdemServico>();
             CreateMap<ItemOrdemServicoUpdateDto, ItemOrdemServico>();
+            CreateMap<EstoqueCreateDto, Estoque>();
+            CreateMap<EstoqueUpdateDto, Estoque>();
 
             // Entidade → DTO  (Domain → Application)
             CreateMap<Usuario, UsuarioDto>();
