@@ -11,21 +11,24 @@ namespace MechanicLtda.API.Extensions
     {
         public static IServiceCollection AddDependencyInjection(this IServiceCollection services)
         {
-            // Notificador — Scoped para que as notificações vivam por requisição
+            // Notificador é Scoped para que as notificações vivam por requisição
             services.AddScoped<INotificadorService, NotificadorService>();
 
             // Repositórios
             services.AddScoped<IUsuarioRepository, UsuarioRepository>();
             services.AddScoped<IClienteRepository, ClienteRepository>();
+            services.AddScoped<IVeiculoRepository, VeiculoRepository>();
 
             // Domain Services
             services.AddScoped<IUsuarioService, UsuarioService>();
             services.AddScoped<IClienteService, ClienteService>();
+            services.AddScoped<IVeiculoService, VeiculoService>();
 
             // App Services
             services.AddScoped<IAuthAppService, AuthAppService>();
             services.AddScoped<IUsuarioAppService, UsuarioAppService>();
             services.AddScoped<IClienteAppService, ClienteAppService>();
+            services.AddScoped<IVeiculoAppService, VeiculoAppService>();
 
             return services;
         }

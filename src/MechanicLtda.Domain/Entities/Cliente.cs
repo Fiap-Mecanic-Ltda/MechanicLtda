@@ -1,12 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using MechanicLtda.Domain.Entities.Base;
+using System.ComponentModel.DataAnnotations;
 
 namespace MechanicLtda.Domain.Entities
 {
-    public class Cliente
+    public class Cliente : Entity<int>
     {
-        [Key]
-        public Guid Id { get; set; }
-
         [Required]
         [MaxLength(100)]
         public string Nome { get; set; }
@@ -25,5 +23,7 @@ namespace MechanicLtda.Domain.Entities
         public DateTime DataCriacao { get; set; }
 
         public DateTime? DataModificacao { get; set; }
+
+        public ICollection<Veiculo> Veiculos { get; set; } = [];
     }
 }

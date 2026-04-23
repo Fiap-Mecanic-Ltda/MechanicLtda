@@ -37,7 +37,7 @@ namespace MechanicLtda.Application.AppServices
             try
             {
                 var cliente = _mapper.Map<Cliente>(dto);
-                cliente.Id = Guid.Parse(id);
+                cliente.Id = int.Parse(id);
                 var resultado = await _clienteService.AtualizarAsync(cliente);
                 return response.setResponse(_mapper.Map<ClienteDto>(resultado));
             }
