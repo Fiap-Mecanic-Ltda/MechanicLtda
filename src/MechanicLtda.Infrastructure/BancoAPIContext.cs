@@ -13,6 +13,7 @@ namespace MechanicLtda.Infrastructure
         public DbSet<Usuario> Usuarios { get; set; }
         public DbSet<Cliente> Clientes { get; set; }
         public DbSet<Veiculo> Veiculos { get; set; }
+        public DbSet<OrdemServico> OrdensServico { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
