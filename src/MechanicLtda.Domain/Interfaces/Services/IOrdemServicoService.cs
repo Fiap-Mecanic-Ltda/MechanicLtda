@@ -6,7 +6,11 @@ namespace MechanicLtda.Domain.Interfaces.Services
     {
         Task<OrdemServico> AdicionarAsync(string descricaoProblema, decimal? valorTotalEstimado, int veiculoId, int clienteId);
         Task<OrdemServico> AtualizarAsync(OrdemServico ordemServico);
-        Task<OrdemServico> MoverParaEmValidacaoAsync(int id);
+        Task<OrdemServico> IniciarDiagnosticoAsync(int id);
+        Task<OrdemServico> AguardarAprovacaoAsync(int id);
+        Task<OrdemServico> IniciarExecucaoAsync(int id);
+        Task<OrdemServico> FinalizarAsync(int id);
+        Task<OrdemServico> EntregarAsync(int id);
         Task<IEnumerable<OrdemServico>> ObterTodosAsync();
         Task<IEnumerable<OrdemServico>> ObterPorClienteIdAsync(string clienteId);
         Task<OrdemServico?> ObterPorIdAsync(string id);
