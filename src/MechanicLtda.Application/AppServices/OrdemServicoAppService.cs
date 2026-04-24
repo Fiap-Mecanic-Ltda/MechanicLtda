@@ -46,7 +46,7 @@ namespace MechanicLtda.Application.AppServices
             catch (Exception ex) { return response.addError(ex); }
         }
 
-        public async Task<ResponseDto<OrdemServicoDto>> MoverParaEmValidacaoAsync(string id)
+        public async Task<ResponseDto<OrdemServicoDto>> IniciarDiagnosticoAsync(string id)
         {
             var response = new ResponseDto<OrdemServicoDto>();
             try
@@ -54,7 +54,71 @@ namespace MechanicLtda.Application.AppServices
                 if (!int.TryParse(id, out var ordemId))
                     return response.addError("Id inválido.");
 
-                var resultado = await _ordemServicoService.MoverParaEmValidacaoAsync(ordemId);
+                var resultado = await _ordemServicoService.IniciarDiagnosticoAsync(ordemId);
+                return response.setResponse(_mapper.Map<OrdemServicoDto>(resultado));
+            }
+            catch (KeyNotFoundException ex) { return response.addError(ex.Message); }
+            catch (InvalidOperationException ex) { return response.addError(ex.Message); }
+            catch (Exception ex) { return response.addError(ex); }
+        }
+
+        public async Task<ResponseDto<OrdemServicoDto>> AguardarAprovacaoAsync(string id)
+        {
+            var response = new ResponseDto<OrdemServicoDto>();
+            try
+            {
+                if (!int.TryParse(id, out var ordemId))
+                    return response.addError("Id inválido.");
+
+                var resultado = await _ordemServicoService.AguardarAprovacaoAsync(ordemId);
+                return response.setResponse(_mapper.Map<OrdemServicoDto>(resultado));
+            }
+            catch (KeyNotFoundException ex) { return response.addError(ex.Message); }
+            catch (InvalidOperationException ex) { return response.addError(ex.Message); }
+            catch (Exception ex) { return response.addError(ex); }
+        }
+
+        public async Task<ResponseDto<OrdemServicoDto>> IniciarExecucaoAsync(string id)
+        {
+            var response = new ResponseDto<OrdemServicoDto>();
+            try
+            {
+                if (!int.TryParse(id, out var ordemId))
+                    return response.addError("Id inválido.");
+
+                var resultado = await _ordemServicoService.IniciarExecucaoAsync(ordemId);
+                return response.setResponse(_mapper.Map<OrdemServicoDto>(resultado));
+            }
+            catch (KeyNotFoundException ex) { return response.addError(ex.Message); }
+            catch (InvalidOperationException ex) { return response.addError(ex.Message); }
+            catch (Exception ex) { return response.addError(ex); }
+        }
+
+        public async Task<ResponseDto<OrdemServicoDto>> FinalizarAsync(string id)
+        {
+            var response = new ResponseDto<OrdemServicoDto>();
+            try
+            {
+                if (!int.TryParse(id, out var ordemId))
+                    return response.addError("Id inválido.");
+
+                var resultado = await _ordemServicoService.FinalizarAsync(ordemId);
+                return response.setResponse(_mapper.Map<OrdemServicoDto>(resultado));
+            }
+            catch (KeyNotFoundException ex) { return response.addError(ex.Message); }
+            catch (InvalidOperationException ex) { return response.addError(ex.Message); }
+            catch (Exception ex) { return response.addError(ex); }
+        }
+
+        public async Task<ResponseDto<OrdemServicoDto>> EntregarAsync(string id)
+        {
+            var response = new ResponseDto<OrdemServicoDto>();
+            try
+            {
+                if (!int.TryParse(id, out var ordemId))
+                    return response.addError("Id inválido.");
+
+                var resultado = await _ordemServicoService.EntregarAsync(ordemId);
                 return response.setResponse(_mapper.Map<OrdemServicoDto>(resultado));
             }
             catch (KeyNotFoundException ex) { return response.addError(ex.Message); }
