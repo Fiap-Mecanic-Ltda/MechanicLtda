@@ -69,7 +69,7 @@ namespace MechanicLtda.API.Controllers
             }
         }
 
-        /// <summary>Cria uma nova Ordem de Serviço (status inicial: Em Aberto).</summary>
+        /// <summary>Cria uma nova Ordem de Serviço com status inicial 'Recebida'.</summary>
         [HttpPost]
         public async Task<IActionResult> Criar([FromBody] OrdemServicoCreateViewModel model)
         {
@@ -88,7 +88,7 @@ namespace MechanicLtda.API.Controllers
             }
         }
 
-        /// <summary>Atualiza uma Ordem de Serviço. Avança automaticamente para 'Em Validação' quando todos os campos estiverem preenchidos.</summary>
+        /// <summary>Atualiza uma Ordem de Serviço. Avança automaticamente para 'Em Diagnóstico' quando descrição e valor estiverem preenchidos.</summary>
         [HttpPut("{id}")]
         public async Task<IActionResult> Atualizar(string id, [FromBody] OrdemServicoUpdateViewModel model)
         {
@@ -107,17 +107,77 @@ namespace MechanicLtda.API.Controllers
             }
         }
 
-        /// <summary>Move manualmente a OS para o status 'Em Validação'. Prepara o gatilho para geração de Orçamento.</summary>
-        [HttpPatch("{id}/em-validacao")]
-        public async Task<IActionResult> MoverParaEmValidacao(string id)
+        /// <summary>Move a OS para o status 'Em Diagnóstico'. Requer status atual: Recebida.</summary>
+        [HttpPatch("{id}/em-diagnostico")]
+        public async Task<IActionResult> IniciarDiagnostico(string id)
         {
             try
             {
-                return CustomResponse(await _ordemServicoAppService.MoverParaEmValidacaoAsync(id));
+                return CustomResponse(await _ordemServicoAppService.IniciarDiagnosticoAsync(id));
             }
             catch (Exception ex)
             {
-                GravaException(ex, "Falha ao mover ordem de serviço para Em Validação", _logger);
+                GravaException(ex, "Falha ao iniciar diagnóstico da ordem de serviço", _logger);
+                return CustomResponse();
+            }
+        }
+
+        /// <summary>Move a OS para o status 'Aguardando Aprovação'. Requer status atual: Em Diagnóstico.</summary>
+        [HttpPatch("{id}/aguardando-aprovacao")]
+        public async Task<IActionResult> AguardarAprovacao(string id)
+        {
+            try
+            {
+                return CustomResponse(await _ordemServicoAppService.AguardarAprovacaoAsync(id));
+            }
+            catch (Exception ex)
+            {
+                GravaException(ex, "Falha ao mover ordem de serviço para Aguardando Aprovação", _logger);
+                return CustomResponse();
+            }
+        }
+
+        /// <summary>Move a OS para o status 'Em Execução'. Requer status atual: Aguardando Aprovação.</summary>
+        [HttpPatch("{id}/em-execucao")]
+        public async Task<IActionResult> IniciarExecucao(string id)
+        {
+            try
+            {
+                return CustomResponse(await _ordemServicoAppService.IniciarExecucaoAsync(id));
+            }
+            catch (Exception ex)
+            {
+                GravaException(ex, "Falha ao iniciar execução da ordem de serviço", _logger);
+                return CustomResponse();
+            }
+        }
+
+        /// <summary>Move a OS para o status 'Finalizada'. Requer status atual: Em Execução.</summary>
+        [HttpPatch("{id}/finalizar")]
+        public async Task<IActionResult> Finalizar(string id)
+        {
+            try
+            {
+                return CustomResponse(await _ordemServicoAppService.FinalizarAsync(id));
+            }
+            catch (Exception ex)
+            {
+                GravaException(ex, "Falha ao finalizar ordem de serviço", _logger);
+                return CustomResponse();
+            }
+        }
+
+        /// <summary>Move a OS para o status 'Entregue'. Requer status atual: Finalizada.</summary>
+        [HttpPatch("{id}/entregar")]
+        public async Task<IActionResult> Entregar(string id)
+        {
+            try
+            {
+                return CustomResponse(await _ordemServicoAppService.EntregarAsync(id));
+            }
+            catch (Exception ex)
+            {
+                GravaException(ex, "Falha ao registrar entrega da ordem de serviço", _logger);
                 return CustomResponse();
             }
         }

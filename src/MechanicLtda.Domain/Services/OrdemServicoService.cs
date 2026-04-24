@@ -41,7 +41,7 @@ namespace MechanicLtda.Domain.Services
                     ValorTotalEstimado = valorTotalEstimado,
                     VeiculoId          = veiculoId,
                     ClienteId          = clienteId,
-                    Status             = StatusOrdemServico.EmAberto,
+                    Status             = StatusOrdemServico.Recebida,
                     DataCriacao        = DateTime.Now
                 };
 
@@ -67,16 +67,16 @@ namespace MechanicLtda.Domain.Services
                 if (veiculo.ClienteId != ordemServico.ClienteId)
                     throw new InvalidOperationException("O veículo informado não pertence ao cliente indicado.");
 
-                ordemServico.Status      = existente.Status;
-                ordemServico.DataCriacao = existente.DataCriacao;
+                ordemServico.Status          = existente.Status;
+                ordemServico.DataCriacao     = existente.DataCriacao;
                 ordemServico.DataModificacao = DateTime.UtcNow;
 
-                // Gatilho: ao atualizar com dados preenchidos, avança para EmValidacao
+                // Gatilho: ao preencher descrição + valor estimado na OS recebida, avança para Em Diagnóstico
                 if (!string.IsNullOrWhiteSpace(ordemServico.DescricaoProblema) &&
                     ordemServico.ValorTotalEstimado.HasValue &&
-                    existente.Status == StatusOrdemServico.EmAberto)
+                    existente.Status == StatusOrdemServico.Recebida)
                 {
-                    ordemServico.Status = StatusOrdemServico.EmValidacao;
+                    ordemServico.Status = StatusOrdemServico.EmDiagnostico;
                 }
 
                 return await _ordemServicoRepository.AtualizarAsync(ordemServico);
@@ -88,24 +88,112 @@ namespace MechanicLtda.Domain.Services
             }
         }
 
-        public async Task<OrdemServico> MoverParaEmValidacaoAsync(int id)
+        public async Task<OrdemServico> IniciarDiagnosticoAsync(int id)
         {
             try
             {
                 var ordemServico = await _ordemServicoRepository.ObterPorIdAsync(id.ToString())
                     ?? throw new KeyNotFoundException($"Ordem de Serviço com Id '{id}' não encontrada.");
 
-                if (ordemServico.Status != StatusOrdemServico.EmAberto)
-                    throw new InvalidOperationException($"A OS só pode ser movida para 'Em Validação' quando estiver 'Em Aberto'. Status atual: {ordemServico.Status}.");
+                if (ordemServico.Status != StatusOrdemServico.Recebida)
+                    throw new InvalidOperationException($"A OS só pode ir para 'Em Diagnóstico' quando estiver 'Recebida'. Status atual: {ordemServico.Status}.");
 
-                ordemServico.Status          = StatusOrdemServico.EmValidacao;
+                ordemServico.Status          = StatusOrdemServico.EmDiagnostico;
                 ordemServico.DataModificacao = DateTime.UtcNow;
 
                 return await _ordemServicoRepository.AtualizarAsync(ordemServico);
             }
             catch (Exception ex)
             {
-                Notificar(ex, "Ocorreu um erro no método OrdemServicoService:MoverParaEmValidacaoAsync", _logger);
+                Notificar(ex, "Ocorreu um erro no método OrdemServicoService:IniciarDiagnosticoAsync", _logger);
+                throw;
+            }
+        }
+
+        public async Task<OrdemServico> AguardarAprovacaoAsync(int id)
+        {
+            try
+            {
+                var ordemServico = await _ordemServicoRepository.ObterPorIdAsync(id.ToString())
+                    ?? throw new KeyNotFoundException($"Ordem de Serviço com Id '{id}' não encontrada.");
+
+                if (ordemServico.Status != StatusOrdemServico.EmDiagnostico)
+                    throw new InvalidOperationException($"A OS só pode ir para 'Aguardando Aprovação' quando estiver 'Em Diagnóstico'. Status atual: {ordemServico.Status}.");
+
+                ordemServico.Status          = StatusOrdemServico.AguardandoAprovacao;
+                ordemServico.DataModificacao = DateTime.UtcNow;
+
+                return await _ordemServicoRepository.AtualizarAsync(ordemServico);
+            }
+            catch (Exception ex)
+            {
+                Notificar(ex, "Ocorreu um erro no método OrdemServicoService:AguardarAprovacaoAsync", _logger);
+                throw;
+            }
+        }
+
+        public async Task<OrdemServico> IniciarExecucaoAsync(int id)
+        {
+            try
+            {
+                var ordemServico = await _ordemServicoRepository.ObterPorIdAsync(id.ToString())
+                    ?? throw new KeyNotFoundException($"Ordem de Serviço com Id '{id}' não encontrada.");
+
+                if (ordemServico.Status != StatusOrdemServico.AguardandoAprovacao)
+                    throw new InvalidOperationException($"A OS só pode ir para 'Em Execução' quando estiver 'Aguardando Aprovação'. Status atual: {ordemServico.Status}.");
+
+                ordemServico.Status          = StatusOrdemServico.EmExecucao;
+                ordemServico.DataModificacao = DateTime.UtcNow;
+
+                return await _ordemServicoRepository.AtualizarAsync(ordemServico);
+            }
+            catch (Exception ex)
+            {
+                Notificar(ex, "Ocorreu um erro no método OrdemServicoService:IniciarExecucaoAsync", _logger);
+                throw;
+            }
+        }
+
+        public async Task<OrdemServico> FinalizarAsync(int id)
+        {
+            try
+            {
+                var ordemServico = await _ordemServicoRepository.ObterPorIdAsync(id.ToString())
+                    ?? throw new KeyNotFoundException($"Ordem de Serviço com Id '{id}' não encontrada.");
+
+                if (ordemServico.Status != StatusOrdemServico.EmExecucao)
+                    throw new InvalidOperationException($"A OS só pode ser 'Finalizada' quando estiver 'Em Execução'. Status atual: {ordemServico.Status}.");
+
+                ordemServico.Status          = StatusOrdemServico.Finalizada;
+                ordemServico.DataModificacao = DateTime.UtcNow;
+
+                return await _ordemServicoRepository.AtualizarAsync(ordemServico);
+            }
+            catch (Exception ex)
+            {
+                Notificar(ex, "Ocorreu um erro no método OrdemServicoService:FinalizarAsync", _logger);
+                throw;
+            }
+        }
+
+        public async Task<OrdemServico> EntregarAsync(int id)
+        {
+            try
+            {
+                var ordemServico = await _ordemServicoRepository.ObterPorIdAsync(id.ToString())
+                    ?? throw new KeyNotFoundException($"Ordem de Serviço com Id '{id}' não encontrada.");
+
+                if (ordemServico.Status != StatusOrdemServico.Finalizada)
+                    throw new InvalidOperationException($"A OS só pode ser 'Entregue' quando estiver 'Finalizada'. Status atual: {ordemServico.Status}.");
+
+                ordemServico.Status          = StatusOrdemServico.Entregue;
+                ordemServico.DataModificacao = DateTime.UtcNow;
+
+                return await _ordemServicoRepository.AtualizarAsync(ordemServico);
+            }
+            catch (Exception ex)
+            {
+                Notificar(ex, "Ocorreu um erro no método OrdemServicoService:EntregarAsync", _logger);
                 throw;
             }
         }

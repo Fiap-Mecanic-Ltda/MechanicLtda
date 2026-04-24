@@ -13,7 +13,7 @@ namespace MechanicLtda.Domain.Entities
         public DateTime? DataModificacao { get; set; }
 
         [Required]
-        public StatusOrdemServico Status { get; set; } = StatusOrdemServico.EmAberto;
+        public StatusOrdemServico Status { get; set; } = StatusOrdemServico.Recebida;
 
         [Required]
         [MaxLength(1000)]

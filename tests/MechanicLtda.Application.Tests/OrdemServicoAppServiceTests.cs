@@ -24,7 +24,7 @@ public class OrdemServicoAppServiceTests
 
     // ─── helpers ────────────────────────────────────────────────────────────────
 
-    private static OrdemServico CriarEntidade(int id = 1, StatusOrdemServico status = StatusOrdemServico.EmAberto) =>
+    private static OrdemServico CriarEntidade(int id = 1, StatusOrdemServico status = StatusOrdemServico.Recebida) =>
         new()
         {
             Id                 = id,
@@ -36,7 +36,7 @@ public class OrdemServicoAppServiceTests
             DataCriacao        = DateTime.Now
         };
 
-    private static OrdemServicoDto CriarDto(int id = 1, StatusOrdemServico status = StatusOrdemServico.EmAberto) =>
+    private static OrdemServicoDto CriarDto(int id = 1, StatusOrdemServico status = StatusOrdemServico.Recebida) =>
         new()
         {
             Id                 = id,
@@ -56,9 +56,9 @@ public class OrdemServicoAppServiceTests
     public async Task AdicionarAsync_QuandoSucesso_DeveRetornarResponseSemErros()
     {
         // Arrange
-        var createDto  = new OrdemServicoCreateDto { DescricaoProblema = "Barulho no motor", ValorTotalEstimado = 500m, VeiculoId = 1, ClienteId = 1 };
-        var entidade   = CriarEntidade();
-        var ordemDto   = CriarDto();
+        var createDto = new OrdemServicoCreateDto { DescricaoProblema = "Barulho no motor", ValorTotalEstimado = 500m, VeiculoId = 1, ClienteId = 1 };
+        var entidade  = CriarEntidade();
+        var ordemDto  = CriarDto();
 
         _serviceMock
             .Setup(s => s.AdicionarAsync(createDto.DescricaoProblema, createDto.ValorTotalEstimado, createDto.VeiculoId, createDto.ClienteId))
@@ -194,19 +194,19 @@ public class OrdemServicoAppServiceTests
 
     #endregion
 
-    // ─── MoverParaEmValidacaoAsync ──────────────────────────────────────────────
+    // ─── IniciarDiagnosticoAsync ─────────────────────────────────────────────────
 
-    #region MoverParaEmValidacaoAsync
+    #region IniciarDiagnosticoAsync
 
     [Fact]
-    public async Task MoverParaEmValidacaoAsync_QuandoSucesso_DeveRetornarResponseSemErros()
+    public async Task IniciarDiagnosticoAsync_QuandoSucesso_DeveRetornarResponseSemErros()
     {
         // Arrange
-        var entidade = CriarEntidade(status: StatusOrdemServico.EmValidacao);
-        var ordemDto = CriarDto(status: StatusOrdemServico.EmValidacao);
+        var entidade = CriarEntidade(status: StatusOrdemServico.EmDiagnostico);
+        var ordemDto = CriarDto(status: StatusOrdemServico.EmDiagnostico);
 
         _serviceMock
-            .Setup(s => s.MoverParaEmValidacaoAsync(1))
+            .Setup(s => s.IniciarDiagnosticoAsync(1))
             .ReturnsAsync(entidade);
 
         _mapperMock
@@ -214,35 +214,35 @@ public class OrdemServicoAppServiceTests
             .Returns(ordemDto);
 
         // Act
-        var response = await _sut.MoverParaEmValidacaoAsync("1");
+        var response = await _sut.IniciarDiagnosticoAsync("1");
 
         // Assert
         Assert.False(response.hasErrors);
-        Assert.Equal(StatusOrdemServico.EmValidacao, response.getResponse.Status);
+        Assert.Equal(StatusOrdemServico.EmDiagnostico, response.getResponse.Status);
     }
 
     [Fact]
-    public async Task MoverParaEmValidacaoAsync_QuandoIdInvalido_DeveRetornarResponseComErro()
+    public async Task IniciarDiagnosticoAsync_QuandoIdInvalido_DeveRetornarResponseComErro()
     {
         // Act
-        var response = await _sut.MoverParaEmValidacaoAsync("nao-e-numero");
+        var response = await _sut.IniciarDiagnosticoAsync("nao-e-numero");
 
         // Assert
         Assert.True(response.hasErrors);
         Assert.Null(response.getResponse);
-        _serviceMock.Verify(s => s.MoverParaEmValidacaoAsync(It.IsAny<int>()), Times.Never);
+        _serviceMock.Verify(s => s.IniciarDiagnosticoAsync(It.IsAny<int>()), Times.Never);
     }
 
     [Fact]
-    public async Task MoverParaEmValidacaoAsync_QuandoOSNaoEncontrada_DeveRetornarResponseComErro()
+    public async Task IniciarDiagnosticoAsync_QuandoOSNaoEncontrada_DeveRetornarResponseComErro()
     {
         // Arrange
         _serviceMock
-            .Setup(s => s.MoverParaEmValidacaoAsync(99))
+            .Setup(s => s.IniciarDiagnosticoAsync(99))
             .ThrowsAsync(new KeyNotFoundException("Ordem de Serviço com Id '99' não encontrada."));
 
         // Act
-        var response = await _sut.MoverParaEmValidacaoAsync("99");
+        var response = await _sut.IniciarDiagnosticoAsync("99");
 
         // Assert
         Assert.True(response.hasErrors);
@@ -250,15 +250,307 @@ public class OrdemServicoAppServiceTests
     }
 
     [Fact]
-    public async Task MoverParaEmValidacaoAsync_QuandoOSJaEmValidacao_DeveRetornarResponseComErro()
+    public async Task IniciarDiagnosticoAsync_QuandoStatusInvalido_DeveRetornarResponseComErro()
     {
         // Arrange
         _serviceMock
-            .Setup(s => s.MoverParaEmValidacaoAsync(1))
-            .ThrowsAsync(new InvalidOperationException("A OS só pode ser movida para 'Em Validação' quando estiver 'Em Aberto'."));
+            .Setup(s => s.IniciarDiagnosticoAsync(1))
+            .ThrowsAsync(new InvalidOperationException("A OS só pode ir para 'Em Diagnóstico' quando estiver 'Recebida'."));
 
         // Act
-        var response = await _sut.MoverParaEmValidacaoAsync("1");
+        var response = await _sut.IniciarDiagnosticoAsync("1");
+
+        // Assert
+        Assert.True(response.hasErrors);
+        Assert.Null(response.getResponse);
+    }
+
+    #endregion
+
+    // ─── AguardarAprovacaoAsync ──────────────────────────────────────────────────
+
+    #region AguardarAprovacaoAsync
+
+    [Fact]
+    public async Task AguardarAprovacaoAsync_QuandoSucesso_DeveRetornarResponseSemErros()
+    {
+        // Arrange
+        var entidade = CriarEntidade(status: StatusOrdemServico.AguardandoAprovacao);
+        var ordemDto = CriarDto(status: StatusOrdemServico.AguardandoAprovacao);
+
+        _serviceMock
+            .Setup(s => s.AguardarAprovacaoAsync(1))
+            .ReturnsAsync(entidade);
+
+        _mapperMock
+            .Setup(m => m.Map<OrdemServicoDto>(entidade))
+            .Returns(ordemDto);
+
+        // Act
+        var response = await _sut.AguardarAprovacaoAsync("1");
+
+        // Assert
+        Assert.False(response.hasErrors);
+        Assert.Equal(StatusOrdemServico.AguardandoAprovacao, response.getResponse.Status);
+    }
+
+    [Fact]
+    public async Task AguardarAprovacaoAsync_QuandoIdInvalido_DeveRetornarResponseComErro()
+    {
+        // Act
+        var response = await _sut.AguardarAprovacaoAsync("nao-e-numero");
+
+        // Assert
+        Assert.True(response.hasErrors);
+        Assert.Null(response.getResponse);
+        _serviceMock.Verify(s => s.AguardarAprovacaoAsync(It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AguardarAprovacaoAsync_QuandoOSNaoEncontrada_DeveRetornarResponseComErro()
+    {
+        // Arrange
+        _serviceMock
+            .Setup(s => s.AguardarAprovacaoAsync(99))
+            .ThrowsAsync(new KeyNotFoundException("Ordem de Serviço com Id '99' não encontrada."));
+
+        // Act
+        var response = await _sut.AguardarAprovacaoAsync("99");
+
+        // Assert
+        Assert.True(response.hasErrors);
+        Assert.Null(response.getResponse);
+    }
+
+    [Fact]
+    public async Task AguardarAprovacaoAsync_QuandoStatusInvalido_DeveRetornarResponseComErro()
+    {
+        // Arrange
+        _serviceMock
+            .Setup(s => s.AguardarAprovacaoAsync(1))
+            .ThrowsAsync(new InvalidOperationException("A OS só pode ir para 'Aguardando Aprovação' quando estiver 'Em Diagnóstico'."));
+
+        // Act
+        var response = await _sut.AguardarAprovacaoAsync("1");
+
+        // Assert
+        Assert.True(response.hasErrors);
+        Assert.Null(response.getResponse);
+    }
+
+    #endregion
+
+    // ─── IniciarExecucaoAsync ────────────────────────────────────────────────────
+
+    #region IniciarExecucaoAsync
+
+    [Fact]
+    public async Task IniciarExecucaoAsync_QuandoSucesso_DeveRetornarResponseSemErros()
+    {
+        // Arrange
+        var entidade = CriarEntidade(status: StatusOrdemServico.EmExecucao);
+        var ordemDto = CriarDto(status: StatusOrdemServico.EmExecucao);
+
+        _serviceMock
+            .Setup(s => s.IniciarExecucaoAsync(1))
+            .ReturnsAsync(entidade);
+
+        _mapperMock
+            .Setup(m => m.Map<OrdemServicoDto>(entidade))
+            .Returns(ordemDto);
+
+        // Act
+        var response = await _sut.IniciarExecucaoAsync("1");
+
+        // Assert
+        Assert.False(response.hasErrors);
+        Assert.Equal(StatusOrdemServico.EmExecucao, response.getResponse.Status);
+    }
+
+    [Fact]
+    public async Task IniciarExecucaoAsync_QuandoIdInvalido_DeveRetornarResponseComErro()
+    {
+        // Act
+        var response = await _sut.IniciarExecucaoAsync("nao-e-numero");
+
+        // Assert
+        Assert.True(response.hasErrors);
+        Assert.Null(response.getResponse);
+        _serviceMock.Verify(s => s.IniciarExecucaoAsync(It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task IniciarExecucaoAsync_QuandoOSNaoEncontrada_DeveRetornarResponseComErro()
+    {
+        // Arrange
+        _serviceMock
+            .Setup(s => s.IniciarExecucaoAsync(99))
+            .ThrowsAsync(new KeyNotFoundException("Ordem de Serviço com Id '99' não encontrada."));
+
+        // Act
+        var response = await _sut.IniciarExecucaoAsync("99");
+
+        // Assert
+        Assert.True(response.hasErrors);
+        Assert.Null(response.getResponse);
+    }
+
+    [Fact]
+    public async Task IniciarExecucaoAsync_QuandoStatusInvalido_DeveRetornarResponseComErro()
+    {
+        // Arrange
+        _serviceMock
+            .Setup(s => s.IniciarExecucaoAsync(1))
+            .ThrowsAsync(new InvalidOperationException("A OS só pode ir para 'Em Execução' quando estiver 'Aguardando Aprovação'."));
+
+        // Act
+        var response = await _sut.IniciarExecucaoAsync("1");
+
+        // Assert
+        Assert.True(response.hasErrors);
+        Assert.Null(response.getResponse);
+    }
+
+    #endregion
+
+    // ─── FinalizarAsync ──────────────────────────────────────────────────────────
+
+    #region FinalizarAsync
+
+    [Fact]
+    public async Task FinalizarAsync_QuandoSucesso_DeveRetornarResponseSemErros()
+    {
+        // Arrange
+        var entidade = CriarEntidade(status: StatusOrdemServico.Finalizada);
+        var ordemDto = CriarDto(status: StatusOrdemServico.Finalizada);
+
+        _serviceMock
+            .Setup(s => s.FinalizarAsync(1))
+            .ReturnsAsync(entidade);
+
+        _mapperMock
+            .Setup(m => m.Map<OrdemServicoDto>(entidade))
+            .Returns(ordemDto);
+
+        // Act
+        var response = await _sut.FinalizarAsync("1");
+
+        // Assert
+        Assert.False(response.hasErrors);
+        Assert.Equal(StatusOrdemServico.Finalizada, response.getResponse.Status);
+    }
+
+    [Fact]
+    public async Task FinalizarAsync_QuandoIdInvalido_DeveRetornarResponseComErro()
+    {
+        // Act
+        var response = await _sut.FinalizarAsync("nao-e-numero");
+
+        // Assert
+        Assert.True(response.hasErrors);
+        Assert.Null(response.getResponse);
+        _serviceMock.Verify(s => s.FinalizarAsync(It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task FinalizarAsync_QuandoOSNaoEncontrada_DeveRetornarResponseComErro()
+    {
+        // Arrange
+        _serviceMock
+            .Setup(s => s.FinalizarAsync(99))
+            .ThrowsAsync(new KeyNotFoundException("Ordem de Serviço com Id '99' não encontrada."));
+
+        // Act
+        var response = await _sut.FinalizarAsync("99");
+
+        // Assert
+        Assert.True(response.hasErrors);
+        Assert.Null(response.getResponse);
+    }
+
+    [Fact]
+    public async Task FinalizarAsync_QuandoStatusInvalido_DeveRetornarResponseComErro()
+    {
+        // Arrange
+        _serviceMock
+            .Setup(s => s.FinalizarAsync(1))
+            .ThrowsAsync(new InvalidOperationException("A OS só pode ser 'Finalizada' quando estiver 'Em Execução'."));
+
+        // Act
+        var response = await _sut.FinalizarAsync("1");
+
+        // Assert
+        Assert.True(response.hasErrors);
+        Assert.Null(response.getResponse);
+    }
+
+    #endregion
+
+    // ─── EntregarAsync ───────────────────────────────────────────────────────────
+
+    #region EntregarAsync
+
+    [Fact]
+    public async Task EntregarAsync_QuandoSucesso_DeveRetornarResponseSemErros()
+    {
+        // Arrange
+        var entidade = CriarEntidade(status: StatusOrdemServico.Entregue);
+        var ordemDto = CriarDto(status: StatusOrdemServico.Entregue);
+
+        _serviceMock
+            .Setup(s => s.EntregarAsync(1))
+            .ReturnsAsync(entidade);
+
+        _mapperMock
+            .Setup(m => m.Map<OrdemServicoDto>(entidade))
+            .Returns(ordemDto);
+
+        // Act
+        var response = await _sut.EntregarAsync("1");
+
+        // Assert
+        Assert.False(response.hasErrors);
+        Assert.Equal(StatusOrdemServico.Entregue, response.getResponse.Status);
+    }
+
+    [Fact]
+    public async Task EntregarAsync_QuandoIdInvalido_DeveRetornarResponseComErro()
+    {
+        // Act
+        var response = await _sut.EntregarAsync("nao-e-numero");
+
+        // Assert
+        Assert.True(response.hasErrors);
+        Assert.Null(response.getResponse);
+        _serviceMock.Verify(s => s.EntregarAsync(It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task EntregarAsync_QuandoOSNaoEncontrada_DeveRetornarResponseComErro()
+    {
+        // Arrange
+        _serviceMock
+            .Setup(s => s.EntregarAsync(99))
+            .ThrowsAsync(new KeyNotFoundException("Ordem de Serviço com Id '99' não encontrada."));
+
+        // Act
+        var response = await _sut.EntregarAsync("99");
+
+        // Assert
+        Assert.True(response.hasErrors);
+        Assert.Null(response.getResponse);
+    }
+
+    [Fact]
+    public async Task EntregarAsync_QuandoStatusInvalido_DeveRetornarResponseComErro()
+    {
+        // Arrange
+        _serviceMock
+            .Setup(s => s.EntregarAsync(1))
+            .ThrowsAsync(new InvalidOperationException("A OS só pode ser 'Entregue' quando estiver 'Finalizada'."));
+
+        // Act
+        var response = await _sut.EntregarAsync("1");
 
         // Assert
         Assert.True(response.hasErrors);
