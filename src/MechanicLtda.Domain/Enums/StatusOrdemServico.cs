@@ -2,7 +2,11 @@ namespace MechanicLtda.Domain.Enums
 {
     public enum StatusOrdemServico
     {
-        EmAberto = 1,
-        EmValidacao = 2
+        Recebida           = 1,
+        EmDiagnostico      = 2,
+        AguardandoAprovacao = 3,
+        EmExecucao         = 4,
+        Finalizada         = 5,
+        Entregue           = 6
     }
 }

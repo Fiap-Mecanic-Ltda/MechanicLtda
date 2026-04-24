@@ -6,7 +6,11 @@ namespace MechanicLtda.Application.AppServices.Interfaces
     {
         Task<ResponseDto<OrdemServicoDto>> AdicionarAsync(OrdemServicoCreateDto dto);
         Task<ResponseDto<OrdemServicoDto>> AtualizarAsync(string id, OrdemServicoUpdateDto dto);
-        Task<ResponseDto<OrdemServicoDto>> MoverParaEmValidacaoAsync(string id);
+        Task<ResponseDto<OrdemServicoDto>> IniciarDiagnosticoAsync(string id);
+        Task<ResponseDto<OrdemServicoDto>> AguardarAprovacaoAsync(string id);
+        Task<ResponseDto<OrdemServicoDto>> IniciarExecucaoAsync(string id);
+        Task<ResponseDto<OrdemServicoDto>> FinalizarAsync(string id);
+        Task<ResponseDto<OrdemServicoDto>> EntregarAsync(string id);
         Task<ResponseDto<IEnumerable<OrdemServicoDto>>> ObterTodosAsync();
         Task<ResponseDto<IEnumerable<OrdemServicoDto>>> ObterPorClienteIdAsync(string clienteId);
         Task<ResponseDto<OrdemServicoDto>> ObterPorIdAsync(string id);

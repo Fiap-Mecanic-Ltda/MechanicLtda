@@ -41,7 +41,7 @@ public class OrdemServicoServiceTests
         new() { Id = id, Placa = "ABC1234", Marca = "Toyota", Modelo = "Corolla", Ano = 2022, ClienteId = clienteId, Ativo = true, DataCriacao = DateTime.Now };
 
     private static OrdemServico CriarOrdemServico(int id = 1, int veiculoId = 1, int clienteId = 1,
-        StatusOrdemServico status = StatusOrdemServico.EmAberto) =>
+        StatusOrdemServico status = StatusOrdemServico.Recebida) =>
         new()
         {
             Id                 = id,
@@ -58,7 +58,7 @@ public class OrdemServicoServiceTests
     #region AdicionarAsync
 
     [Fact]
-    public async Task AdicionarAsync_QuandoVeiculoExisteEClienteCorreto_DeveRetornarOSComStatusEmAberto()
+    public async Task AdicionarAsync_QuandoVeiculoExisteEClienteCorreto_DeveRetornarOSComStatusRecebida()
     {
         // Arrange
         var veiculo = CriarVeiculo(clienteId: 1);
@@ -77,7 +77,7 @@ public class OrdemServicoServiceTests
 
         // Assert
         Assert.NotNull(resultado);
-        Assert.Equal(StatusOrdemServico.EmAberto, resultado.Status);
+        Assert.Equal(StatusOrdemServico.Recebida, resultado.Status);
         _ordemServicoRepositoryMock.Verify(r => r.AdicionarAsync(It.IsAny<OrdemServico>()), Times.Once);
     }
 
@@ -99,7 +99,7 @@ public class OrdemServicoServiceTests
     [Fact]
     public async Task AdicionarAsync_QuandoVeiculoNaoPertenceAoCliente_DeveLancarInvalidOperationException()
     {
-        // Arrange — veículo pertence ao cliente 2, mas OS está sendo aberta para o cliente 1
+        // Arrange
         var veiculo = CriarVeiculo(clienteId: 2);
 
         _veiculoRepositoryMock
@@ -114,7 +114,7 @@ public class OrdemServicoServiceTests
     }
 
     [Fact]
-    public async Task AdicionarAsync_QuandoCriada_DeveDefinirStatusEmAberto()
+    public async Task AdicionarAsync_QuandoCriada_DeveDefinirStatusRecebida()
     {
         // Arrange
         var veiculo = CriarVeiculo(clienteId: 1);
@@ -134,7 +134,7 @@ public class OrdemServicoServiceTests
 
         // Assert
         Assert.NotNull(ordemCriada);
-        Assert.Equal(StatusOrdemServico.EmAberto, ordemCriada.Status);
+        Assert.Equal(StatusOrdemServico.Recebida, ordemCriada.Status);
         Assert.Equal(1, ordemCriada.ClienteId);
         Assert.Equal(1, ordemCriada.VeiculoId);
     }
@@ -146,11 +146,10 @@ public class OrdemServicoServiceTests
     #region AtualizarAsync
 
     [Fact]
-    public async Task AtualizarAsync_QuandoOSExisteEDadosCompletos_DeveAvancarParaEmValidacao()
+    public async Task AtualizarAsync_QuandoOSRecebidaEDadosCompletos_DeveAvancarParaEmDiagnostico()
     {
         // Arrange
-        var existente = CriarOrdemServico(status: StatusOrdemServico.EmAberto);
-        // OS atualizada com descrição + valor preenchidos → gatilho de status
+        var existente = CriarOrdemServico(status: StatusOrdemServico.Recebida);
         var osAtualizada = new OrdemServico
         {
             Id                 = 1,
@@ -170,21 +169,21 @@ public class OrdemServicoServiceTests
         var resultado = await _sut.AtualizarAsync(osAtualizada);
 
         // Assert
-        Assert.Equal(StatusOrdemServico.EmValidacao, osAtualizada.Status);
+        Assert.Equal(StatusOrdemServico.EmDiagnostico, osAtualizada.Status);
         Assert.NotNull(osAtualizada.DataModificacao);
         _ordemServicoRepositoryMock.Verify(r => r.AtualizarAsync(It.IsAny<OrdemServico>()), Times.Once);
     }
 
     [Fact]
-    public async Task AtualizarAsync_QuandoOSEmAbertoSemValorEstimado_NaoDeveAvancarStatus()
+    public async Task AtualizarAsync_QuandoOSRecebidaSemValorEstimado_NaoDeveAvancarStatus()
     {
         // Arrange
-        var existente = CriarOrdemServico(status: StatusOrdemServico.EmAberto);
+        var existente = CriarOrdemServico(status: StatusOrdemServico.Recebida);
         var osAtualizada = new OrdemServico
         {
             Id                 = 1,
             DescricaoProblema  = "Descrição preenchida",
-            ValorTotalEstimado = null,   // ← sem valor → gatilho NÃO deve disparar
+            ValorTotalEstimado = null,
             VeiculoId          = 1,
             ClienteId          = 1
         };
@@ -197,7 +196,7 @@ public class OrdemServicoServiceTests
         await _sut.AtualizarAsync(osAtualizada);
 
         // Assert
-        Assert.Equal(StatusOrdemServico.EmAberto, osAtualizada.Status);
+        Assert.Equal(StatusOrdemServico.Recebida, osAtualizada.Status);
     }
 
     [Fact]
@@ -239,8 +238,8 @@ public class OrdemServicoServiceTests
     {
         // Arrange
         var existente    = CriarOrdemServico(clienteId: 1);
-        var osAtualizada = CriarOrdemServico(clienteId: 99); // cliente diferente do veículo
-        var veiculo      = CriarVeiculo(clienteId: 1);       // veículo pertence ao cliente 1
+        var osAtualizada = CriarOrdemServico(clienteId: 99);
+        var veiculo      = CriarVeiculo(clienteId: 1);
 
         _ordemServicoRepositoryMock.Setup(r => r.ObterPorIdAsync("1")).ReturnsAsync(existente);
         _veiculoRepositoryMock.Setup(r => r.ObterPorIdAsync("1")).ReturnsAsync(veiculo);
@@ -276,56 +275,196 @@ public class OrdemServicoServiceTests
 
     #endregion
 
-    // ─── MoverParaEmValidacaoAsync ──────────────────────────────────────────────
+    // ─── IniciarDiagnosticoAsync ─────────────────────────────────────────────────
 
-    #region MoverParaEmValidacaoAsync
+    #region IniciarDiagnosticoAsync
 
     [Fact]
-    public async Task MoverParaEmValidacaoAsync_QuandoOSEmAberto_DeveAlterarStatusParaEmValidacao()
+    public async Task IniciarDiagnosticoAsync_QuandoOSRecebida_DeveAlterarStatusParaEmDiagnostico()
     {
         // Arrange
-        var os = CriarOrdemServico(status: StatusOrdemServico.EmAberto);
+        var os = CriarOrdemServico(status: StatusOrdemServico.Recebida);
 
         _ordemServicoRepositoryMock.Setup(r => r.ObterPorIdAsync("1")).ReturnsAsync(os);
         _ordemServicoRepositoryMock.Setup(r => r.AtualizarAsync(It.IsAny<OrdemServico>())).ReturnsAsync(os);
 
         // Act
-        var resultado = await _sut.MoverParaEmValidacaoAsync(1);
+        var resultado = await _sut.IniciarDiagnosticoAsync(1);
 
         // Assert
-        Assert.Equal(StatusOrdemServico.EmValidacao, resultado.Status);
+        Assert.Equal(StatusOrdemServico.EmDiagnostico, resultado.Status);
         Assert.NotNull(resultado.DataModificacao);
         _ordemServicoRepositoryMock.Verify(r => r.AtualizarAsync(It.IsAny<OrdemServico>()), Times.Once);
     }
 
     [Fact]
-    public async Task MoverParaEmValidacaoAsync_QuandoOSJaEmValidacao_DeveLancarInvalidOperationException()
+    public async Task IniciarDiagnosticoAsync_QuandoOSNaoRecebida_DeveLancarInvalidOperationException()
     {
         // Arrange
-        var os = CriarOrdemServico(status: StatusOrdemServico.EmValidacao);
+        var os = CriarOrdemServico(status: StatusOrdemServico.EmDiagnostico);
 
         _ordemServicoRepositoryMock.Setup(r => r.ObterPorIdAsync("1")).ReturnsAsync(os);
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _sut.MoverParaEmValidacaoAsync(1));
+            () => _sut.IniciarDiagnosticoAsync(1));
 
         _ordemServicoRepositoryMock.Verify(r => r.AtualizarAsync(It.IsAny<OrdemServico>()), Times.Never);
     }
 
     [Fact]
-    public async Task MoverParaEmValidacaoAsync_QuandoOSNaoEncontrada_DeveLancarKeyNotFoundException()
+    public async Task IniciarDiagnosticoAsync_QuandoOSNaoEncontrada_DeveLancarKeyNotFoundException()
     {
         // Arrange
-        _ordemServicoRepositoryMock
-            .Setup(r => r.ObterPorIdAsync("99"))
-            .ReturnsAsync((OrdemServico?)null);
+        _ordemServicoRepositoryMock.Setup(r => r.ObterPorIdAsync("99")).ReturnsAsync((OrdemServico?)null);
 
         // Act & Assert
         await Assert.ThrowsAsync<KeyNotFoundException>(
-            () => _sut.MoverParaEmValidacaoAsync(99));
+            () => _sut.IniciarDiagnosticoAsync(99));
+    }
 
-        _ordemServicoRepositoryMock.Verify(r => r.AtualizarAsync(It.IsAny<OrdemServico>()), Times.Never);
+    #endregion
+
+    // ─── AguardarAprovacaoAsync ──────────────────────────────────────────────────
+
+    #region AguardarAprovacaoAsync
+
+    [Fact]
+    public async Task AguardarAprovacaoAsync_QuandoOSEmDiagnostico_DeveAlterarStatusParaAguardandoAprovacao()
+    {
+        // Arrange
+        var os = CriarOrdemServico(status: StatusOrdemServico.EmDiagnostico);
+
+        _ordemServicoRepositoryMock.Setup(r => r.ObterPorIdAsync("1")).ReturnsAsync(os);
+        _ordemServicoRepositoryMock.Setup(r => r.AtualizarAsync(It.IsAny<OrdemServico>())).ReturnsAsync(os);
+
+        // Act
+        var resultado = await _sut.AguardarAprovacaoAsync(1);
+
+        // Assert
+        Assert.Equal(StatusOrdemServico.AguardandoAprovacao, resultado.Status);
+        Assert.NotNull(resultado.DataModificacao);
+    }
+
+    [Fact]
+    public async Task AguardarAprovacaoAsync_QuandoOSNaoEmDiagnostico_DeveLancarInvalidOperationException()
+    {
+        // Arrange
+        var os = CriarOrdemServico(status: StatusOrdemServico.Recebida);
+
+        _ordemServicoRepositoryMock.Setup(r => r.ObterPorIdAsync("1")).ReturnsAsync(os);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _sut.AguardarAprovacaoAsync(1));
+    }
+
+    #endregion
+
+    // ─── IniciarExecucaoAsync ────────────────────────────────────────────────────
+
+    #region IniciarExecucaoAsync
+
+    [Fact]
+    public async Task IniciarExecucaoAsync_QuandoOSAguardandoAprovacao_DeveAlterarStatusParaEmExecucao()
+    {
+        // Arrange
+        var os = CriarOrdemServico(status: StatusOrdemServico.AguardandoAprovacao);
+
+        _ordemServicoRepositoryMock.Setup(r => r.ObterPorIdAsync("1")).ReturnsAsync(os);
+        _ordemServicoRepositoryMock.Setup(r => r.AtualizarAsync(It.IsAny<OrdemServico>())).ReturnsAsync(os);
+
+        // Act
+        var resultado = await _sut.IniciarExecucaoAsync(1);
+
+        // Assert
+        Assert.Equal(StatusOrdemServico.EmExecucao, resultado.Status);
+        Assert.NotNull(resultado.DataModificacao);
+    }
+
+    [Fact]
+    public async Task IniciarExecucaoAsync_QuandoOSNaoAguardandoAprovacao_DeveLancarInvalidOperationException()
+    {
+        // Arrange
+        var os = CriarOrdemServico(status: StatusOrdemServico.EmDiagnostico);
+
+        _ordemServicoRepositoryMock.Setup(r => r.ObterPorIdAsync("1")).ReturnsAsync(os);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _sut.IniciarExecucaoAsync(1));
+    }
+
+    #endregion
+
+    // ─── FinalizarAsync ──────────────────────────────────────────────────────────
+
+    #region FinalizarAsync
+
+    [Fact]
+    public async Task FinalizarAsync_QuandoOSEmExecucao_DeveAlterarStatusParaFinalizada()
+    {
+        // Arrange
+        var os = CriarOrdemServico(status: StatusOrdemServico.EmExecucao);
+
+        _ordemServicoRepositoryMock.Setup(r => r.ObterPorIdAsync("1")).ReturnsAsync(os);
+        _ordemServicoRepositoryMock.Setup(r => r.AtualizarAsync(It.IsAny<OrdemServico>())).ReturnsAsync(os);
+
+        // Act
+        var resultado = await _sut.FinalizarAsync(1);
+
+        // Assert
+        Assert.Equal(StatusOrdemServico.Finalizada, resultado.Status);
+        Assert.NotNull(resultado.DataModificacao);
+    }
+
+    [Fact]
+    public async Task FinalizarAsync_QuandoOSNaoEmExecucao_DeveLancarInvalidOperationException()
+    {
+        // Arrange
+        var os = CriarOrdemServico(status: StatusOrdemServico.AguardandoAprovacao);
+
+        _ordemServicoRepositoryMock.Setup(r => r.ObterPorIdAsync("1")).ReturnsAsync(os);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _sut.FinalizarAsync(1));
+    }
+
+    #endregion
+
+    // ─── EntregarAsync ───────────────────────────────────────────────────────────
+
+    #region EntregarAsync
+
+    [Fact]
+    public async Task EntregarAsync_QuandoOSFinalizada_DeveAlterarStatusParaEntregue()
+    {
+        // Arrange
+        var os = CriarOrdemServico(status: StatusOrdemServico.Finalizada);
+
+        _ordemServicoRepositoryMock.Setup(r => r.ObterPorIdAsync("1")).ReturnsAsync(os);
+        _ordemServicoRepositoryMock.Setup(r => r.AtualizarAsync(It.IsAny<OrdemServico>())).ReturnsAsync(os);
+
+        // Act
+        var resultado = await _sut.EntregarAsync(1);
+
+        // Assert
+        Assert.Equal(StatusOrdemServico.Entregue, resultado.Status);
+        Assert.NotNull(resultado.DataModificacao);
+    }
+
+    [Fact]
+    public async Task EntregarAsync_QuandoOSNaoFinalizada_DeveLancarInvalidOperationException()
+    {
+        // Arrange
+        var os = CriarOrdemServico(status: StatusOrdemServico.EmExecucao);
+
+        _ordemServicoRepositoryMock.Setup(r => r.ObterPorIdAsync("1")).ReturnsAsync(os);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _sut.EntregarAsync(1));
     }
 
     #endregion
