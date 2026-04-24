@@ -1,4 +1,4 @@
-using MechanicLtda.Domain.Entities;
+﻿using MechanicLtda.Domain.Entities;
 using MechanicLtda.Domain.Interfaces.Repositories;
 using MechanicLtda.Domain.Interfaces.Services;
 using MechanicLtda.Domain.Services.Base;
@@ -12,20 +12,24 @@ namespace MechanicLtda.Domain.Services
         private readonly IItemOrdemServicoRepository _itemRepository;
         private readonly IOrdemServicoRepository     _ordemServicoRepository;
         private readonly IEstoqueService             _estoqueService;
+        private readonly IOrcamentoService           _orcamentoService;
         private readonly ILogger<ItemOrdemServicoService> _logger;
 
         public ItemOrdemServicoService(
             ILogger<ItemOrdemServicoService> logger,
-            IConfiguration configuration,
-            INotificadorService notificadorService,
-            IItemOrdemServicoRepository itemRepository,
-            IOrdemServicoRepository ordemServicoRepository,
-            IEstoqueService estoqueService) : base(notificadorService, configuration)
+            IConfiguration                  configuration,
+            INotificadorService             notificadorService,
+            IItemOrdemServicoRepository     itemRepository,
+            IOrdemServicoRepository         ordemServicoRepository,
+            IEstoqueService                 estoqueService,
+            IOrcamentoService               orcamentoService)
+            : base(notificadorService, configuration)
         {
-            _logger                 = logger;
             _itemRepository         = itemRepository;
             _ordemServicoRepository = ordemServicoRepository;
             _estoqueService         = estoqueService;
+            _orcamentoService       = orcamentoService;
+            _logger                 = logger;
         }
 
         public async Task<ItemOrdemServico> AdicionarAsync(
@@ -33,11 +37,9 @@ namespace MechanicLtda.Domain.Services
         {
             try
             {
-                _ = await _ordemServicoRepository.ObterPorIdAsync(ordemServicoId.ToString())
-                    ?? throw new KeyNotFoundException(
-                        $"Ordem de Servi�o com Id '{ordemServicoId}' n�o encontrada.");
+                var os = await _ordemServicoRepository.ObterPorIdAsync(ordemServicoId.ToString())
+                    ?? throw new KeyNotFoundException($"Ordem de Serviço com Id '{ordemServicoId}' não encontrada.");
 
-                // Realiza a baixa no estoque quando um EstoqueId for informado
                 if (estoqueId.HasValue)
                     await _estoqueService.SubtrairQuantidadeAsync(estoqueId.Value, quantidade);
 
@@ -48,18 +50,18 @@ namespace MechanicLtda.Domain.Services
                     Quantidade     = quantidade,
                     ValorUnitario  = valorUnitario
                 };
-
                 item.CalcularValorTotal();
 
-                var itemCriado = await _itemRepository.AdicionarAsync(item);
+                var resultado = await _itemRepository.AdicionarAsync(item);
 
-                await AtualizarValorTotalOrdemServicoAsync(ordemServicoId);
+                await AtualizarTotaisAsync(os);
+                await _orcamentoService.CriarOuAtualizarAsync(ordemServicoId);
 
-                return itemCriado;
+                return resultado;
             }
             catch (Exception ex)
             {
-                Notificar(ex, "Ocorreu um erro no m�todo ItemOrdemServicoService:AdicionarAsync", _logger);
+                Notificar(ex, "Ocorreu um erro no metodo ItemOrdemServicoService:AdicionarAsync", _logger);
                 throw;
             }
         }
@@ -69,20 +71,25 @@ namespace MechanicLtda.Domain.Services
             try
             {
                 var existente = await _itemRepository.ObterPorIdAsync(item.Id.ToString())
-                    ?? throw new KeyNotFoundException($"Item com Id '{item.Id}' n�o encontrado.");
+                    ?? throw new KeyNotFoundException($"Item com Id '{item.Id}' não encontrado.");
 
                 item.OrdemServicoId = existente.OrdemServicoId;
                 item.CalcularValorTotal();
 
-                var itemAtualizado = await _itemRepository.AtualizarAsync(item);
+                var resultado = await _itemRepository.AtualizarAsync(item);
 
-                await AtualizarValorTotalOrdemServicoAsync(item.OrdemServicoId);
+                var os = await _ordemServicoRepository.ObterPorIdAsync(existente.OrdemServicoId.ToString());
+                if (os is not null)
+                {
+                    await AtualizarTotaisAsync(os);
+                    await _orcamentoService.CriarOuAtualizarAsync(os.Id);
+                }
 
-                return itemAtualizado;
+                return resultado;
             }
             catch (Exception ex)
             {
-                Notificar(ex, "Ocorreu um erro no m�todo ItemOrdemServicoService:AtualizarAsync", _logger);
+                Notificar(ex, "Ocorreu um erro no metodo ItemOrdemServicoService:AtualizarAsync", _logger);
                 throw;
             }
         }
@@ -92,17 +99,22 @@ namespace MechanicLtda.Domain.Services
             try
             {
                 var existente = await _itemRepository.ObterPorIdAsync(id)
-                    ?? throw new KeyNotFoundException($"Item com Id '{id}' n�o encontrado.");
+                    ?? throw new KeyNotFoundException($"Item com Id '{id}' não encontrado.");
 
                 var ordemServicoId = existente.OrdemServicoId;
 
                 await _itemRepository.RemoverAsync(id);
 
-                await AtualizarValorTotalOrdemServicoAsync(ordemServicoId);
+                var os = await _ordemServicoRepository.ObterPorIdAsync(ordemServicoId.ToString());
+                if (os is not null)
+                {
+                    await AtualizarTotaisAsync(os);
+                    await _orcamentoService.CriarOuAtualizarAsync(ordemServicoId);
+                }
             }
             catch (Exception ex)
             {
-                Notificar(ex, "Ocorreu um erro no m�todo ItemOrdemServicoService:RemoverAsync", _logger);
+                Notificar(ex, "Ocorreu um erro no metodo ItemOrdemServicoService:RemoverAsync", _logger);
                 throw;
             }
         }
@@ -115,7 +127,7 @@ namespace MechanicLtda.Domain.Services
             }
             catch (Exception ex)
             {
-                Notificar(ex, "Ocorreu um erro no m�todo ItemOrdemServicoService:ObterPorOrdemServicoIdAsync", _logger);
+                Notificar(ex, "Ocorreu um erro no metodo ItemOrdemServicoService:ObterPorOrdemServicoIdAsync", _logger);
                 throw;
             }
         }
@@ -128,23 +140,19 @@ namespace MechanicLtda.Domain.Services
             }
             catch (Exception ex)
             {
-                Notificar(ex, "Ocorreu um erro no m�todo ItemOrdemServicoService:ObterPorIdAsync", _logger);
+                Notificar(ex, "Ocorreu um erro no metodo ItemOrdemServicoService:ObterPorIdAsync", _logger);
                 throw;
             }
         }
 
-        // Trigger: recalcula e persiste o ValorTotalEstimado da OS ap�s qualquer altera��o nos itens.
-        // Quando a entidade Orcamento for implementada, este m�todo tamb�m dever� atualiz�-la.
-        private async Task AtualizarValorTotalOrdemServicoAsync(int ordemServicoId)
+        // ─── Privado ────────────────────────────────────────────────────────────
+
+        private async Task AtualizarTotaisAsync(OrdemServico os)
         {
-            var ordemServico = await _ordemServicoRepository.ObterPorIdAsync(ordemServicoId.ToString());
-            if (ordemServico is null) return;
-
-            var itens = await _itemRepository.ObterPorOrdemServicoIdAsync(ordemServicoId);
-            ordemServico.ValorTotalEstimado = itens.Sum(i => i.ValorTotal);
-            ordemServico.DataModificacao    = DateTime.UtcNow;
-
-            await _ordemServicoRepository.AtualizarAsync(ordemServico);
+            var itens = await _itemRepository.ObterPorOrdemServicoIdAsync(os.Id);
+            os.ValorTotalEstimado = itens.Sum(i => i.ValorTotal);
+            os.DataModificacao    = DateTime.UtcNow;
+            await _ordemServicoRepository.AtualizarAsync(os);
         }
     }
 }

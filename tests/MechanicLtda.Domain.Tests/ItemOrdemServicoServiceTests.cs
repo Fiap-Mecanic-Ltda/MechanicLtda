@@ -17,6 +17,7 @@ public class ItemOrdemServicoServiceTests
     private readonly Mock<ILogger<ItemOrdemServicoService>> _loggerMock;
     private readonly Mock<IConfiguration>                  _configurationMock;
     private readonly Mock<IEstoqueService>                 _estoqueServiceMock;
+    private readonly Mock<IOrcamentoService>               _orcamentoServiceMock;
     private readonly ItemOrdemServicoService               _sut;
 
     public ItemOrdemServicoServiceTests()
@@ -27,6 +28,12 @@ public class ItemOrdemServicoServiceTests
         _loggerMock                 = new Mock<ILogger<ItemOrdemServicoService>>();
         _configurationMock          = new Mock<IConfiguration>();
         _estoqueServiceMock         = new Mock<IEstoqueService>();
+        _orcamentoServiceMock       = new Mock<IOrcamentoService>();
+
+        // Configuração padrão: CriarOuAtualizarAsync não lança exceção
+        _orcamentoServiceMock
+            .Setup(o => o.CriarOuAtualizarAsync(It.IsAny<int>()))
+            .ReturnsAsync(new Orcamento());
 
         _sut = new ItemOrdemServicoService(
             _loggerMock.Object,
@@ -34,7 +41,8 @@ public class ItemOrdemServicoServiceTests
             _notificadorMock.Object,
             _itemRepositoryMock.Object,
             _ordemServicoRepositoryMock.Object,
-            _estoqueServiceMock.Object);
+            _estoqueServiceMock.Object,
+            _orcamentoServiceMock.Object);
     }
 
     // ─── helpers ────────────────────────────────────────────────────────────────
@@ -206,6 +214,36 @@ public class ItemOrdemServicoServiceTests
         Assert.Equal(150m, osAtualizada.ValorTotalEstimado);
         Assert.NotNull(osAtualizada.DataModificacao);
         _ordemServicoRepositoryMock.Verify(r => r.AtualizarAsync(It.IsAny<OrdemServico>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task AdicionarAsync_DeveTriggerCriacaoOrcamento()
+    {
+        // Arrange
+        var ordemServico   = CriarOrdemServico();
+        var itemAdicionado = CriarItem(quantidade: 2, valorUnitario: 75m);
+
+        _ordemServicoRepositoryMock
+            .Setup(r => r.ObterPorIdAsync("1"))
+            .ReturnsAsync(ordemServico);
+
+        _itemRepositoryMock
+            .Setup(r => r.AdicionarAsync(It.IsAny<ItemOrdemServico>()))
+            .ReturnsAsync(itemAdicionado);
+
+        _itemRepositoryMock
+            .Setup(r => r.ObterPorOrdemServicoIdAsync(1))
+            .ReturnsAsync([itemAdicionado]);
+
+        _ordemServicoRepositoryMock
+            .Setup(r => r.AtualizarAsync(It.IsAny<OrdemServico>()))
+            .ReturnsAsync(ordemServico);
+
+        // Act
+        await _sut.AdicionarAsync(ordemServicoId: 1, estoqueId: null, quantidade: 2, valorUnitario: 75m);
+
+        // Assert
+        _orcamentoServiceMock.Verify(o => o.CriarOuAtualizarAsync(1), Times.Once);
     }
 
     [Fact]
@@ -476,6 +514,42 @@ public class ItemOrdemServicoServiceTests
         Assert.NotNull(osAtualizada.DataModificacao);
     }
 
+    [Fact]
+    public async Task AtualizarAsync_DeveTriggerAtualizacaoOrcamento()
+    {
+        // Arrange
+        var itemExistente  = CriarItem(quantidade: 1, valorUnitario: 100m);
+        var itemAtualizado = CriarItem(quantidade: 3, valorUnitario: 200m);
+        itemAtualizado.ValorTotal = 600m;
+        var ordemServico   = CriarOrdemServico();
+
+        _itemRepositoryMock
+            .Setup(r => r.ObterPorIdAsync("1"))
+            .ReturnsAsync(itemExistente);
+
+        _itemRepositoryMock
+            .Setup(r => r.AtualizarAsync(It.IsAny<ItemOrdemServico>()))
+            .ReturnsAsync(itemAtualizado);
+
+        _ordemServicoRepositoryMock
+            .Setup(r => r.ObterPorIdAsync("1"))
+            .ReturnsAsync(ordemServico);
+
+        _itemRepositoryMock
+            .Setup(r => r.ObterPorOrdemServicoIdAsync(1))
+            .ReturnsAsync([itemAtualizado]);
+
+        _ordemServicoRepositoryMock
+            .Setup(r => r.AtualizarAsync(It.IsAny<OrdemServico>()))
+            .ReturnsAsync(ordemServico);
+
+        // Act
+        await _sut.AtualizarAsync(itemAtualizado);
+
+        // Assert
+        _orcamentoServiceMock.Verify(o => o.CriarOuAtualizarAsync(1), Times.Once);
+    }
+
     #endregion
 
     // ─── RemoverAsync ───────────────────────────────────────────────────────────
@@ -550,6 +624,25 @@ public class ItemOrdemServicoServiceTests
         Assert.Equal(0m, osAtualizada.ValorTotalEstimado);  // sem itens → 0
         Assert.NotNull(osAtualizada.DataModificacao);
         _ordemServicoRepositoryMock.Verify(r => r.AtualizarAsync(It.IsAny<OrdemServico>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task RemoverAsync_DeveTriggerAtualizacaoOrcamento()
+    {
+        // Arrange
+        var id           = "1";
+        var item         = CriarItem(quantidade: 2, valorUnitario: 100m);
+        var ordemServico = CriarOrdemServico(valorTotalEstimado: 200m);
+
+        _itemRepositoryMock.Setup(r => r.ObterPorIdAsync(id)).ReturnsAsync(item);
+        _itemRepositoryMock.Setup(r => r.RemoverAsync(id)).Returns(Task.CompletedTask);
+        ConfigurarTriggerAtualizacaoOS(ordemServico, []);
+
+        // Act
+        await _sut.RemoverAsync(id);
+
+        // Assert
+        _orcamentoServiceMock.Verify(o => o.CriarOuAtualizarAsync(1), Times.Once);
     }
 
     #endregion
