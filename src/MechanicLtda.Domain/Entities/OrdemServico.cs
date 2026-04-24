@@ -34,5 +34,7 @@ namespace MechanicLtda.Domain.Entities
         public Cliente Cliente { get; set; }
 
         public ICollection<ItemOrdemServico> ItensOrdemServico { get; set; } = [];
+
+        public Orcamento? Orcamento { get; set; }
     }
 }
