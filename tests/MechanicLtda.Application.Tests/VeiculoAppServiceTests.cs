@@ -306,4 +306,110 @@ public class VeiculoAppServiceTests
     }
 
     #endregion
+
+    // ─── Dados Sensíveis — Placa ─────────────────────────────────────────────────
+
+    #region DadosSensiveis_Placa
+
+    [Fact]
+    public async Task AdicionarAsync_DevePropagarPlacaParaOServicoDeDominio()
+    {
+        // Arrange
+        var placa = "ABC1234";
+        var dto = new VeiculoCreateDto { Placa = placa, Marca = "Toyota", Modelo = "Corolla", Ano = 2022, ClienteId = 1 };
+
+        string placaPassada = null!;
+        _serviceMock
+            .Setup(s => s.AdicionarAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+            .Callback<string, string, string, int, int>((p, _, _, _, _) => placaPassada = p)
+            .ReturnsAsync(new Veiculo { Placa = placa, ClienteId = dto.ClienteId });
+
+        _mapperMock
+            .Setup(m => m.Map<VeiculoDto>(It.IsAny<Veiculo>()))
+            .Returns(new VeiculoDto { Placa = placa });
+
+        // Act
+        await _sut.AdicionarAsync(dto);
+
+        // Assert
+        Assert.Equal(placa, placaPassada);
+    }
+
+    [Fact]
+    public async Task AdicionarAsync_PlacaMercosul_DevePropagarCorretamenteParaOServico()
+    {
+        // Arrange
+        var placa = "ABC1D23";
+        var dto = new VeiculoCreateDto { Placa = placa, Marca = "Honda", Modelo = "Civic", Ano = 2023, ClienteId = 1 };
+
+        string placaPassada = null!;
+        _serviceMock
+            .Setup(s => s.AdicionarAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+            .Callback<string, string, string, int, int>((p, _, _, _, _) => placaPassada = p)
+            .ReturnsAsync(new Veiculo { Placa = placa, ClienteId = dto.ClienteId });
+
+        _mapperMock
+            .Setup(m => m.Map<VeiculoDto>(It.IsAny<Veiculo>()))
+            .Returns(new VeiculoDto { Placa = placa });
+
+        // Act
+        await _sut.AdicionarAsync(dto);
+
+        // Assert
+        Assert.Equal(placa, placaPassada);
+    }
+
+    [Fact]
+    public async Task AdicionarAsync_ResponseDeveConterPlacaMapeadaCorretamente()
+    {
+        // Arrange
+        var placa = "XYZ9999";
+        var dto = new VeiculoCreateDto { Placa = placa, Marca = "Fiat", Modelo = "Uno", Ano = 2020, ClienteId = 1 };
+        var entidade = new Veiculo { Placa = placa.ToUpper(), ClienteId = 1, Ativo = true };
+        var veiculoDto = new VeiculoDto { Placa = placa.ToUpper(), ClienteId = 1 };
+
+        _serviceMock
+            .Setup(s => s.AdicionarAsync(dto.Placa, dto.Marca, dto.Modelo, dto.Ano, dto.ClienteId))
+            .ReturnsAsync(entidade);
+
+        _mapperMock
+            .Setup(m => m.Map<VeiculoDto>(entidade))
+            .Returns(veiculoDto);
+
+        // Act
+        var response = await _sut.AdicionarAsync(dto);
+
+        // Assert
+        Assert.False(response.hasErrors);
+        Assert.Equal(placa.ToUpper(), response.getResponse.Placa);
+    }
+
+    [Fact]
+    public async Task AtualizarAsync_DevePropagarPlacaAtualizadaParaOServico()
+    {
+        // Arrange
+        var novaPlaca = "NEW1D23";
+        var dto = new VeiculoUpdateDto { Placa = novaPlaca, Marca = "Ford", Modelo = "Ka", Ano = 2023, Ativo = true, ClienteId = 1 };
+        var entidade = new Veiculo { Id = 1, Placa = novaPlaca, ClienteId = 1 };
+
+        _mapperMock.Setup(m => m.Map<Veiculo>(dto)).Returns(entidade);
+
+        Veiculo veiculoPassado = null!;
+        _serviceMock
+            .Setup(s => s.AtualizarAsync(It.IsAny<Veiculo>()))
+            .Callback<Veiculo>(v => veiculoPassado = v)
+            .ReturnsAsync(entidade);
+
+        _mapperMock
+            .Setup(m => m.Map<VeiculoDto>(entidade))
+            .Returns(new VeiculoDto { Placa = novaPlaca });
+
+        // Act
+        await _sut.AtualizarAsync("1", dto);
+
+        // Assert
+        Assert.Equal(novaPlaca, veiculoPassado.Placa);
+    }
+
+    #endregion
 }

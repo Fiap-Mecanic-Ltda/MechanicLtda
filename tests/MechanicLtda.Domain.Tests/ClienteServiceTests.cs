@@ -1,4 +1,4 @@
-using MechanicLtda.Domain.Entities;
+﻿using MechanicLtda.Domain.Entities;
 using MechanicLtda.Domain.Interfaces.Repositories;
 using MechanicLtda.Domain.Interfaces.Services;
 using MechanicLtda.Domain.Services;
@@ -37,9 +37,10 @@ public class ClienteServiceTests
     public async Task AdicionarAsync_QuandoEmailNaoExiste_DeveRetornarClienteCriado()
     {
         // Arrange
-        var nome = "Jo�o Silva";
+        var nome = "João Silva";
         var email = "joao@email.com";
         var telefone = "11999999999";
+        var cpfCnpj = "12345678901";
 
         var clienteEsperado = new Cliente
         {
@@ -47,6 +48,7 @@ public class ClienteServiceTests
             Nome = nome,
             Email = email,
             Telefone = telefone,
+            CpfCnpj = cpfCnpj,
             Ativo = true,
             DataCriacao = DateTime.Now
         };
@@ -60,12 +62,13 @@ public class ClienteServiceTests
             .ReturnsAsync(clienteEsperado);
 
         // Act
-        var resultado = await _sut.AdicionarAsync(nome, email, telefone);
+        var resultado = await _sut.AdicionarAsync(nome, email, telefone, cpfCnpj);
 
         // Assert
         Assert.NotNull(resultado);
         Assert.Equal(email, resultado.Email);
         Assert.Equal(nome, resultado.Nome);
+        Assert.Equal(cpfCnpj, resultado.CpfCnpj);
         Assert.True(resultado.Ativo);
         _repositoryMock.Verify(r => r.AdicionarAsync(It.IsAny<Cliente>()), Times.Once);
     }
@@ -82,7 +85,7 @@ public class ClienteServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _sut.AdicionarAsync("Nome Qualquer", email, null));
+            () => _sut.AdicionarAsync("Nome Qualquer", email, null, "12345678901"));
 
         _repositoryMock.Verify(r => r.AdicionarAsync(It.IsAny<Cliente>()), Times.Never);
     }
@@ -93,18 +96,139 @@ public class ClienteServiceTests
         // Arrange
         var nome = "Maria";
         var email = "maria@email.com";
+        var cpfCnpj = "98765432100";
 
-        var clienteEsperado = new Cliente { Id = 2, Nome = nome, Email = email, Ativo = true };
+        var clienteEsperado = new Cliente { Id = 2, Nome = nome, Email = email, CpfCnpj = cpfCnpj, Ativo = true };
 
         _repositoryMock.Setup(r => r.EmailExisteAsync(email)).ReturnsAsync(false);
         _repositoryMock.Setup(r => r.AdicionarAsync(It.IsAny<Cliente>())).ReturnsAsync(clienteEsperado);
 
         // Act
-        var resultado = await _sut.AdicionarAsync(nome, email, null);
+        var resultado = await _sut.AdicionarAsync(nome, email, null, cpfCnpj);
 
         // Assert
         Assert.NotNull(resultado);
         Assert.Null(resultado.Telefone);
+        Assert.Equal(cpfCnpj, resultado.CpfCnpj);
+    }
+
+    [Fact]
+    public async Task AdicionarAsync_QuandoCriado_DeveAtribuirCpfCnpjCorretamente()
+    {
+        // Arrange
+        var cpfCnpj = "12345678000199";
+        Cliente clienteCriado = null!;
+
+        _repositoryMock.Setup(r => r.EmailExisteAsync(It.IsAny<string>())).ReturnsAsync(false);
+        _repositoryMock
+            .Setup(r => r.AdicionarAsync(It.IsAny<Cliente>()))
+            .Callback<Cliente>(c => clienteCriado = c)
+            .ReturnsAsync((Cliente c) => c);
+
+        // Act
+        await _sut.AdicionarAsync("Carlos", "carlos@email.com", null, cpfCnpj);
+
+        // Assert
+        Assert.NotNull(clienteCriado);
+        Assert.Equal(cpfCnpj, clienteCriado.CpfCnpj);
+        Assert.True(clienteCriado.Ativo);
+    }
+
+    #endregion
+
+    // ─── Dados Sensíveis — CpfCnpj ───────────────────────────────────────────────
+
+    #region DadosSensiveis_CpfCnpj
+
+    [Fact]
+    public async Task AdicionarAsync_DeveAtribuirCpfCnpjCorretamenteNaEntidade()
+    {
+        // Arrange
+        var cpfCnpj = "52998224725";
+        Cliente clienteSalvo = null!;
+
+        _repositoryMock.Setup(r => r.EmailExisteAsync(It.IsAny<string>())).ReturnsAsync(false);
+        _repositoryMock
+            .Setup(r => r.AdicionarAsync(It.IsAny<Cliente>()))
+            .Callback<Cliente>(c => clienteSalvo = c)
+            .ReturnsAsync((Cliente c) => c);
+
+        // Act
+        await _sut.AdicionarAsync("João", "joao@email.com", null, cpfCnpj);
+
+        // Assert
+        Assert.NotNull(clienteSalvo);
+        Assert.Equal(cpfCnpj, clienteSalvo.CpfCnpj);
+    }
+
+    [Fact]
+    public async Task AdicionarAsync_ComCnpj_DeveAtribuirCnpjCorretamenteNaEntidade()
+    {
+        // Arrange
+        var cnpj = "11222333000181";
+        Cliente clienteSalvo = null!;
+
+        _repositoryMock.Setup(r => r.EmailExisteAsync(It.IsAny<string>())).ReturnsAsync(false);
+        _repositoryMock
+            .Setup(r => r.AdicionarAsync(It.IsAny<Cliente>()))
+            .Callback<Cliente>(c => clienteSalvo = c)
+            .ReturnsAsync((Cliente c) => c);
+
+        // Act
+        await _sut.AdicionarAsync("Empresa LTDA", "empresa@email.com", null, cnpj);
+
+        // Assert
+        Assert.NotNull(clienteSalvo);
+        Assert.Equal(cnpj, clienteSalvo.CpfCnpj);
+    }
+
+    [Fact]
+    public async Task AtualizarAsync_DevePreservarCpfCnpjNaAtualizacao()
+    {
+        // Arrange
+        var cpfCnpj = "52998224725";
+        var id = 1;
+        var cliente = new Cliente { Id = id, Nome = "Atualizado", Email = "at@email.com", CpfCnpj = cpfCnpj, Ativo = true };
+
+        _repositoryMock
+            .Setup(r => r.ObterPorIdAsync(id.ToString()))
+            .ReturnsAsync(new Cliente { Id = id, Email = "at@email.com", CpfCnpj = cpfCnpj, DataCriacao = DateTime.Now });
+
+        _repositoryMock
+            .Setup(r => r.ObterPorEmailAsync(cliente.Email))
+            .ReturnsAsync((Cliente?)null);
+
+        Cliente clienteSalvo = null!;
+        _repositoryMock
+            .Setup(r => r.AtualizarAsync(It.IsAny<Cliente>()))
+            .Callback<Cliente>(c => clienteSalvo = c)
+            .ReturnsAsync((Cliente c) => c);
+
+        // Act
+        await _sut.AtualizarAsync(cliente);
+
+        // Assert
+        Assert.Equal(cpfCnpj, clienteSalvo.CpfCnpj);
+    }
+
+    [Fact]
+    public async Task AdicionarAsync_CpfCnpjNaoDeveSerAlteradoPeloServico()
+    {
+        // Arrange — o serviço não deve transformar o valor (ex: remover máscara)
+        var cpfComMascara = "529.982.247-25";
+        Cliente clienteSalvo = null!;
+
+        _repositoryMock.Setup(r => r.EmailExisteAsync(It.IsAny<string>())).ReturnsAsync(false);
+        _repositoryMock
+            .Setup(r => r.AdicionarAsync(It.IsAny<Cliente>()))
+            .Callback<Cliente>(c => clienteSalvo = c)
+            .ReturnsAsync((Cliente c) => c);
+
+        // Act
+        await _sut.AdicionarAsync("Maria", "maria@email.com", null, cpfComMascara);
+
+        // Assert — o serviço repassa o valor sem transformação
+        Assert.Equal(cpfComMascara, clienteSalvo.CpfCnpj);
     }
 
     #endregion
@@ -121,12 +245,13 @@ public class ClienteServiceTests
             Id = id,
             Nome = "Novo Nome",
             Email = "novo@email.com",
+            CpfCnpj = "12345678901",
             Ativo = true
         };
 
         _repositoryMock
             .Setup(r => r.ObterPorIdAsync(id.ToString()))
-            .ReturnsAsync(new Cliente { Id = id, Nome = "Antigo", Email = "antigo@email.com", DataCriacao = DateTime.Now });
+            .ReturnsAsync(new Cliente { Id = id, Nome = "Antigo", Email = "antigo@email.com", CpfCnpj = "00000000000", DataCriacao = DateTime.Now });
 
         _repositoryMock
             .Setup(r => r.ObterPorEmailAsync(cliente.Email))
@@ -149,7 +274,7 @@ public class ClienteServiceTests
     public async Task AtualizarAsync_QuandoClienteNaoEncontrado_DeveLancarKeyNotFoundException()
     {
         // Arrange
-        var cliente = new Cliente { Id = 99, Email = "x@email.com" };
+        var cliente = new Cliente { Id = 99, Email = "x@email.com", CpfCnpj = "12345678901" };
 
         _repositoryMock
             .Setup(r => r.ObterPorIdAsync(cliente.Id.ToString()))
@@ -170,8 +295,8 @@ public class ClienteServiceTests
         var outroId = 2;
         var emailEmUso = "emuso@email.com";
 
-        var cliente = new Cliente { Id = id, Email = emailEmUso };
-        var outroCliente = new Cliente { Id = outroId, Email = emailEmUso };
+        var cliente = new Cliente { Id = id, Email = emailEmUso, CpfCnpj = "12345678901" };
+        var outroCliente = new Cliente { Id = outroId, Email = emailEmUso, CpfCnpj = "98765432100" };
 
         _repositoryMock.Setup(r => r.ObterPorIdAsync(id.ToString())).ReturnsAsync(cliente);
         _repositoryMock.Setup(r => r.ObterPorEmailAsync(emailEmUso)).ReturnsAsync(outroCliente);
@@ -187,15 +312,15 @@ public class ClienteServiceTests
         // Arrange
         var id = 1;
         var email = "mesmo@email.com";
-        var cliente = new Cliente { Id = id, Nome = "Atualizado", Email = email, Ativo = true };
+        var cliente = new Cliente { Id = id, Nome = "Atualizado", Email = email, CpfCnpj = "12345678901", Ativo = true };
 
         _repositoryMock
             .Setup(r => r.ObterPorIdAsync(id.ToString()))
-            .ReturnsAsync(new Cliente { Id = id, Email = email, DataCriacao = DateTime.Now });
+            .ReturnsAsync(new Cliente { Id = id, Email = email, CpfCnpj = "12345678901", DataCriacao = DateTime.Now });
 
         _repositoryMock
             .Setup(r => r.ObterPorEmailAsync(email))
-            .ReturnsAsync(cliente); // mesmo cliente
+            .ReturnsAsync(cliente);
 
         _repositoryMock
             .Setup(r => r.AtualizarAsync(It.IsAny<Cliente>()))
@@ -219,8 +344,8 @@ public class ClienteServiceTests
         // Arrange
         var lista = new List<Cliente>
         {
-            new() { Id = 1, Nome = "Cliente 1", Email = "c1@email.com" },
-            new() { Id = 2, Nome = "Cliente 2", Email = "c2@email.com" }
+            new() { Id = 1, Nome = "Cliente 1", Email = "c1@email.com", CpfCnpj = "11111111111" },
+            new() { Id = 2, Nome = "Cliente 2", Email = "c2@email.com", CpfCnpj = "22222222222" }
         };
 
         _repositoryMock.Setup(r => r.ObterTodosAsync()).ReturnsAsync(lista);
@@ -254,7 +379,7 @@ public class ClienteServiceTests
     {
         // Arrange
         var id = 1;
-        var cliente = new Cliente { Id = id, Nome = "Jo�o", Email = "joao@email.com" };
+        var cliente = new Cliente { Id = id, Nome = "João", Email = "joao@email.com", CpfCnpj = "12345678901" };
 
         _repositoryMock.Setup(r => r.ObterPorIdAsync(id.ToString())).ReturnsAsync(cliente);
 
@@ -290,7 +415,7 @@ public class ClienteServiceTests
     {
         // Arrange
         var id = "1";
-        var cliente = new Cliente { Id = 1 };
+        var cliente = new Cliente { Id = 1, CpfCnpj = "12345678901" };
 
         _repositoryMock.Setup(r => r.ObterPorIdAsync(id)).ReturnsAsync(cliente);
         _repositoryMock.Setup(r => r.RemoverAsync(id)).Returns(Task.CompletedTask);
