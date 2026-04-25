@@ -298,4 +298,98 @@ public class VeiculoServiceTests
     }
 
     #endregion
+
+    // ─── Dados Sensíveis — Placa ─────────────────────────────────────────────────
+
+    #region DadosSensiveis_Placa
+
+    [Fact]
+    public async Task AdicionarAsync_DeveConverterPlacaParaMaiusculas()
+    {
+        // Arrange
+        var placaMinuscula = "abc1234";
+        var clienteId = 1;
+        Veiculo veiculoSalvo = null!;
+
+        _clienteRepositoryMock
+            .Setup(r => r.ObterPorIdAsync(clienteId.ToString()))
+            .ReturnsAsync(new Cliente { Id = clienteId, Nome = "João", Email = "j@email.com", CpfCnpj = "52998224725", Ativo = true, DataCriacao = DateTime.Now });
+
+        _veiculoRepositoryMock
+            .Setup(r => r.PlacaExisteAsync(placaMinuscula))
+            .ReturnsAsync(false);
+
+        _veiculoRepositoryMock
+            .Setup(r => r.AdicionarAsync(It.IsAny<Veiculo>()))
+            .Callback<Veiculo>(v => veiculoSalvo = v)
+            .ReturnsAsync((Veiculo v) => v);
+
+        // Act
+        await _sut.AdicionarAsync(placaMinuscula, "Toyota", "Corolla", 2022, clienteId);
+
+        // Assert
+        Assert.NotNull(veiculoSalvo);
+        Assert.Equal("ABC1234", veiculoSalvo.Placa);
+    }
+
+    [Theory]
+    [InlineData("abc1234", "ABC1234")]      // formato antigo minúsculo
+    [InlineData("ABC1234", "ABC1234")]      // formato antigo já maiúsculo
+    [InlineData("abc1d23", "ABC1D23")]      // Mercosul minúsculo
+    [InlineData("ABC1D23", "ABC1D23")]      // Mercosul já maiúsculo
+    public async Task AdicionarAsync_SempreDeveArmazenarPlacaEmMaiusculas(string placaEntrada, string placaEsperada)
+    {
+        // Arrange
+        var clienteId = 1;
+        Veiculo veiculoSalvo = null!;
+
+        _clienteRepositoryMock
+            .Setup(r => r.ObterPorIdAsync(clienteId.ToString()))
+            .ReturnsAsync(new Cliente { Id = clienteId, Nome = "Ana", Email = "ana@email.com", CpfCnpj = "52998224725", Ativo = true, DataCriacao = DateTime.Now });
+
+        _veiculoRepositoryMock
+            .Setup(r => r.PlacaExisteAsync(placaEntrada))
+            .ReturnsAsync(false);
+
+        _veiculoRepositoryMock
+            .Setup(r => r.AdicionarAsync(It.IsAny<Veiculo>()))
+            .Callback<Veiculo>(v => veiculoSalvo = v)
+            .ReturnsAsync((Veiculo v) => v);
+
+        // Act
+        await _sut.AdicionarAsync(placaEntrada, "Honda", "Civic", 2023, clienteId);
+
+        // Assert
+        Assert.Equal(placaEsperada, veiculoSalvo.Placa);
+    }
+
+    [Fact]
+    public async Task AdicionarAsync_PlacaMercosulEmMaiusculas_DeveSerArmazenadaCorretamente()
+    {
+        // Arrange
+        var placa = "BRA2E19";
+        var clienteId = 1;
+        Veiculo veiculoSalvo = null!;
+
+        _clienteRepositoryMock
+            .Setup(r => r.ObterPorIdAsync(clienteId.ToString()))
+            .ReturnsAsync(new Cliente { Id = clienteId, Nome = "Carlos", Email = "c@email.com", CpfCnpj = "52998224725", Ativo = true, DataCriacao = DateTime.Now });
+
+        _veiculoRepositoryMock
+            .Setup(r => r.PlacaExisteAsync(placa))
+            .ReturnsAsync(false);
+
+        _veiculoRepositoryMock
+            .Setup(r => r.AdicionarAsync(It.IsAny<Veiculo>()))
+            .Callback<Veiculo>(v => veiculoSalvo = v)
+            .ReturnsAsync((Veiculo v) => v);
+
+        // Act
+        await _sut.AdicionarAsync(placa, "VW", "Polo", 2024, clienteId);
+
+        // Assert
+        Assert.Equal(placa.ToUpper(), veiculoSalvo.Placa);
+    }
+
+    #endregion
 }

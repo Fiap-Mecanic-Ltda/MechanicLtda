@@ -21,7 +21,7 @@ namespace MechanicLtda.Domain.Services
             _logger = logger;
         }
 
-        public async Task<Cliente> AdicionarAsync(string nome, string email, string? telefone)
+        public async Task<Cliente> AdicionarAsync(string nome, string email, string? telefone, string cpfCnpj)
         {
             try
             {
@@ -34,6 +34,7 @@ namespace MechanicLtda.Domain.Services
                     Nome = nome,
                     Email = email,
                     Telefone = telefone,
+                    CpfCnpj = cpfCnpj,
                     Ativo = true,
                     DataCriacao = DateTime.Now
                 };
