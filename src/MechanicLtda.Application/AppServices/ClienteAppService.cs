@@ -22,7 +22,7 @@ namespace MechanicLtda.Application.AppServices
             var response = new ResponseDto<ClienteDto>();
             try
             {
-                var cliente = await _clienteService.AdicionarAsync(dto.Nome, dto.Email, dto.Telefone);
+                var cliente = await _clienteService.AdicionarAsync(dto.Nome, dto.Email, dto.Telefone, dto.CpfCnpj);
                 return response.setResponse(_mapper.Map<ClienteDto>(cliente));
             }
             catch (Exception ex)

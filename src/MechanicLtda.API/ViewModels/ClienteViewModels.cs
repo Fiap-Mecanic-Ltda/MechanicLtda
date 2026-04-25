@@ -15,6 +15,10 @@ namespace MechanicLtda.API.ViewModels
 
         [MaxLength(20)]
         public string? Telefone { get; set; }
+
+        [Required]
+        [MaxLength(14)]
+        public string CpfCnpj { get; set; }
     }
 
     public class ClienteUpdateViewModel
@@ -30,6 +34,10 @@ namespace MechanicLtda.API.ViewModels
 
         [MaxLength(20)]
         public string? Telefone { get; set; }
+
+        [Required]
+        [MaxLength(14)]
+        public string CpfCnpj { get; set; }
 
         [Required]
         public bool Ativo { get; set; }

@@ -27,13 +27,13 @@ public class ClienteAppServiceTests
     public async Task AdicionarAsync_QuandoSucesso_DeveRetornarResponseSemErros()
     {
         // Arrange
-        var dto = new ClienteCreateDto { Nome = "João", Email = "joao@email.com", Telefone = "11999999999" };
+        var dto = new ClienteCreateDto { Nome = "João", Email = "joao@email.com", Telefone = "11999999999", CpfCnpj = "12345678901" };
 
-        var clienteCriado = new Cliente { Id = 1, Nome = dto.Nome, Email = dto.Email };
-        var clienteDto = new ClienteDto { Nome = dto.Nome, Email = dto.Email };
+        var clienteCriado = new Cliente { Id = 1, Nome = dto.Nome, Email = dto.Email, CpfCnpj = dto.CpfCnpj };
+        var clienteDto = new ClienteDto { Nome = dto.Nome, Email = dto.Email, CpfCnpj = dto.CpfCnpj };
 
         _serviceMock
-            .Setup(s => s.AdicionarAsync(dto.Nome, dto.Email, dto.Telefone))
+            .Setup(s => s.AdicionarAsync(dto.Nome, dto.Email, dto.Telefone, dto.CpfCnpj))
             .ReturnsAsync(clienteCriado);
 
         _mapperMock
@@ -52,10 +52,10 @@ public class ClienteAppServiceTests
     public async Task AdicionarAsync_QuandoEmailJaCadastrado_DeveRetornarResponseComErro()
     {
         // Arrange
-        var dto = new ClienteCreateDto { Nome = "Fail", Email = "fail@email.com" };
+        var dto = new ClienteCreateDto { Nome = "Fail", Email = "fail@email.com", CpfCnpj = "12345678901" };
 
         _serviceMock
-            .Setup(s => s.AdicionarAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>()))
+            .Setup(s => s.AdicionarAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string>()))
             .ThrowsAsync(new InvalidOperationException("E-mail já cadastrado."));
 
         // Act
@@ -75,10 +75,10 @@ public class ClienteAppServiceTests
     {
         // Arrange
         var id = 1;
-        var dto = new ClienteUpdateDto { Nome = "Atualizado", Email = "atualizado@email.com", Ativo = true };
+        var dto = new ClienteUpdateDto { Nome = "Atualizado", Email = "atualizado@email.com", CpfCnpj = "12345678901", Ativo = true };
 
-        var entidade = new Cliente { Id = id, Nome = dto.Nome, Email = dto.Email };
-        var clienteDto = new ClienteDto { Nome = dto.Nome, Email = dto.Email };
+        var entidade = new Cliente { Id = id, Nome = dto.Nome, Email = dto.Email, CpfCnpj = dto.CpfCnpj };
+        var clienteDto = new ClienteDto { Nome = dto.Nome, Email = dto.Email, CpfCnpj = dto.CpfCnpj };
 
         _mapperMock.Setup(m => m.Map<Cliente>(dto)).Returns(entidade);
         _serviceMock.Setup(s => s.AtualizarAsync(It.IsAny<Cliente>())).ReturnsAsync(entidade);
@@ -97,7 +97,7 @@ public class ClienteAppServiceTests
     {
         // Arrange
         var id = 99;
-        var dto = new ClienteUpdateDto { Nome = "x", Email = "x@email.com" };
+        var dto = new ClienteUpdateDto { Nome = "x", Email = "x@email.com", CpfCnpj = "12345678901" };
 
         _mapperMock.Setup(m => m.Map<Cliente>(dto)).Returns(new Cliente());
         _serviceMock
@@ -121,11 +121,11 @@ public class ClienteAppServiceTests
         // Arrange
         var clientes = new List<Cliente>
         {
-            new() { Id = 1, Nome = "c1", Email = "c1@email.com" },
-            new() { Id = 2, Nome = "c2", Email = "c2@email.com" }
+            new() { Id = 1, Nome = "c1", Email = "c1@email.com", CpfCnpj = "11111111111" },
+            new() { Id = 2, Nome = "c2", Email = "c2@email.com", CpfCnpj = "22222222222" }
         };
 
-        var dtos = clientes.Select(c => new ClienteDto { Nome = c.Nome, Email = c.Email });
+        var dtos = clientes.Select(c => new ClienteDto { Nome = c.Nome, Email = c.Email, CpfCnpj = c.CpfCnpj });
 
         _serviceMock.Setup(s => s.ObterTodosAsync()).ReturnsAsync(clientes);
         _mapperMock.Setup(m => m.Map<IEnumerable<ClienteDto>>(clientes)).Returns(dtos);
@@ -162,8 +162,8 @@ public class ClienteAppServiceTests
     {
         // Arrange
         var id = 1;
-        var cliente = new Cliente { Id = id, Nome = "João", Email = "joao@email.com" };
-        var dto = new ClienteDto { Id = id, Nome = "João", Email = "joao@email.com" };
+        var cliente = new Cliente { Id = id, Nome = "João", Email = "joao@email.com", CpfCnpj = "12345678901" };
+        var dto = new ClienteDto { Id = id, Nome = "João", Email = "joao@email.com", CpfCnpj = "12345678901" };
 
         _serviceMock.Setup(s => s.ObterPorIdAsync(id.ToString())).ReturnsAsync(cliente);
         _mapperMock.Setup(m => m.Map<ClienteDto>(cliente)).Returns(dto);
