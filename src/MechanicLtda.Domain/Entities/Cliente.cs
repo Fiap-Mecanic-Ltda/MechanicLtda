@@ -17,6 +17,10 @@ namespace MechanicLtda.Domain.Entities
         public string? Telefone { get; set; }
 
         [Required]
+        [MaxLength(14)]
+        public string CpfCnpj { get; set; }
+
+        [Required]
         public bool Ativo { get; set; }
 
         [Required]

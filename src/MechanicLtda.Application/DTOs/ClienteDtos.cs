@@ -6,6 +6,7 @@ namespace MechanicLtda.Application.DTOs
         public string Nome { get; set; }
         public string Email { get; set; }
         public string? Telefone { get; set; }
+        public string CpfCnpj { get; set; }
         public bool Ativo { get; set; }
     }
 
@@ -14,6 +15,7 @@ namespace MechanicLtda.Application.DTOs
         public string Nome { get; set; }
         public string Email { get; set; }
         public string? Telefone { get; set; }
+        public string CpfCnpj { get; set; }
     }
 
     public class ClienteUpdateDto
@@ -21,6 +23,7 @@ namespace MechanicLtda.Application.DTOs
         public string Nome { get; set; }
         public string Email { get; set; }
         public string? Telefone { get; set; }
+        public string CpfCnpj { get; set; }
         public bool Ativo { get; set; }
     }
 }
