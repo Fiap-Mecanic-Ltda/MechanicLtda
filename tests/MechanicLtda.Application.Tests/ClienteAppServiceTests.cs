@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using MechanicLtda.Application.AppServices;
 using MechanicLtda.Application.DTOs;
 using MechanicLtda.Domain.Entities;
@@ -27,7 +27,7 @@ public class ClienteAppServiceTests
     public async Task AdicionarAsync_QuandoSucesso_DeveRetornarResponseSemErros()
     {
         // Arrange
-        var dto = new ClienteCreateDto { Nome = "Jo�o", Email = "joao@email.com", Telefone = "11999999999", CpfCnpj = "12345678901" };
+        var dto = new ClienteCreateDto { Nome = "João", Email = "joao@email.com", Telefone = "11999999999", CpfCnpj = "12345678901" };
 
         var clienteCriado = new Cliente { Id = 1, Nome = dto.Nome, Email = dto.Email, CpfCnpj = dto.CpfCnpj };
         var clienteDto = new ClienteDto { Nome = dto.Nome, Email = dto.Email, CpfCnpj = dto.CpfCnpj };
@@ -56,7 +56,7 @@ public class ClienteAppServiceTests
 
         _serviceMock
             .Setup(s => s.AdicionarAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string>()))
-            .ThrowsAsync(new InvalidOperationException("E-mail j� cadastrado."));
+            .ThrowsAsync(new InvalidOperationException("E-mail já cadastrado."));
 
         // Act
         var response = await _sut.AdicionarAsync(dto);
@@ -102,7 +102,7 @@ public class ClienteAppServiceTests
         _mapperMock.Setup(m => m.Map<Cliente>(dto)).Returns(new Cliente());
         _serviceMock
             .Setup(s => s.AtualizarAsync(It.IsAny<Cliente>()))
-            .ThrowsAsync(new KeyNotFoundException("Cliente n�o encontrado."));
+            .ThrowsAsync(new KeyNotFoundException("Cliente não encontrado."));
 
         // Act
         var response = await _sut.AtualizarAsync(id.ToString(), dto);
@@ -162,8 +162,8 @@ public class ClienteAppServiceTests
     {
         // Arrange
         var id = 1;
-        var cliente = new Cliente { Id = id, Nome = "Jo�o", Email = "joao@email.com", CpfCnpj = "12345678901" };
-        var dto = new ClienteDto { Id = id, Nome = "Jo�o", Email = "joao@email.com", CpfCnpj = "12345678901" };
+        var cliente = new Cliente { Id = id, Nome = "João", Email = "joao@email.com", CpfCnpj = "12345678901" };
+        var dto = new ClienteDto { Id = id, Nome = "João", Email = "joao@email.com", CpfCnpj = "12345678901" };
 
         _serviceMock.Setup(s => s.ObterPorIdAsync(id.ToString())).ReturnsAsync(cliente);
         _mapperMock.Setup(m => m.Map<ClienteDto>(cliente)).Returns(dto);
@@ -218,7 +218,7 @@ public class ClienteAppServiceTests
         var id = "999";
         _serviceMock
             .Setup(s => s.RemoverAsync(id))
-            .ThrowsAsync(new KeyNotFoundException("Cliente n�o encontrado."));
+            .ThrowsAsync(new KeyNotFoundException("Cliente não encontrado."));
 
         // Act
         var response = await _sut.RemoverAsync(id);
@@ -226,6 +226,112 @@ public class ClienteAppServiceTests
         // Assert
         Assert.True(response.hasErrors);
         Assert.False(response.getResponse);
+    }
+
+    #endregion
+
+    // ─── Dados Sensíveis — CpfCnpj ───────────────────────────────────────────────
+
+    #region DadosSensiveis_CpfCnpj
+
+    [Fact]
+    public async Task AdicionarAsync_DevePropagarlCpfCnpjParaOServicoDeDominio()
+    {
+        // Arrange
+        var cpfCnpj = "52998224725";
+        var dto = new ClienteCreateDto { Nome = "João", Email = "joao@email.com", CpfCnpj = cpfCnpj };
+
+        string cpfPassado = null!;
+        _serviceMock
+            .Setup(s => s.AdicionarAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string>()))
+            .Callback<string, string, string?, string>((_, _, _, cpf) => cpfPassado = cpf)
+            .ReturnsAsync(new Cliente { Nome = dto.Nome, Email = dto.Email, CpfCnpj = cpfCnpj });
+
+        _mapperMock
+            .Setup(m => m.Map<ClienteDto>(It.IsAny<Cliente>()))
+            .Returns(new ClienteDto { CpfCnpj = cpfCnpj });
+
+        // Act
+        await _sut.AdicionarAsync(dto);
+
+        // Assert
+        Assert.Equal(cpfCnpj, cpfPassado);
+    }
+
+    [Fact]
+    public async Task AdicionarAsync_ComCnpj_DevePropagarlCnpjParaOServicoDeDominio()
+    {
+        // Arrange
+        var cnpj = "11222333000181";
+        var dto = new ClienteCreateDto { Nome = "Empresa", Email = "emp@email.com", CpfCnpj = cnpj };
+
+        string cnpjPassado = null!;
+        _serviceMock
+            .Setup(s => s.AdicionarAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string>()))
+            .Callback<string, string, string?, string>((_, _, _, cpfCnpj) => cnpjPassado = cpfCnpj)
+            .ReturnsAsync(new Cliente { Nome = dto.Nome, Email = dto.Email, CpfCnpj = cnpj });
+
+        _mapperMock
+            .Setup(m => m.Map<ClienteDto>(It.IsAny<Cliente>()))
+            .Returns(new ClienteDto { CpfCnpj = cnpj });
+
+        // Act
+        await _sut.AdicionarAsync(dto);
+
+        // Assert
+        Assert.Equal(cnpj, cnpjPassado);
+    }
+
+    [Fact]
+    public async Task AdicionarAsync_ResponseDeveConterCpfCnpjMapeadoCorretamente()
+    {
+        // Arrange
+        var cpfCnpj = "52998224725";
+        var dto = new ClienteCreateDto { Nome = "Ana", Email = "ana@email.com", CpfCnpj = cpfCnpj };
+        var entidade = new Cliente { Nome = dto.Nome, Email = dto.Email, CpfCnpj = cpfCnpj };
+        var clienteDto = new ClienteDto { Nome = dto.Nome, Email = dto.Email, CpfCnpj = cpfCnpj };
+
+        _serviceMock
+            .Setup(s => s.AdicionarAsync(dto.Nome, dto.Email, dto.Telefone, dto.CpfCnpj))
+            .ReturnsAsync(entidade);
+
+        _mapperMock
+            .Setup(m => m.Map<ClienteDto>(entidade))
+            .Returns(clienteDto);
+
+        // Act
+        var response = await _sut.AdicionarAsync(dto);
+
+        // Assert
+        Assert.False(response.hasErrors);
+        Assert.Equal(cpfCnpj, response.getResponse.CpfCnpj);
+    }
+
+    [Fact]
+    public async Task AtualizarAsync_DevePropagarlCpfCnpjAtualizadoParaOServicoDeDominio()
+    {
+        // Arrange
+        var cpfCnpj = "11144477735";
+        var dto = new ClienteUpdateDto { Nome = "Atualizado", Email = "at@email.com", CpfCnpj = cpfCnpj, Ativo = true };
+        var entidade = new Cliente { Id = 1, Nome = dto.Nome, Email = dto.Email, CpfCnpj = cpfCnpj };
+
+        _mapperMock.Setup(m => m.Map<Cliente>(dto)).Returns(entidade);
+
+        Cliente clientePassado = null!;
+        _serviceMock
+            .Setup(s => s.AtualizarAsync(It.IsAny<Cliente>()))
+            .Callback<Cliente>(c => clientePassado = c)
+            .ReturnsAsync(entidade);
+
+        _mapperMock
+            .Setup(m => m.Map<ClienteDto>(entidade))
+            .Returns(new ClienteDto { CpfCnpj = cpfCnpj });
+
+        // Act
+        await _sut.AtualizarAsync("1", dto);
+
+        // Assert
+        Assert.Equal(cpfCnpj, clientePassado.CpfCnpj);
     }
 
     #endregion

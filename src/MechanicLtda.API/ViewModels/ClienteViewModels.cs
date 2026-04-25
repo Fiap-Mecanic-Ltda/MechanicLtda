@@ -1,3 +1,4 @@
+using MechanicLtda.API.Validations;
 using System.ComponentModel.DataAnnotations;
 
 namespace MechanicLtda.API.ViewModels
@@ -18,6 +19,7 @@ namespace MechanicLtda.API.ViewModels
 
         [Required]
         [MaxLength(14)]
+        [CpfCnpj]
         public string CpfCnpj { get; set; }
     }
 
@@ -37,6 +39,7 @@ namespace MechanicLtda.API.ViewModels
 
         [Required]
         [MaxLength(14)]
+        [CpfCnpj]
         public string CpfCnpj { get; set; }
 
         [Required]

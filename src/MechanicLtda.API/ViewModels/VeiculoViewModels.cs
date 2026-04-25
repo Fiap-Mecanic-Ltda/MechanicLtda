@@ -1,3 +1,4 @@
+using MechanicLtda.API.Validations;
 using System.ComponentModel.DataAnnotations;
 
 namespace MechanicLtda.API.ViewModels
@@ -6,6 +7,7 @@ namespace MechanicLtda.API.ViewModels
     {
         [Required]
         [MaxLength(10)]
+        [PlacaVeiculo]
         public string Placa { get; set; }
 
         [Required]
@@ -28,6 +30,7 @@ namespace MechanicLtda.API.ViewModels
     {
         [Required]
         [MaxLength(10)]
+        [PlacaVeiculo]
         public string Placa { get; set; }
 
         [Required]

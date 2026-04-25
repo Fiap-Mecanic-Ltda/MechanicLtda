@@ -1,4 +1,4 @@
-using MechanicLtda.Domain.Entities;
+﻿using MechanicLtda.Domain.Entities;
 using MechanicLtda.Domain.Interfaces.Repositories;
 using MechanicLtda.Domain.Interfaces.Services;
 using MechanicLtda.Domain.Services;
@@ -37,7 +37,7 @@ public class ClienteServiceTests
     public async Task AdicionarAsync_QuandoEmailNaoExiste_DeveRetornarClienteCriado()
     {
         // Arrange
-        var nome = "Jo�o Silva";
+        var nome = "João Silva";
         var email = "joao@email.com";
         var telefone = "11999999999";
         var cpfCnpj = "12345678901";
@@ -132,6 +132,103 @@ public class ClienteServiceTests
         Assert.NotNull(clienteCriado);
         Assert.Equal(cpfCnpj, clienteCriado.CpfCnpj);
         Assert.True(clienteCriado.Ativo);
+    }
+
+    #endregion
+
+    // ─── Dados Sensíveis — CpfCnpj ───────────────────────────────────────────────
+
+    #region DadosSensiveis_CpfCnpj
+
+    [Fact]
+    public async Task AdicionarAsync_DeveAtribuirCpfCnpjCorretamenteNaEntidade()
+    {
+        // Arrange
+        var cpfCnpj = "52998224725";
+        Cliente clienteSalvo = null!;
+
+        _repositoryMock.Setup(r => r.EmailExisteAsync(It.IsAny<string>())).ReturnsAsync(false);
+        _repositoryMock
+            .Setup(r => r.AdicionarAsync(It.IsAny<Cliente>()))
+            .Callback<Cliente>(c => clienteSalvo = c)
+            .ReturnsAsync((Cliente c) => c);
+
+        // Act
+        await _sut.AdicionarAsync("João", "joao@email.com", null, cpfCnpj);
+
+        // Assert
+        Assert.NotNull(clienteSalvo);
+        Assert.Equal(cpfCnpj, clienteSalvo.CpfCnpj);
+    }
+
+    [Fact]
+    public async Task AdicionarAsync_ComCnpj_DeveAtribuirCnpjCorretamenteNaEntidade()
+    {
+        // Arrange
+        var cnpj = "11222333000181";
+        Cliente clienteSalvo = null!;
+
+        _repositoryMock.Setup(r => r.EmailExisteAsync(It.IsAny<string>())).ReturnsAsync(false);
+        _repositoryMock
+            .Setup(r => r.AdicionarAsync(It.IsAny<Cliente>()))
+            .Callback<Cliente>(c => clienteSalvo = c)
+            .ReturnsAsync((Cliente c) => c);
+
+        // Act
+        await _sut.AdicionarAsync("Empresa LTDA", "empresa@email.com", null, cnpj);
+
+        // Assert
+        Assert.NotNull(clienteSalvo);
+        Assert.Equal(cnpj, clienteSalvo.CpfCnpj);
+    }
+
+    [Fact]
+    public async Task AtualizarAsync_DevePreservarCpfCnpjNaAtualizacao()
+    {
+        // Arrange
+        var cpfCnpj = "52998224725";
+        var id = 1;
+        var cliente = new Cliente { Id = id, Nome = "Atualizado", Email = "at@email.com", CpfCnpj = cpfCnpj, Ativo = true };
+
+        _repositoryMock
+            .Setup(r => r.ObterPorIdAsync(id.ToString()))
+            .ReturnsAsync(new Cliente { Id = id, Email = "at@email.com", CpfCnpj = cpfCnpj, DataCriacao = DateTime.Now });
+
+        _repositoryMock
+            .Setup(r => r.ObterPorEmailAsync(cliente.Email))
+            .ReturnsAsync((Cliente?)null);
+
+        Cliente clienteSalvo = null!;
+        _repositoryMock
+            .Setup(r => r.AtualizarAsync(It.IsAny<Cliente>()))
+            .Callback<Cliente>(c => clienteSalvo = c)
+            .ReturnsAsync((Cliente c) => c);
+
+        // Act
+        await _sut.AtualizarAsync(cliente);
+
+        // Assert
+        Assert.Equal(cpfCnpj, clienteSalvo.CpfCnpj);
+    }
+
+    [Fact]
+    public async Task AdicionarAsync_CpfCnpjNaoDeveSerAlteradoPeloServico()
+    {
+        // Arrange — o serviço não deve transformar o valor (ex: remover máscara)
+        var cpfComMascara = "529.982.247-25";
+        Cliente clienteSalvo = null!;
+
+        _repositoryMock.Setup(r => r.EmailExisteAsync(It.IsAny<string>())).ReturnsAsync(false);
+        _repositoryMock
+            .Setup(r => r.AdicionarAsync(It.IsAny<Cliente>()))
+            .Callback<Cliente>(c => clienteSalvo = c)
+            .ReturnsAsync((Cliente c) => c);
+
+        // Act
+        await _sut.AdicionarAsync("Maria", "maria@email.com", null, cpfComMascara);
+
+        // Assert — o serviço repassa o valor sem transformação
+        Assert.Equal(cpfComMascara, clienteSalvo.CpfCnpj);
     }
 
     #endregion
@@ -282,7 +379,7 @@ public class ClienteServiceTests
     {
         // Arrange
         var id = 1;
-        var cliente = new Cliente { Id = id, Nome = "Jo�o", Email = "joao@email.com", CpfCnpj = "12345678901" };
+        var cliente = new Cliente { Id = id, Nome = "João", Email = "joao@email.com", CpfCnpj = "12345678901" };
 
         _repositoryMock.Setup(r => r.ObterPorIdAsync(id.ToString())).ReturnsAsync(cliente);
 
