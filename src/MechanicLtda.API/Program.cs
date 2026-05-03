@@ -2,6 +2,12 @@ using MechanicLtda.API.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add User Secrets in development environment
+if (builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddUserSecrets<Program>();
+}
+
 // Add services to the container.
 
 builder.Services.AddControllers();
