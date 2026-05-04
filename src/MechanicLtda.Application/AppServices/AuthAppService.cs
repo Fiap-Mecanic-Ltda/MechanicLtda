@@ -13,15 +13,15 @@ namespace MechanicLtda.Application.AppServices
 {
     public class AuthAppService : IAuthAppService
     {
-        private readonly UserManager<Usuario> _userManager;
+        private readonly UserManager<Usuario>   _userManager;
         private readonly SignInManager<Usuario> _signInManager;
-        private readonly IConfiguration _configuration;
+        private readonly IConfiguration        _configuration;
 
-        public AuthAppService(UserManager<Usuario> userManager,
+        public AuthAppService(UserManager<Usuario>   userManager,
                               SignInManager<Usuario> signInManager,
-                              IConfiguration configuration)
+                              IConfiguration        configuration)
         {
-            _userManager = userManager;
+            _userManager   = userManager;
             _signInManager = signInManager;
             _configuration = configuration;
         }
@@ -77,6 +77,10 @@ namespace MechanicLtda.Application.AppServices
                     return response;
                 }
 
+                // Atribui o role correspondente ao tipo de usuário
+                var role = ObterRolePorTipo(tipo);
+                await _userManager.AddToRoleAsync(usuario, role);
+
                 return response.setResponse(new UsuarioDto
                 {
                     Id       = Guid.Parse(usuario.Id),
@@ -118,24 +122,34 @@ namespace MechanicLtda.Application.AppServices
             }
         }
 
+        // ─── Privado ────────────────────────────────────────────────────────────
+
+        private static string ObterRolePorTipo(TipoUsuario tipo) => tipo switch
+        {
+            TipoUsuario.Administrador => "Administrador",
+            TipoUsuario.Funcionario   => "Funcionario",
+            TipoUsuario.Cliente       => "Cliente",
+            _                         => "Cliente"
+        };
+
         private async Task<TokenDto> GerarTokenAsync(Usuario usuario)
         {
             var roles = await _userManager.GetRolesAsync(usuario);
 
             var claims = new List<Claim>
             {
-                new(JwtRegisteredClaimNames.Sub, usuario.Id),
+                new(JwtRegisteredClaimNames.Sub,   usuario.Id),
                 new(JwtRegisteredClaimNames.Email, usuario.Email!),
-                new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new(JwtRegisteredClaimNames.Jti,   Guid.NewGuid().ToString()),
                 new("userName", usuario.UserName!),
-                new("tipo", usuario.Tipo.ToString())
+                new("tipo",     usuario.Tipo.ToString())
             };
 
             claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
-            var jwtSettings  = _configuration.GetSection("JwtSettings");
-            var secretKey    = Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!);
-            var expiracao    = DateTime.UtcNow.AddMinutes(Convert.ToDouble(jwtSettings["ExpiracaoMinutos"]));
+            var jwtSettings = _configuration.GetSection("JwtSettings");
+            var secretKey   = Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!);
+            var expiracao   = DateTime.UtcNow.AddMinutes(Convert.ToDouble(jwtSettings["ExpiracaoMinutos"]));
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {

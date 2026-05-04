@@ -1,15 +1,18 @@
 using AutoMapper;
-using MechanicLtda.Application.DTOs;
+using MechanicLtda.API.Authorization;
 using MechanicLtda.API.Controllers.Base;
 using MechanicLtda.API.ViewModels;
+using MechanicLtda.Application.AppServices.Interfaces;
+using MechanicLtda.Application.DTOs;
 using MechanicLtda.Domain.Enums;
 using MechanicLtda.Domain.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MechanicLtda.Application.AppServices.Interfaces;
 
 namespace MechanicLtda.API.Controllers
 {
     [Route("api/estoque")]
+    [Authorize(Roles = Roles.Admin)]
     public class EstoqueController : BaseController
     {
         private readonly ILogger<EstoqueController> _logger;

@@ -1,27 +1,30 @@
 ﻿using AutoMapper;
+using MechanicLtda.API.Authorization;
 using MechanicLtda.API.Controllers.Base;
 using MechanicLtda.API.ViewModels;
 using MechanicLtda.Application.AppServices.Interfaces;
 using MechanicLtda.Application.DTOs;
 using MechanicLtda.Domain.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MechanicLtda.API.Controllers
 {
+    [Authorize(Roles = Roles.Administrador)]
     public class UsuarioController : BaseController
     {
         private readonly ILogger<UsuarioController> _logger;
-        private readonly IUsuarioAppService _usuarioAppService;
-        private readonly IMapper _mapper;
+        private readonly IUsuarioAppService         _usuarioAppService;
+        private readonly IMapper                    _mapper;
 
-        public UsuarioController(INotificadorService notificadorService,
-                                  ILogger<UsuarioController> logger,
-                                  IUsuarioAppService usuarioAppService,
-                                  IMapper mapper) : base(notificadorService)
+        public UsuarioController(INotificadorService        notificadorService,
+                                 ILogger<UsuarioController> logger,
+                                 IUsuarioAppService         usuarioAppService,
+                                 IMapper                    mapper) : base(notificadorService)
         {
-            _logger = logger;
+            _logger            = logger;
             _usuarioAppService = usuarioAppService;
-            _mapper = mapper;
+            _mapper            = mapper;
         }
 
         [HttpGet]
@@ -51,7 +54,7 @@ namespace MechanicLtda.API.Controllers
             }
             catch (Exception ex)
             {
-                GravaException(ex, "Falha ao buscar modalidades", _logger);
+                GravaException(ex, "Falha ao criar usuário", _logger);
                 return CustomResponse();
             }
         }

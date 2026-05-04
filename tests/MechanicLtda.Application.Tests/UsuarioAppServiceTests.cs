@@ -4,6 +4,7 @@ using MechanicLtda.Application.DTOs;
 using MechanicLtda.Domain.Entities;
 using MechanicLtda.Domain.Enums;
 using MechanicLtda.Domain.Interfaces.Services;
+using Microsoft.AspNetCore.Identity;
 using Moq;
 using Xunit;
 
@@ -12,6 +13,7 @@ namespace MechanicLtda.Application.Tests;
 public class UsuarioAppServiceTests
 {
     private readonly Mock<IUsuarioService> _serviceMock;
+    private readonly Mock<UserManager<Usuario>> _userManagerMock;
     private readonly Mock<IMapper> _mapperMock;
     private readonly UsuarioAppService _sut;
 
@@ -19,7 +21,12 @@ public class UsuarioAppServiceTests
     {
         _serviceMock = new Mock<IUsuarioService>();
         _mapperMock  = new Mock<IMapper>();
-        _sut         = new UsuarioAppService(_serviceMock.Object, _mapperMock.Object);
+
+        var storeMock    = new Mock<IUserStore<Usuario>>();
+        _userManagerMock = new Mock<UserManager<Usuario>>(
+            storeMock.Object, null, null, null, null, null, null, null, null);
+
+        _sut = new UsuarioAppService(_serviceMock.Object, _userManagerMock.Object, _mapperMock.Object);
     }
 
     #region AdicionarAsync
@@ -41,6 +48,10 @@ public class UsuarioAppServiceTests
         _serviceMock
             .Setup(s => s.AdicionarAsnyc(dto.UserName, dto.Email, dto.Tipo))
             .ReturnsAsync(usuarioCriado);
+
+        _userManagerMock
+            .Setup(u => u.AddToRoleAsync(usuarioCriado, It.IsAny<string>()))
+            .ReturnsAsync(IdentityResult.Success);
 
         _mapperMock
             .Setup(m => m.Map<UsuarioDto>(usuarioCriado))
@@ -88,6 +99,15 @@ public class UsuarioAppServiceTests
 
         _mapperMock.Setup(m => m.Map<Usuario>(dto)).Returns(entidade);
         _serviceMock.Setup(s => s.AtualizarAsync(It.IsAny<Usuario>())).ReturnsAsync(entidade);
+
+        _userManagerMock
+            .Setup(u => u.GetRolesAsync(entidade))
+            .ReturnsAsync(new List<string>());
+
+        _userManagerMock
+            .Setup(u => u.AddToRoleAsync(entidade, It.IsAny<string>()))
+            .ReturnsAsync(IdentityResult.Success);
+
         _mapperMock.Setup(m => m.Map<UsuarioDto>(entidade)).Returns(usuarioDto);
 
         // Act
