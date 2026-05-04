@@ -1,4 +1,5 @@
 using AutoMapper;
+using MechanicLtda.API.Authorization;
 using MechanicLtda.API.ViewModels;
 using MechanicLtda.Application.AppServices.Interfaces;
 using MechanicLtda.Application.DTOs;
@@ -7,9 +8,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace MechanicLtda.API.Controllers
 {
-    [Authorize]
-    [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = Roles.Admin)]
     public class OrcamentoController : ControllerBase
     {
         private readonly IOrcamentoAppService _orcamentoAppService;

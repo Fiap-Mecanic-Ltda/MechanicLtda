@@ -2,19 +2,25 @@
 using MechanicLtda.Application.AppServices.Interfaces;
 using MechanicLtda.Application.DTOs;
 using MechanicLtda.Domain.Entities;
+using MechanicLtda.Domain.Enums;
 using MechanicLtda.Domain.Interfaces.Services;
+using Microsoft.AspNetCore.Identity;
 
 namespace MechanicLtda.Application.AppServices
 {
     public class UsuarioAppService : IUsuarioAppService
     {
-        private readonly IUsuarioService _usuarioService;
-        private readonly IMapper _mapper;
+        private readonly IUsuarioService    _usuarioService;
+        private readonly UserManager<Usuario> _userManager;
+        private readonly IMapper            _mapper;
 
-        public UsuarioAppService(IUsuarioService usuarioService, IMapper mapper)
+        public UsuarioAppService(IUsuarioService      usuarioService,
+                                 UserManager<Usuario> userManager,
+                                 IMapper              mapper)
         {
             _usuarioService = usuarioService;
-            _mapper = mapper;
+            _userManager    = userManager;
+            _mapper         = mapper;
         }
 
         public async Task<ResponseDto<UsuarioDto>> AdicionarAsync(UsuarioCreateDto dto)
@@ -25,9 +31,13 @@ namespace MechanicLtda.Application.AppServices
             {
                 var usuario = await _usuarioService.AdicionarAsnyc(dto.UserName, dto.Email, dto.Tipo);
 
+                // Atribui o role correspondente ao tipo informado
+                var role = ObterRolePorTipo(dto.Tipo);
+                await _userManager.AddToRoleAsync(usuario, role);
+
                 return response.setResponse(_mapper.Map<UsuarioDto>(usuario));
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 return response.addError(ex);
             }
@@ -40,8 +50,12 @@ namespace MechanicLtda.Application.AppServices
             try
             {
                 var usuario = _mapper.Map<Usuario>(dto);
-                usuario.Id = id;
+                usuario.Id  = id;
+
                 var resultado = await _usuarioService.AtualizarAsync(usuario);
+
+                // Atualiza o role caso o tipo tenha sido alterado
+                await AtualizarRoleAsync(resultado, dto.Tipo);
 
                 return response.setResponse(_mapper.Map<UsuarioDto>(resultado));
             }
@@ -71,7 +85,31 @@ namespace MechanicLtda.Application.AppServices
                 return response.setResponse(true);
             }
             catch (KeyNotFoundException ex) { return response.addError(ex.Message); }
-            catch (Exception ex) { return response.addError(ex); }
+            catch (Exception ex)            { return response.addError(ex); }
         }
+
+        // ─── Privado ────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Remove todos os roles atuais do usuário e atribui o novo role
+        /// correspondente ao tipo informado.
+        /// </summary>
+        private async Task AtualizarRoleAsync(Usuario usuario, TipoUsuario novoTipo)
+        {
+            var rolesAtuais = await _userManager.GetRolesAsync(usuario);
+
+            if (rolesAtuais.Any())
+                await _userManager.RemoveFromRolesAsync(usuario, rolesAtuais);
+
+            await _userManager.AddToRoleAsync(usuario, ObterRolePorTipo(novoTipo));
+        }
+
+        private static string ObterRolePorTipo(TipoUsuario tipo) => tipo switch
+        {
+            TipoUsuario.Administrador => "Administrador",
+            TipoUsuario.Funcionario   => "Funcionario",
+            TipoUsuario.Cliente       => "Cliente",
+            _                         => "Cliente"
+        };
     }
 }
