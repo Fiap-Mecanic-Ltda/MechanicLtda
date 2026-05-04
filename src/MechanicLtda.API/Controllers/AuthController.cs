@@ -17,10 +17,11 @@ namespace MechanicLtda.API.Controllers
                               ILogger<AuthController> logger,
                               IAuthAppService authAppService) : base(notificadorService)
         {
-            _logger = logger;
+            _logger         = logger;
             _authAppService = authAppService;
         }
 
+        /// <summary>Realiza login e retorna o token JWT.</summary>
         [AllowAnonymous]
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginViewModel model)
@@ -39,6 +40,10 @@ namespace MechanicLtda.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Registra um novo usuário. Tipos disponíveis: 1 = Administrador, 2 = Funcionario, 3 = Cliente.
+        /// O role JWT é atribuído automaticamente conforme o tipo informado.
+        /// </summary>
         //[AllowAnonymous]
         //[HttpPost("registrar")]
         //public async Task<IActionResult> Registrar([FromBody] RegistrarViewModel model)
@@ -61,6 +66,7 @@ namespace MechanicLtda.API.Controllers
         //    }
         //}
 
+        /// <summary>Altera a senha do usuário autenticado.</summary>
         [HttpPut("alterar-senha")]
         public async Task<IActionResult> AlterarSenha([FromBody] AlterarSenhaViewModel model)
         {

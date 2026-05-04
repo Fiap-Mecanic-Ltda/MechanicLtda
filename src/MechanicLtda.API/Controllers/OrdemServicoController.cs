@@ -1,9 +1,11 @@
-using AutoMapper;
+ï»¿using AutoMapper;
+using MechanicLtda.API.Authorization;
 using MechanicLtda.API.Controllers.Base;
 using MechanicLtda.API.ViewModels;
 using MechanicLtda.Application.AppServices.Interfaces;
 using MechanicLtda.Application.DTOs;
 using MechanicLtda.Domain.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MechanicLtda.API.Controllers
@@ -11,21 +13,24 @@ namespace MechanicLtda.API.Controllers
     public class OrdemServicoController : BaseController
     {
         private readonly ILogger<OrdemServicoController> _logger;
-        private readonly IOrdemServicoAppService _ordemServicoAppService;
-        private readonly IMapper _mapper;
+        private readonly IOrdemServicoAppService         _ordemServicoAppService;
+        private readonly IMapper                         _mapper;
 
-        public OrdemServicoController(INotificadorService notificadorService,
+        public OrdemServicoController(INotificadorService      notificadorService,
                                       ILogger<OrdemServicoController> logger,
-                                      IOrdemServicoAppService ordemServicoAppService,
-                                      IMapper mapper) : base(notificadorService)
+                                      IOrdemServicoAppService  ordemServicoAppService,
+                                      IMapper                  mapper) : base(notificadorService)
         {
-            _logger = logger;
+            _logger                 = logger;
             _ordemServicoAppService = ordemServicoAppService;
-            _mapper = mapper;
+            _mapper                 = mapper;
         }
 
-        /// <summary>Lista todas as Ordens de Serviço.</summary>
+        // â”€â”€â”€ Endpoints administrativos (Administrador + Funcionario) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+        /// <summary>Lista todas as Ordens de ServiÃ§o. [Admin]</summary>
         [HttpGet]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> ObterTodos()
         {
             try
@@ -34,13 +39,14 @@ namespace MechanicLtda.API.Controllers
             }
             catch (Exception ex)
             {
-                GravaException(ex, "Falha ao obter ordens de serviço", _logger);
+                GravaException(ex, "Falha ao obter ordens de serviÃ§o", _logger);
                 return CustomResponse();
             }
         }
 
-        /// <summary>Retorna uma Ordem de Serviço pelo Id.</summary>
+        /// <summary>Retorna uma Ordem de ServiÃ§o pelo Id. [Admin]</summary>
         [HttpGet("{id}")]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> ObterPorId(string id)
         {
             try
@@ -49,13 +55,17 @@ namespace MechanicLtda.API.Controllers
             }
             catch (Exception ex)
             {
-                GravaException(ex, "Falha ao obter ordem de serviço", _logger);
+                GravaException(ex, "Falha ao obter ordem de serviÃ§o", _logger);
                 return CustomResponse();
             }
         }
 
-        /// <summary>Lista as Ordens de Serviço filtradas pelo ClienteId.</summary>
+        /// <summary>
+        /// Consulta o progresso das Ordens de ServiÃ§o de um cliente. [Admin + Cliente]
+        /// O cliente sÃ³ deve consultar o seu prÃ³prio clienteId.
+        /// </summary>
         [HttpGet("cliente/{clienteId}")]
+        [Authorize(Roles = Roles.AdminOuCliente)]
         public async Task<IActionResult> ObterPorCliente(string clienteId)
         {
             try
@@ -64,13 +74,14 @@ namespace MechanicLtda.API.Controllers
             }
             catch (Exception ex)
             {
-                GravaException(ex, "Falha ao obter ordens de serviço do cliente", _logger);
+                GravaException(ex, "Falha ao obter ordens de serviÃ§o do cliente", _logger);
                 return CustomResponse();
             }
         }
 
-        /// <summary>Cria uma nova Ordem de Serviço com status inicial 'Recebida'.</summary>
+        /// <summary>Cria uma nova Ordem de ServiÃ§o com status inicial 'Recebida'. [Admin]</summary>
         [HttpPost]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> Criar([FromBody] OrdemServicoCreateViewModel model)
         {
             try
@@ -83,13 +94,14 @@ namespace MechanicLtda.API.Controllers
             }
             catch (Exception ex)
             {
-                GravaException(ex, "Falha ao criar ordem de serviço", _logger);
+                GravaException(ex, "Falha ao criar ordem de serviÃ§o", _logger);
                 return CustomResponse();
             }
         }
 
-        /// <summary>Atualiza uma Ordem de Serviço. Avança automaticamente para 'Em Diagnóstico' quando descrição e valor estiverem preenchidos.</summary>
+        /// <summary>Atualiza uma Ordem de ServiÃ§o. [Admin]</summary>
         [HttpPut("{id}")]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> Atualizar(string id, [FromBody] OrdemServicoUpdateViewModel model)
         {
             try
@@ -102,13 +114,14 @@ namespace MechanicLtda.API.Controllers
             }
             catch (Exception ex)
             {
-                GravaException(ex, "Falha ao atualizar ordem de serviço", _logger);
+                GravaException(ex, "Falha ao atualizar ordem de serviÃ§o", _logger);
                 return CustomResponse();
             }
         }
 
-        /// <summary>Move a OS para o status 'Em Diagnóstico'. Requer status atual: Recebida.</summary>
+        /// <summary>Move a OS para 'Em DiagnÃ³stico'. [Admin]</summary>
         [HttpPatch("{id}/em-diagnostico")]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> IniciarDiagnostico(string id)
         {
             try
@@ -117,13 +130,14 @@ namespace MechanicLtda.API.Controllers
             }
             catch (Exception ex)
             {
-                GravaException(ex, "Falha ao iniciar diagnóstico da ordem de serviço", _logger);
+                GravaException(ex, "Falha ao iniciar diagnÃ³stico da ordem de serviÃ§o", _logger);
                 return CustomResponse();
             }
         }
 
-        /// <summary>Move a OS para o status 'Aguardando Aprovação'. Requer status atual: Em Diagnóstico.</summary>
+        /// <summary>Move a OS para 'Aguardando AprovaÃ§Ã£o'. [Admin]</summary>
         [HttpPatch("{id}/aguardando-aprovacao")]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> AguardarAprovacao(string id)
         {
             try
@@ -132,13 +146,14 @@ namespace MechanicLtda.API.Controllers
             }
             catch (Exception ex)
             {
-                GravaException(ex, "Falha ao mover ordem de serviço para Aguardando Aprovação", _logger);
+                GravaException(ex, "Falha ao mover ordem de serviÃ§o para Aguardando AprovaÃ§Ã£o", _logger);
                 return CustomResponse();
             }
         }
 
-        /// <summary>Move a OS para o status 'Em Execução'. Requer status atual: Aguardando Aprovação.</summary>
+        /// <summary>Move a OS para 'Em ExecuÃ§Ã£o'. [Admin]</summary>
         [HttpPatch("{id}/em-execucao")]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> IniciarExecucao(string id)
         {
             try
@@ -147,13 +162,14 @@ namespace MechanicLtda.API.Controllers
             }
             catch (Exception ex)
             {
-                GravaException(ex, "Falha ao iniciar execução da ordem de serviço", _logger);
+                GravaException(ex, "Falha ao iniciar execuÃ§Ã£o da ordem de serviÃ§o", _logger);
                 return CustomResponse();
             }
         }
 
-        /// <summary>Move a OS para o status 'Finalizada'. Requer status atual: Em Execução.</summary>
+        /// <summary>Move a OS para 'Finalizada'. [Admin]</summary>
         [HttpPatch("{id}/finalizar")]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> Finalizar(string id)
         {
             try
@@ -162,13 +178,14 @@ namespace MechanicLtda.API.Controllers
             }
             catch (Exception ex)
             {
-                GravaException(ex, "Falha ao finalizar ordem de serviço", _logger);
+                GravaException(ex, "Falha ao finalizar ordem de serviÃ§o", _logger);
                 return CustomResponse();
             }
         }
 
-        /// <summary>Move a OS para o status 'Entregue'. Requer status atual: Finalizada.</summary>
+        /// <summary>Move a OS para 'Entregue'. [Admin]</summary>
         [HttpPatch("{id}/entregar")]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> Entregar(string id)
         {
             try
@@ -177,13 +194,14 @@ namespace MechanicLtda.API.Controllers
             }
             catch (Exception ex)
             {
-                GravaException(ex, "Falha ao registrar entrega da ordem de serviço", _logger);
+                GravaException(ex, "Falha ao registrar entrega da ordem de serviÃ§o", _logger);
                 return CustomResponse();
             }
         }
 
-        /// <summary>Remove uma Ordem de Serviço.</summary>
+        /// <summary>Remove uma Ordem de ServiÃ§o. [Admin]</summary>
         [HttpDelete("{id}")]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> Remover(string id)
         {
             try
@@ -192,7 +210,7 @@ namespace MechanicLtda.API.Controllers
             }
             catch (Exception ex)
             {
-                GravaException(ex, "Falha ao remover ordem de serviço", _logger);
+                GravaException(ex, "Falha ao remover ordem de serviÃ§o", _logger);
                 return CustomResponse();
             }
         }

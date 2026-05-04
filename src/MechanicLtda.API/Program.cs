@@ -21,6 +21,9 @@ builder.Services.AddJwtAuthentication(builder.Configuration);
 
 var app = builder.Build();
 
+// Seed roles (Administrador, Funcionario, Cliente)
+await app.SeedRolesAsync();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
