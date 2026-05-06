@@ -47,7 +47,18 @@ namespace MechanicLtda.API.Controllers
         {
             try
             {
-                return CustomResponse(await _clienteAppService.ObterPorIdAsync(id));
+                var result = await _clienteAppService.ObterPorIdAsync(id);
+
+                // KeyNotFoundException é mapeada como erro no ResponseDto pelo AppService;
+                // precisamos retornar 404 em vez de 400 para "não encontrado".
+                if (result.hasErrors)
+                    return NotFound(new
+                    {
+                        success = false,
+                        errors  = result.getErrors
+                    });
+
+                return CustomResponse(result);
             }
             catch (Exception ex)
             {
@@ -64,8 +75,17 @@ namespace MechanicLtda.API.Controllers
                 if (!ModelState.IsValid)
                     return CustomResponse(ModelState);
 
-                var dto = _mapper.Map<ClienteCreateDto>(model);
-                return CustomResponse(await _clienteAppService.AdicionarAsync(dto));
+                var dto    = _mapper.Map<ClienteCreateDto>(model);
+                var result = await _clienteAppService.AdicionarAsync(dto);
+
+                if (result.hasErrors)
+                    return CustomResponse(result);
+
+                // Retorna 201 Created com a localização do recurso criado.
+                return CreatedAtAction(
+                    nameof(ObterPorId),
+                    new { id = result.getResponse!.Id },
+                    result.getResponse);
             }
             catch (Exception ex)
             {

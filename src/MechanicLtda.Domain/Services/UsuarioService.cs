@@ -54,6 +54,7 @@ namespace MechanicLtda.Domain.Services
         {
             try
             {
+                // Carrega a entidade já rastreada pelo EF Core
                 var existente = await _usuarioRepository.ObterPorIdAsync(usuario.Id)
                         ?? throw new KeyNotFoundException($"Usuário com Id '{usuario.Id}' não encontrado.");
 
@@ -61,9 +62,15 @@ namespace MechanicLtda.Domain.Services
                 if (emailEmUso is not null && emailEmUso.Id != usuario.Id)
                     throw new InvalidOperationException($"Já existe um usuário com o e-mail '{usuario.Email}'.");
 
-                usuario.DataModificacao = DateTime.UtcNow;
+                // Atualiza as propriedades da instância rastreada para evitar
+                // conflito de tracking ao chamar _dbSet.Update com outra instância
+                existente.UserName        = usuario.UserName;
+                existente.Email           = usuario.Email;
+                existente.Tipo            = usuario.Tipo;
+                existente.Ativo           = usuario.Ativo;
+                existente.DataModificacao = DateTime.UtcNow;
 
-                return await _usuarioRepository.AtualizarAsync(usuario);
+                return await _usuarioRepository.AtualizarAsync(existente);
             }
             catch (Exception ex)
             {
