@@ -209,6 +209,37 @@ Os projetos de teste estão em `tests/` e utilizam **xUnit** e **Moq**, cobrindo
 | `MechanicLtda.Application.Tests` | AppServices (ex: `OrcamentoAppService`) |
 | `MechanicLtda.Domain.Tests` | Serviços de domínio (ex: `ItemOrdemServicoService`) |
 
+## Cobertura de código
+
+### Pré-requisito
+
+Instale o `dotnet-reportgenerator-globaltool` caso ainda não tenha:
+
+```
+dotnet tool install --global dotnet-reportgenerator-globaltool
+```
+
+### Gerar o relatório
+
+Execute os comandos abaixo na raiz da solução:
+
+```
+dotnet test --settings coverlet.runsettings --collect:"XPlat Code Coverage" --results-directory ./coverage-output
+```
+### Gerar o relatório HTML
+
+```
+reportgenerator -reports:"./coverage-output/**/coverage.cobertura.xml" -targetdir:"./coverage-report" -reporttypes:Html
+```
+
+### Abrir o relatório (Windows)
+
+```
+start coverage-report\index.html
+```
+
+O relatório HTML será gerado na pasta `coverage-report/` e pode ser aberto em qualquer navegador.
+
 ## Estrutura de dependências
 
 ```
