@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <Exclude>[*]*Migrations*,[*]MechanicLtda.Infrastructure.FluentAPI.*</Exclude>
+          <ExcludeByFile>**/Migrations/**/*.cs,**/FluentAPI/**/*.cs</ExcludeByFile>
+          <ExcludeByAttribute>GeneratedCodeAttribute,ExcludeFromCodeCoverageAttribute,MigrationAttribute</ExcludeByAttribute>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

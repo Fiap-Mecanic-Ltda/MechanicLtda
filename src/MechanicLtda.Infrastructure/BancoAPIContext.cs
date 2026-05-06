@@ -1,14 +1,22 @@
 ﻿using MechanicLtda.Domain.Entities;
+using MechanicLtda.Infrastructure.FluentAPI.ConfiguracaoTabelas;
 using MechanicLtda.Infrastructure.FluentAPI.ConfiguracaoTabelas.Base;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using System.Reflection;
 
 namespace MechanicLtda.Infrastructure
 {
     public class BancoAPIContext : IdentityDbContext<Usuario>
     {
-        public BancoAPIContext(DbContextOptions<BancoAPIContext> options) : base(options) { }
+        private readonly IConfiguration? _configuration;
+
+        public BancoAPIContext(DbContextOptions<BancoAPIContext> options, IConfiguration? configuration = null)
+            : base(options)
+        {
+            _configuration = configuration;
+        }
 
         public DbSet<Usuario> Usuarios { get; set; }
         public DbSet<Cliente> Clientes { get; set; }
@@ -25,6 +33,18 @@ namespace MechanicLtda.Infrastructure
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(BancoAPIContext).Assembly);
 
             ConfigurarEntidadesAtravesDasClassesConfig(modelBuilder);
+
+            AplicarCriptografiaCpfCnpj(modelBuilder);
+        }
+
+        private void AplicarCriptografiaCpfCnpj(ModelBuilder modelBuilder)
+        {
+            var chave = _configuration?["Encryption:CpfCnpjKey"];
+            if (string.IsNullOrWhiteSpace(chave))
+                return;
+
+            var config = new ClienteConfig(chave);
+            config.Configurar(modelBuilder);
         }
 
         private void ConfigurarEntidadesAtravesDasClassesConfig(ModelBuilder modelBuilder)
@@ -41,12 +61,11 @@ namespace MechanicLtda.Infrastructure
         IEnumerable<Type> RecuperarTodosOsTiposQueHerdamDaClasse(Type MyType)
         {
             return Assembly.GetAssembly(MyType)
-            .GetTypes()
-            .Where(TheType =>
-            TheType.IsClass
-            && !TheType.IsAbstract
-            && TheType.IsSubclassOf(MyType)
-            );
+                .GetTypes()
+                .Where(TheType =>
+                    TheType.IsClass
+                    && !TheType.IsAbstract
+                    && TheType.IsSubclassOf(MyType));
         }
 
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = new CancellationToken())
@@ -54,14 +73,10 @@ namespace MechanicLtda.Infrastructure
             foreach (var entry in ChangeTracker.Entries().Where(entry => entry.Entity.GetType().GetProperty("DataCadastro") != null))
             {
                 if (entry.State == EntityState.Added)
-                {
                     entry.Property("DataCadastro").CurrentValue = DateTime.Now;
-                }
 
                 if (entry.State == EntityState.Modified)
-                {
                     entry.Property("DataCadastro").IsModified = false;
-                }
             }
 
             return base.SaveChangesAsync(cancellationToken);

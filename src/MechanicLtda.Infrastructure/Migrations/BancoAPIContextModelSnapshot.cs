@@ -35,8 +35,8 @@ namespace MechanicLtda.Infrastructure.Migrations
 
                     b.Property<string>("CpfCnpj")
                         .IsRequired()
-                        .HasMaxLength(14)
-                        .HasColumnType("nvarchar(14)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<DateTime>("DataCriacao")
                         .HasColumnType("datetime2");
