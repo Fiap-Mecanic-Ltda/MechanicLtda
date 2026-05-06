@@ -1,13 +1,16 @@
 using AutoMapper;
+using MechanicLtda.API.Authorization;
 using MechanicLtda.API.Controllers.Base;
 using MechanicLtda.API.ViewModels;
 using MechanicLtda.Application.AppServices.Interfaces;
 using MechanicLtda.Application.DTOs;
 using MechanicLtda.Domain.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MechanicLtda.API.Controllers
 {
+    [Authorize(Roles = Roles.Admin)]
     public class VeiculoController : BaseController
     {
         private readonly ILogger<VeiculoController> _logger;
@@ -43,7 +46,16 @@ namespace MechanicLtda.API.Controllers
         {
             try
             {
-                return CustomResponse(await _veiculoAppService.ObterPorIdAsync(id));
+                var result = await _veiculoAppService.ObterPorIdAsync(id);
+
+                if (result.hasErrors)
+                    return NotFound(new
+                    {
+                        success = false,
+                        errors  = result.getErrors
+                    });
+
+                return CustomResponse(result);
             }
             catch (Exception ex)
             {
@@ -74,8 +86,16 @@ namespace MechanicLtda.API.Controllers
                 if (!ModelState.IsValid)
                     return CustomResponse(ModelState);
 
-                var dto = _mapper.Map<VeiculoCreateDto>(model);
-                return CustomResponse(await _veiculoAppService.AdicionarAsync(dto));
+                var dto    = _mapper.Map<VeiculoCreateDto>(model);
+                var result = await _veiculoAppService.AdicionarAsync(dto);
+
+                if (result.hasErrors)
+                    return CustomResponse(result);
+
+                return CreatedAtAction(
+                    nameof(ObterPorId),
+                    new { id = result.getResponse!.Id },
+                    result.getResponse);
             }
             catch (Exception ex)
             {

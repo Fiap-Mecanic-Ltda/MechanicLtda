@@ -16,5 +16,11 @@ copilot-chat/
 design/
 .github/
 
+# Secrets and sensitive configuration
+appsettings.*.json
+appsettings.Development.json
+secrets.json
+secrets/
+
 
 

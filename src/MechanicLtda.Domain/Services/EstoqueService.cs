@@ -44,8 +44,12 @@ namespace MechanicLtda.Domain.Services
                 var existente = await _estoqueRepository.ObterPorIdAsync(estoque.Id.ToString())
                     ?? throw new KeyNotFoundException($"Estoque com Id '{estoque.Id}' não encontrado.");
 
-                estoque.DataUltimaAtualizacao = DateTime.UtcNow;
-                return await _estoqueRepository.AtualizarAsync(estoque);
+                existente.Nome                 = estoque.Nome;
+                existente.Tipo                 = estoque.Tipo;
+                existente.QuantidadeMinima     = estoque.QuantidadeMinima;
+                existente.DataUltimaAtualizacao = DateTime.UtcNow;
+
+                return await _estoqueRepository.AtualizarAsync(existente);
             }
             catch (Exception ex)
             {

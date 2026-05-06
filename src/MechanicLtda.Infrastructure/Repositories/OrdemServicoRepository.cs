@@ -21,6 +21,7 @@ namespace MechanicLtda.Infrastructure.Repositories
         public override async Task<OrdemServico?> ObterPorIdAsync(string id)
         {
             return await _dbSet
+                .AsNoTracking()
                 .Include(o => o.Veiculo)
                 .Include(o => o.Cliente)
                 .FirstOrDefaultAsync(o => o.Id == int.Parse(id));

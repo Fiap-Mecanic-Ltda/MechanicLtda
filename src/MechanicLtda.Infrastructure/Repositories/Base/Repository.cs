@@ -46,7 +46,23 @@ namespace MechanicLtda.Infrastructure.Repositories.Base
 
         public virtual async Task<TEntity?> ObterPorIdAsync(string id)
         {
-            return await _dbSet.FindAsync(id);
+            // Converte para o tipo correto da PK — FindAsync falha silenciosamente
+            // quando a PK é int e recebe uma string.
+            var keyType = _context.Model
+                .FindEntityType(typeof(TEntity))!
+                .FindPrimaryKey()!
+                .Properties[0]
+                .ClrType;
+
+            var convertedId = Convert.ChangeType(id, keyType);
+            var entity = await _dbSet.FindAsync(convertedId);
+
+            // Desanexa a entidade para evitar conflito de tracking quando o
+            // chamador precisar salvar um objeto diferente com o mesmo ID.
+            if (entity is not null)
+                _context.Entry(entity).State = EntityState.Detached;
+
+            return entity;
         }
 
         public async Task<int> SaveChanges()

@@ -33,6 +33,11 @@ namespace MechanicLtda.Infrastructure.Migrations
                     b.Property<bool>("Ativo")
                         .HasColumnType("bit");
 
+                    b.Property<string>("CpfCnpj")
+                        .IsRequired()
+                        .HasMaxLength(14)
+                        .HasColumnType("nvarchar(14)");
+
                     b.Property<DateTime>("DataCriacao")
                         .HasColumnType("datetime2");
 
