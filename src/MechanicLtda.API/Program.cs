@@ -2,6 +2,12 @@ using MechanicLtda.API.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add User Secrets in development environment
+if (builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddUserSecrets<Program>();
+}
+
 // Add services to the container.
 
 builder.Services.AddControllers();
@@ -15,10 +21,8 @@ builder.Services.AddJwtAuthentication(builder.Configuration);
 
 var app = builder.Build();
 
-// Seed roles (Administrador, Funcionario, Cliente)
 await app.SeedRolesAsync();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -26,10 +30,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();
+
+// Expõe a classe Program para WebApplicationFactory
+public partial class Program { }

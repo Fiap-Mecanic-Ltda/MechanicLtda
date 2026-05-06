@@ -19,7 +19,12 @@ namespace MechanicLtda.Infrastructure.Repositories
 
         public override async Task<ItemOrdemServico?> ObterPorIdAsync(string id)
         {
-            return await _dbSet.FirstOrDefaultAsync(i => i.Id == int.Parse(id));
+            var entity = await _dbSet.FirstOrDefaultAsync(i => i.Id == int.Parse(id));
+
+            if (entity is not null)
+                _context.Entry(entity).State = EntityState.Detached;
+
+            return entity;
         }
     }
 }
