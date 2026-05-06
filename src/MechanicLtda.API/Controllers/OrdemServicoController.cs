@@ -120,7 +120,7 @@ namespace MechanicLtda.API.Controllers
         }
 
         /// <summary>Move a OS para 'Em Diagnóstico'. [Admin]</summary>
-        [HttpPatch("{id}/em-diagnostico")]
+        [HttpPatch("{id}/iniciar-diagnostico")]
         [Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> IniciarDiagnostico(string id)
         {
@@ -136,7 +136,7 @@ namespace MechanicLtda.API.Controllers
         }
 
         /// <summary>Move a OS para 'Aguardando Aprovação'. [Admin]</summary>
-        [HttpPatch("{id}/aguardando-aprovacao")]
+        [HttpPatch("{id}/aguardar-aprovacao")]
         [Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> AguardarAprovacao(string id)
         {
@@ -152,7 +152,7 @@ namespace MechanicLtda.API.Controllers
         }
 
         /// <summary>Move a OS para 'Em Execução'. [Admin]</summary>
-        [HttpPatch("{id}/em-execucao")]
+        [HttpPatch("{id}/iniciar-execucao")]
         [Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> IniciarExecucao(string id)
         {
