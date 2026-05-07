@@ -6,7 +6,7 @@ namespace MechanicLtda.API.Validations
     public class CpfCnpjAttribute : ValidationAttribute
     {
         public CpfCnpjAttribute()
-            : base("O campo {0} deve conter um CPF ou CNPJ válido.") { }
+            : base("O campo {0} deve conter um CPF ou CNPJ valido.") { }
 
         protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
         {
