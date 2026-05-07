@@ -21,7 +21,14 @@ builder.Services.AddJwtAuthentication(builder.Configuration);
 
 var app = builder.Build();
 
+// 1. Cria o banco e aplica migrations — deve ser o primeiro passo
+await app.MigrateDatabaseAsync();
+
+// 2. Seed de roles — depende do schema existir
 await app.SeedRolesAsync();
+
+// 3. Seed de dados mocados — depende dos roles existirem
+await app.SeedDataAsync();
 
 if (app.Environment.IsDevelopment())
 {

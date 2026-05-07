@@ -14,7 +14,7 @@ namespace MechanicLtda.API.Validations
         private static partial Regex PlacaRegex();
 
         public PlacaVeiculoAttribute()
-            : base("O campo {0} deve conter uma placa válida no formato antigo (ABC1234) ou Mercosul (ABC1D23).") { }
+            : base("O campo {0} deve conter uma placa valida no formato antigo (ABC1234) ou Mercosul (ABC1D23).") { }
 
         protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
         {

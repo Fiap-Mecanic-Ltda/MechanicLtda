@@ -17,7 +17,7 @@ namespace MechanicLtda.API.Extensions
                     Scheme       = "Bearer",
                     BearerFormat = "JWT",
                     In           = ParameterLocation.Header,
-                    Description  = "Informe o token JWT. Exemplo: Bearer {seu_token}"
+                    Description  = "Informe o token JWT."
                 });
 
                 options.AddSecurityRequirement(new OpenApiSecurityRequirement

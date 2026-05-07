@@ -7,23 +7,31 @@ WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
 
-
 # Esta fase é usada para compilar o projeto de serviço
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["MechanicLtda.API.csproj", "."]
-RUN dotnet restore "./MechanicLtda.API.csproj"
+
+# Copia os arquivos de projeto para aproveitar o cache de restore
+COPY ["src/MechanicLtda.API/MechanicLtda.API.csproj", "src/MechanicLtda.API/"]
+COPY ["src/MechanicLtda.Application/MechanicLtda.Application.csproj", "src/MechanicLtda.Application/"]
+COPY ["src/MechanicLtda.Domain/MechanicLtda.Domain.csproj", "src/MechanicLtda.Domain/"]
+COPY ["src/MechanicLtda.Infrastructure/MechanicLtda.Infrastructure.csproj", "src/MechanicLtda.Infrastructure/"]
+
+RUN dotnet restore "src/MechanicLtda.API/MechanicLtda.API.csproj"
+
+# Copia todo o código-fonte
 COPY . .
-WORKDIR "/src/."
-RUN dotnet build "./MechanicLtda.API.csproj" -c $BUILD_CONFIGURATION -o /app/build
+
+WORKDIR "/src/src/MechanicLtda.API"
+RUN dotnet build "MechanicLtda.API.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # Esta fase é usada para publicar o projeto de serviço a ser copiado para a fase final
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./MechanicLtda.API.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "MechanicLtda.API.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
-# Esta fase é usada na produção ou quando executada no VS no modo normal (padrão quando não está usando a configuração de Depuração)
+# Esta fase é usada na produção ou quando executada no VS no modo normal
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
