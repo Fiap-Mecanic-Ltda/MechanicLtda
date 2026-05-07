@@ -229,7 +229,7 @@ dotnet test --settings coverlet.runsettings --collect:"XPlat Code Coverage" --re
 ### Gerar o relatório HTML
 
 ```
-reportgenerator -reports:"./coverage-output/**/coverage.cobertura.xml" -targetdir:"./coverage-report" -reporttypes:Html
+reportgenerator -reports:"./coverage-output/**/coverage.cobertura.xml" -targetdir:"./coverage-report" -reporttypes:Html -classfilters:"-MechanicLtda.Infrastructure.Migrations.*;-MechanicLtda.Infrastructure.FluentAPI.*" -filefilters:"-**/obj/**;-**/bin/**;-**/Debug/**;-**/Release/**"
 ```
 
 ### Abrir o relatório (Windows)
