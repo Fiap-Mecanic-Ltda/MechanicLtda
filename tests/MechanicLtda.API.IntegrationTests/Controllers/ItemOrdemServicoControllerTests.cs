@@ -272,6 +272,29 @@ public class ItemOrdemServicoControllerTests : IClassFixture<CustomWebApplicatio
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    /// <summary>
+    /// Cobre o branch "if (!ModelState.IsValid) return CustomResponse(ModelState)" em Criar.
+    /// Envia quantidade = 0, violando [Range(1, int.MaxValue)].
+    /// </summary>
+    [Fact]
+    public async Task PostItem_ModelStateInvalido_DeveRetornar400()
+    {
+        // Arrange
+        await AutenticarAsync();
+        var clienteId = await CriarClienteEObterIdAsync();
+        var veiculoId = await CriarVeiculoEObterIdAsync(clienteId);
+        var osId      = await CriarOSEObterIdAsync(veiculoId, clienteId);
+
+        // quantidade = 0 viola [Range(1, int.MaxValue)] — ModelState.IsValid == false
+        var payload = new { quantidade = 0, valorUnitario = 100m };
+
+        // Act
+        var response = await _client.PostAsJsonAsync($"/api/ordem-servico/{osId}/itens", payload);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     // ─── PUT /api/ordem-servico/{ordemServicoId}/itens/{id} ─────────────────────
 
     [Fact]
@@ -303,6 +326,30 @@ public class ItemOrdemServicoControllerTests : IClassFixture<CustomWebApplicatio
 
         // Act
         var response = await _client.PutAsJsonAsync("/api/ordem-servico/1/itens/99999", payload);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>
+    /// Cobre o branch "if (!ModelState.IsValid) return CustomResponse(ModelState)" em Atualizar.
+    /// Envia valorUnitario = 0, violando [Range(0.01, double.MaxValue)].
+    /// </summary>
+    [Fact]
+    public async Task PutItem_ModelStateInvalido_DeveRetornar400()
+    {
+        // Arrange
+        await AutenticarAsync();
+        var clienteId = await CriarClienteEObterIdAsync();
+        var veiculoId = await CriarVeiculoEObterIdAsync(clienteId);
+        var osId      = await CriarOSEObterIdAsync(veiculoId, clienteId);
+        var itemId    = await CriarItemEObterIdAsync(osId);
+
+        // valorUnitario = 0 viola [Range(0.01, double.MaxValue)] — ModelState.IsValid == false
+        var payload = new { quantidade = 1, valorUnitario = 0m };
+
+        // Act
+        var response = await _client.PutAsJsonAsync($"/api/ordem-servico/{osId}/itens/{itemId}", payload);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
