@@ -55,31 +55,58 @@ MechanicLtda/
 
 - [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
 - SQL Server (local ou remoto)
-- Docker (opcional, para rodar em container)
+- Docker + Docker Compose (opcional, para rodar em container)
 
 ## Configuração
 
+### Localmente
+
 Configure a string de conexão e as configurações JWT no arquivo `appsettings.json` (ou via variáveis de ambiente):
 
-```
+```json
 {
   "ConnectionStrings": {
     "DefaultConnection": "Server=...;Database=MechanicLtda;..."
   },
   "JwtSettings": {
     "SecretKey": "sua-chave-secreta",
-    "Issuer": "MechanicLtda",
-    "Audience": "MechanicLtdaUsers",
+    "Issuer": "MechanicLtda.API",
+    "Audience": "MechanicLtda.Clients",
     "ExpiracaoMinutos": 60
+  },
+  "Encryption": {
+    "CpfCnpjKey": "sua-chave-de-criptografia"
   }
 }
 ```
+
+### Com Docker (variáveis de ambiente / secrets)
+
+O `docker-compose.yml` utiliza variáveis de ambiente para injetar credenciais sensíveis nos serviços, evitando que segredos fiquem hardcoded na imagem ou no repositório.
+
+Crie um arquivo `.env` na raiz do projeto com o seguinte conteúdo:
+
+```env
+SA_PASSWORD=SuaSenhaForte@123
+JWT_SECRET_KEY=sua-chave-jwt-secreta-com-no-minimo-32-caracteres
+ENCRYPTION_KEY=sua-chave-de-criptografia-32chars
+```
+
+> **Importante:** nunca commite o arquivo `.env` no repositório. Ele já está listado no `.gitignore`.
+
+As variáveis são utilizadas da seguinte forma:
+
+| Variável | Uso |
+|---|---|
+| `SA_PASSWORD` | Senha do usuário `sa` do SQL Server |
+| `JWT_SECRET_KEY` | Chave secreta para assinatura dos tokens JWT |
+| `ENCRYPTION_KEY` | Chave de criptografia dos campos CPF/CNPJ |
 
 ## Como executar
 
 ### Localmente
 
-```
+```bash
 # Na raiz da solução
 dotnet restore
 dotnet build
@@ -97,11 +124,31 @@ A API estará disponível em:
 
 A documentação Swagger estará disponível em `http://localhost:5062/swagger` (ambiente de desenvolvimento).
 
-### Com Docker
+### Com Docker Compose
 
+Certifique-se de ter criado o arquivo `.env` conforme descrito na seção de configuração, depois execute:
+
+```bash
+docker compose up --build
 ```
-docker build -f src/MechanicLtda.API/Dockerfile -t mechanicltda-api .
-docker run -p 8080:8080 -p 8081:8081 mechanicltda-api
+
+Isso irá:
+1. Subir o container do **SQL Server 2022** (`mechanicltda-sqlserver`) na porta `1433`
+2. Aguardar o SQL Server ficar saudável (healthcheck automático)
+3. Construir e subir o container da **API** (`mechanicltda-api`) na porta `8080`
+
+A API estará disponível em `http://localhost:8080` e o Swagger em `http://localhost:8080/swagger`.
+
+Para parar os serviços:
+
+```bash
+docker compose down
+```
+
+Para remover também o volume de dados do SQL Server:
+
+```bash
+docker compose down -v
 ```
 
 ## Autenticação
