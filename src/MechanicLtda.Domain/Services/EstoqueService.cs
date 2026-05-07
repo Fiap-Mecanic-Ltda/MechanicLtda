@@ -143,7 +143,7 @@ namespace MechanicLtda.Domain.Services
                 if (estoque.QuantidadeAtual < quantidade)
                     throw new InvalidOperationException(
                         $"[show]Saldo insuficiente no estoque '{estoque.Nome}'. " +
-                        $"Disponível: {estoque.QuantidadeAtual}, Solicitado: {quantidade}.");
+                        $"Disponivel: {estoque.QuantidadeAtual}, Solicitado: {quantidade}.");
 
                 estoque.QuantidadeAtual      -= quantidade;
                 estoque.DataUltimaAtualizacao = DateTime.UtcNow;
@@ -166,7 +166,7 @@ namespace MechanicLtda.Domain.Services
             }
             catch (Exception ex)
             {
-                Notificar(ex, "Ocorreu um erro no método EstoqueService:SubtrairQuantidadeAsync", _logger);
+                Notificar(ex, "Ocorreu um erro no metodo EstoqueService:SubtrairQuantidadeAsync", _logger);
                 throw;
             }
         }
