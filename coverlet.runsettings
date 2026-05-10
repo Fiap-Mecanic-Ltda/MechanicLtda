@@ -6,7 +6,7 @@
         <Configuration>
           <Format>cobertura</Format>
           <Exclude>[*]*Migrations*,[*]MechanicLtda.Infrastructure.FluentAPI.*</Exclude>
-          <ExcludeByFile>**/Migrations/**/*.cs,**/FluentAPI/**/*.cs</ExcludeByFile>
+          <ExcludeByFile>**/Migrations/**/*.cs,**/FluentAPI/**/*.cs,**/Debug/**/*.cs,**/Release/**/*.cs,**/obj/**/*.cs,**/bin/**/*.cs</ExcludeByFile>          
           <ExcludeByAttribute>GeneratedCodeAttribute,ExcludeFromCodeCoverageAttribute,MigrationAttribute</ExcludeByAttribute>
         </Configuration>
       </DataCollector>

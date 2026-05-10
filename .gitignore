@@ -23,7 +23,7 @@ secrets.json
 secrets/
 
 
-
+# Relatorios de cobertura de teste
 /coverage-output
 /coverage-report
 .env
