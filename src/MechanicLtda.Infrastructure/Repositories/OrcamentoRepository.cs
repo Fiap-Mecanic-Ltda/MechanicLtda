@@ -22,5 +22,15 @@ namespace MechanicLtda.Infrastructure.Repositories
                 .Include(o => o.OrdemServico)
                 .FirstOrDefaultAsync(o => o.OrdemServicoId == ordemServicoId);
         }
+
+        public async Task<Orcamento?> ObterComDetalhesAsync(int id)
+        {
+            return await _dbSet
+                .Include(o => o.OrdemServico)
+                    .ThenInclude(os => os.Cliente)
+                .Include(o => o.OrdemServico)
+                    .ThenInclude(os => os.Veiculo)
+                .FirstOrDefaultAsync(o => o.Id == id);
+        }
     }
 }

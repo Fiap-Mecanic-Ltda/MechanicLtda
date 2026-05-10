@@ -53,5 +53,20 @@ namespace MechanicLtda.API.Controllers
             var response = await _orcamentoAppService.RemoverAsync(id.ToString());
             return response.hasErrors ? BadRequest(response) : Ok(response);
         }
+
+        /// <summary>Exporta o orçamento como relatório em PDF.</summary>
+        [HttpGet("{id:int}/pdf")]
+        public async Task<IActionResult> ExportarPdf(int id)
+        {
+            var response = await _orcamentoAppService.ExportarPdfAsync(id);
+
+            if (response.hasErrors)
+                return BadRequest(response);
+
+            return File(
+                response.getResponse,
+                "application/pdf",
+                $"orcamento-{id:D6}.pdf");
+        }
     }
 }

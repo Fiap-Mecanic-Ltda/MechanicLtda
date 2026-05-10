@@ -25,5 +25,5 @@ secrets/
 
 # Relatorios de cobertura de teste
 /coverage-output
-.env
 /coverage-report
+.env

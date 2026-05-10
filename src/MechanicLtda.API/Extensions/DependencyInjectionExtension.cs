@@ -41,6 +41,7 @@ namespace MechanicLtda.API.Extensions
             services.AddScoped<IItemOrdemServicoAppService, ItemOrdemServicoAppService>();
             services.AddScoped<IEstoqueAppService, EstoqueAppService>();
             services.AddScoped<IOrcamentoAppService, OrcamentoAppService>();
+            services.AddScoped<IOrcamentoPdfAppService, OrcamentoPdfAppService>();
 
             return services;
         }
