@@ -276,7 +276,7 @@ dotnet test --settings coverlet.runsettings --collect:"XPlat Code Coverage" --re
 ### Gerar o relatório HTML
 
 ```
-reportgenerator -reports:"./coverage-output/**/coverage.cobertura.xml" -targetdir:"./coverage-report" -reporttypes:Html
+reportgenerator -reports:"./coverage-output/**/coverage.cobertura.xml" -targetdir:"./coverage-report" -reporttypes:Html -classfilters:"-MechanicLtda.Infrastructure.Migrations.*;-MechanicLtda.Infrastructure.FluentAPI.*" -filefilters:"-**/obj/**;-**/bin/**;-**/Debug/**;-**/Release/**"
 ```
 
 ### Abrir o relatório (Windows)
@@ -295,3 +295,54 @@ API → Infrastructure → Domain
 ```
 
 A camada de `Domain` não possui dependências externas, sendo o núcleo da aplicação.
+
+## Dados Iniciais (Seed)
+
+Ao iniciar a aplicação pela primeira vez com o banco vazio, os seguintes dados são inseridos automaticamente.
+
+### Usuário administrador
+
+| Campo | Valor |
+|---|---|
+| **E-mail** | `admin@mechanic.com` |
+| **Senha** | `Admin@123` |
+| **Role** | `Administrador` |
+
+> Use essas credenciais para realizar o primeiro login via `POST /api/auth/login`.
+
+### Clientes
+
+| Nome | E-mail | Telefone | CPF/CNPJ |
+|---|---|---|---|
+| Carlos Oliveira | carlos@email.com | 11999990001 | 123.456.789-01 |
+| Fernanda Lima | fernanda@email.com | 11999990002 | 234.567.890-12 |
+| Ricardo Souza | ricardo@email.com | 11999990003 | 345.678.901-23 |
+
+### Veículos
+
+| Placa | Marca | Modelo | Ano | Cliente |
+|---|---|---|---|---|
+| ABC1D23 | Toyota | Corolla | 2021 | Carlos Oliveira |
+| DEF4E56 | Honda | Civic | 2019 | Fernanda Lima |
+| GHI7F89 | Volkswagen | Polo | 2022 | Ricardo Souza |
+| JKL0G12 | Chevrolet | Onix | 2020 | Carlos Oliveira |
+
+### Estoque
+
+| Nome | Tipo | Qtd. Atual | Qtd. Mínima |
+|---|---|---|---|
+| Óleo Motor 5W30 | Insumo | 50 | 10 |
+| Filtro de Ar | Peça | 30 | 5 |
+| Pastilha de Freio | Peça | 20 | 4 |
+| Fluido de Freio DOT 4 | Insumo | 15 | 3 |
+| Correia Dentada | Peça | 8 | 2 |
+
+### Ordens de Serviço
+
+| Cliente | Veículo | Problema | Status | Valor Estimado |
+|---|---|---|---|---|
+| Carlos Oliveira | Toyota Corolla | Troca de óleo e filtro de ar. | Em Execução | R$ 250,00 |
+| Fernanda Lima | Honda Civic | Revisão de freios dianteiros e traseiros. | Recebida | R$ 420,00 |
+| Ricardo Souza | Volkswagen Polo | Substituição de correia dentada. | Aguardando Aprovação | R$ 680,00 |
+
+> Os orçamentos correspondentes a cada ordem de serviço também são gerados automaticamente no seed.

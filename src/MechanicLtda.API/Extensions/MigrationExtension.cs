@@ -7,12 +7,21 @@ namespace MechanicLtda.API.Extensions
     {
         /// <summary>
         /// Aplica migrations pendentes com retry, tolerando atraso na inicialização do SQL Server.
+        /// Em ambientes de teste com InMemory, apenas garante que o schema foi criado.
         /// </summary>
         public static async Task MigrateDatabaseAsync(this WebApplication app)
         {
             using var scope = app.Services.CreateScope();
             var context     = scope.ServiceProvider.GetRequiredService<BancoAPIContext>();
             var logger      = scope.ServiceProvider.GetRequiredService<ILogger<BancoAPIContext>>();
+
+            // InMemory não suporta migrations — apenas garante a criação do schema
+            if (!context.Database.IsRelational())
+            {
+                await context.Database.EnsureCreatedAsync();
+                logger.LogInformation("Banco InMemory inicializado via EnsureCreated.");
+                return;
+            }
 
             const int maxTentativas = 10;
             const int intervaloMs   = 3000;

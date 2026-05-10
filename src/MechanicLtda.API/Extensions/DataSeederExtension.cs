@@ -19,8 +19,12 @@ namespace MechanicLtda.API.Extensions
             var context     = sp.GetRequiredService<BancoAPIContext>();
             var userManager = sp.GetRequiredService<UserManager<Usuario>>();
 
-            // Aplica migrations automaticamente (garante que o schema exista no container)
-            await context.Database.MigrateAsync();
+            // Aplica migrations apenas em provedores relacionais (SQL Server, etc.)
+            // Em testes com InMemory, usa EnsureCreated para criar o schema
+            if (context.Database.IsRelational())
+                await context.Database.MigrateAsync();
+            else
+                await context.Database.EnsureCreatedAsync();
 
             // Evita re-seed caso já existam dados
             if (await context.Clientes.AnyAsync())
@@ -82,30 +86,30 @@ namespace MechanicLtda.API.Extensions
             {
                 new()
                 {
-                    ClienteId         = clientes[0].Id,
-                    VeiculoId         = veiculos[0].Id,
-                    DescricaoProblema = "Troca de óleo e filtro de ar.",
-                    Status            = StatusOrdemServico.EmExecucao,
+                    ClienteId          = clientes[0].Id,
+                    VeiculoId          = veiculos[0].Id,
+                    DescricaoProblema  = "Troca de óleo e filtro de ar.",
+                    Status             = StatusOrdemServico.EmExecucao,
                     ValorTotalEstimado = 250.00m,
-                    DataCriacao       = DateTime.UtcNow
+                    DataCriacao        = DateTime.UtcNow
                 },
                 new()
                 {
-                    ClienteId         = clientes[1].Id,
-                    VeiculoId         = veiculos[1].Id,
-                    DescricaoProblema = "Revisão de freios dianteiros e traseiros.",
-                    Status            = StatusOrdemServico.Recebida,
+                    ClienteId          = clientes[1].Id,
+                    VeiculoId          = veiculos[1].Id,
+                    DescricaoProblema  = "Revisão de freios dianteiros e traseiros.",
+                    Status             = StatusOrdemServico.Recebida,
                     ValorTotalEstimado = 420.00m,
-                    DataCriacao       = DateTime.UtcNow
+                    DataCriacao        = DateTime.UtcNow
                 },
                 new()
                 {
-                    ClienteId         = clientes[2].Id,
-                    VeiculoId         = veiculos[2].Id,
-                    DescricaoProblema = "Substituição de correia dentada.",
-                    Status            = StatusOrdemServico.AguardandoAprovacao,
+                    ClienteId          = clientes[2].Id,
+                    VeiculoId          = veiculos[2].Id,
+                    DescricaoProblema  = "Substituição de correia dentada.",
+                    Status             = StatusOrdemServico.AguardandoAprovacao,
                     ValorTotalEstimado = 680.00m,
-                    DataCriacao       = DateTime.UtcNow
+                    DataCriacao        = DateTime.UtcNow
                 }
             };
 

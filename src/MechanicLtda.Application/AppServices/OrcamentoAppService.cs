@@ -8,12 +8,18 @@ namespace MechanicLtda.Application.AppServices
 {
     public class OrcamentoAppService : IOrcamentoAppService
     {
-        private readonly IOrcamentoService _orcamentoService;
-        private readonly IMapper           _mapper;
+        private readonly IOrcamentoService    _orcamentoService;
+        private readonly IOrcamentoPdfAppService _pdfService;
+        private readonly IMapper              _mapper;
 
-        public OrcamentoAppService(IOrcamentoService orcamentoService, IMapper mapper)
+        public OrcamentoAppService(
+                                    IOrcamentoService orcamentoService, 
+                                    IOrcamentoPdfAppService pdfService,
+                                    IMapper mapper
+                                    )
         {
             _orcamentoService = orcamentoService;
+            _pdfService       = pdfService;
             _mapper           = mapper;
         }
 
@@ -69,6 +75,41 @@ namespace MechanicLtda.Application.AppServices
             }
             catch (KeyNotFoundException ex) { return response.addError(ex.Message); }
             catch (Exception ex)            { return response.addError(ex); }
+        }
+
+        public async Task<ResponseDto<byte[]>> ExportarPdfAsync(int id)
+        {
+            var response = new ResponseDto<byte[]>();
+            try
+            {
+                var orcamento = await _orcamentoService.ObterComDetalhesAsync(id)
+                    ?? throw new KeyNotFoundException($"Orçamento com Id '{id}' não encontrado.");
+
+                var dto = new OrcamentoPdfDto
+                {
+                    Id = orcamento.Id,
+                    OrdemServicoId = orcamento.OrdemServicoId,
+                    DataGeracao = orcamento.DataGeracao,
+                    Validade = orcamento.Validade,
+                    ValorTotalPecas = orcamento.ValorTotalPecas,
+                    ValorTotalInsumos = orcamento.ValorTotalInsumos,
+                    ValorTotalGeral = orcamento.ValorTotalGeral,
+                    DescricaoProblema = orcamento.OrdemServico.DescricaoProblema,
+                    StatusOrdemServico = orcamento.OrdemServico.Status.ToString(),
+                    ClienteNome = orcamento.OrdemServico.Cliente.Nome,
+                    ClienteEmail = orcamento.OrdemServico.Cliente.Email,
+                    ClienteTelefone = orcamento.OrdemServico.Cliente.Telefone,
+                    VeiculoMarca = orcamento.OrdemServico.Veiculo.Marca,
+                    VeiculoModelo = orcamento.OrdemServico.Veiculo.Modelo,
+                    VeiculoPlaca = orcamento.OrdemServico.Veiculo.Placa,
+                    VeiculoAno = orcamento.OrdemServico.Veiculo.Ano
+                };
+
+                var bytes = _pdfService.Gerar(dto);
+                return response.setResponse(bytes);
+            }
+            catch (KeyNotFoundException ex) { return response.addError(ex.Message); }
+            catch (Exception ex) { return response.addError(ex); }
         }
     }
 }
