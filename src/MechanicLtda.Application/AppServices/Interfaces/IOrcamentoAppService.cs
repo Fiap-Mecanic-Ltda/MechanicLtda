@@ -8,5 +8,6 @@ namespace MechanicLtda.Application.AppServices.Interfaces
         Task<ResponseDto<OrcamentoDto>> ObterPorOrdemServicoIdAsync(int ordemServicoId);
         Task<ResponseDto<OrcamentoDto>> AtualizarManualAsync(string id, OrcamentoUpdateDto dto);
         Task<ResponseDto<bool>> RemoverAsync(string id);
+        Task<ResponseDto<byte[]>> ExportarPdfAsync(int id);
     }
 }

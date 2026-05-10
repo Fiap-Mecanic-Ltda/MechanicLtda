@@ -165,5 +165,10 @@ namespace MechanicLtda.Domain.Services
                 throw;
             }
         }
+
+        public async Task<Orcamento?> ObterComDetalhesAsync(int id)
+        {
+            return await _orcamentoRepository.ObterComDetalhesAsync(id);
+        }
     }
 }
