@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using MechanicLtda.Application.AppServices;
+using MechanicLtda.Application.AppServices.Interfaces;
 using MechanicLtda.Application.DTOs;
 using MechanicLtda.Domain.Entities;
 using MechanicLtda.Domain.Interfaces.Services;
@@ -10,15 +11,17 @@ namespace MechanicLtda.Application.Tests;
 
 public class OrcamentoAppServiceTests
 {
-    private readonly Mock<IOrcamentoService> _serviceMock;
-    private readonly Mock<IMapper>           _mapperMock;
-    private readonly OrcamentoAppService     _sut;
+    private readonly Mock<IOrcamentoService>    _serviceMock;
+    private readonly Mock<IOrcamentoPdfAppService> _pdfService;
+    private readonly Mock<IMapper>              _mapperMock;
+    private readonly OrcamentoAppService        _sut;
 
     public OrcamentoAppServiceTests()
     {
         _serviceMock = new Mock<IOrcamentoService>();
+        _pdfService  = new Mock<IOrcamentoPdfAppService>();
         _mapperMock  = new Mock<IMapper>();
-        _sut = new OrcamentoAppService(_serviceMock.Object, _mapperMock.Object);
+        _sut = new OrcamentoAppService(_serviceMock.Object, _pdfService.Object, _mapperMock.Object);
     }
 
     // ─── helpers ────────────────────────────────────────────────────────────────
