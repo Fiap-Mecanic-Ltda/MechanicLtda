@@ -14,6 +14,7 @@ MechanicLtda/
 │   ├── MechanicLtda.Domain         # Camada de domínio (Entidades, Interfaces, Serviços de domínio)
 │   └── MechanicLtda.Infrastructure # Camada de infraestrutura (Repositórios, DbContext, Migrations)
 └── tests/
+    ├── MechanicLtda.API.IntegrationTests
     ├── MechanicLtda.Application.Tests
     └── MechanicLtda.Domain.Tests
 ```
