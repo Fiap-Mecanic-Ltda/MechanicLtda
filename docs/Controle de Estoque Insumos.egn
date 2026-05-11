@@ -1,0 +1,538 @@
+{
+  "domain": {
+    "name": "default",
+    "actors": {
+      "Person": "<svg viewBox=\"0 0 24 26\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M12 5.9c1.16 0 2.1.94 2.1 2.1s-.94 2.1-2.1 2.1S9.9 9.16 9.9 8s.94-2.1 2.1-2.1m0 9c2.97 0 6.1 1.46 6.1 2.1v1.1H5.9V17c0-.64 3.13-2.1 6.1-2.1M12 4C9.79 4 8 5.79 8 8s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 9c-2.67 0-8 1.34-8 4v3h16v-3c0-2.66-5.33-4-8-4z\"/><path d=\"M0 0h24v24H0z\" fill=\"none\"/></svg>",
+      "Group": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"48\" viewBox=\"0 0 24 26\"><path d=\"M0 0h24v24H0z\" fill=\"none\"/><path d=\"M16.5 13c-1.2 0-3.07.34-4.5 1-1.43-.67-3.3-1-4.5-1C5.33 13 1 14.08 1 16.25V19h22v-2.75c0-2.17-4.33-3.25-6.5-3.25zm-4 4.5h-10v-1.25c0-.54 2.56-1.75 5-1.75s5 1.21 5 1.75v1.25zm9 0H14v-1.25c0-.46-.2-.86-.52-1.22.88-.3 1.96-.53 3.02-.53 2.44 0 5 1.21 5 1.75v1.25zM7.5 12c1.93 0 3.5-1.57 3.5-3.5S9.43 5 7.5 5 4 6.57 4 8.5 5.57 12 7.5 12zm0-5.5c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm9 5.5c1.93 0 3.5-1.57 3.5-3.5S18.43 5 16.5 5 13 6.57 13 8.5s1.57 3.5 3.5 3.5zm0-5.5c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2z\"/></svg>",
+      "System": "<svg viewBox=\"0 0 24 26\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M20,18c1.1,0,2-0.9,2-2V6c0-1.1-0.9-2-2-2H4C2.9,4,2,4.9,2,6v10c0,1.1,0.9,2,2,2H0v2h24v-2H20z M4,6h16v10H4V6z\"/></svg>"
+    },
+    "workObjects": {
+      "Document": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 26\"><path fill=\"none\" d=\"M0 0h24v24H0V0z\"/><path d=\"M8 16h8v2H8zm0-4h8v2H8zm6-10H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z\"/></svg>",
+      "Folder": "<svg viewBox=\"0 0 24 26\" xmlns=\"http://www.w3.org/2000/svg\"><path fill=\"none\" d=\"M0,0h24v24H0V0z\"/><path d=\"M9.17,6l2,2H20v10L4,18V6H9.17 M10,4H4C2.9,4,2.01,4.9,2.01,6L2,18c0,1.1,0.9,2,2,2h16c1.1,0,2-0.9,2-2V8c0-1.1-0.9-2-2-2 h-8L10,4L10,4z\"/></svg>",
+      "Call": "<svg viewBox=\"0 0 24 26\" xmlns=\"http://www.w3.org/2000/svg\"><path fill=\"none\" d=\"M0,0h24v24H0V0z\"/><path d=\"M6.54,5C6.6,5.89,6.75,6.76,6.99,7.59l-1.2,1.2C5.38,7.59,5.12,6.32,5.03,5H6.54 M16.4,17.02c0.85,0.24,1.72,0.39,2.6,0.45 v1.49c-1.32-0.09-2.59-0.35-3.8-0.75L16.4,17.02 M7.5,3H4C3.45,3,3,3.45,3,4c0,9.39,7.61,17,17,17c0.55,0,1-0.45,1-1v-3.49\tc0-0.55-0.45-1-1-1c-1.24,0-2.45-0.2-3.57-0.57c-0.1-0.04-0.21-0.05-0.31-0.05c-0.26,0-0.51,0.1-0.71,0.29l-2.2,2.2 c-2.83-1.45-5.15-3.76-6.59-6.59l2.2-2.2C9.1,8.31,9.18,7.92,9.07,7.57C8.7,6.45,8.5,5.25,8.5,4C8.5,3.45,8.05,3,7.5,3L7.5,3z\"/></svg>",
+      "Email": "<svg viewBox=\"0 0 24 26\" xmlns=\"http://www.w3.org/2000/svg\"><path fill=\"none\" d=\"M0,0h24v24H0V0z\"/><path fill-opacity=\"0.9\" d=\"M12,1.95c-5.52,0-10,4.48-10,10s4.48,10,10,10h5v-2h-5c-4.34,0-8-3.66-8-8s3.66-8,8-8s8,3.66,8,8v1.43 c0,0.79-0.71,1.57-1.5,1.57S17,14.17,17,13.38v-1.43c0-2.76-2.24-5-5-5s-5,2.24-5,5s2.24,5,5,5c1.38,0,2.64-0.56,3.54-1.47 c0.65,0.89,1.77,1.47,2.96,1.47c1.97,0,3.5-1.6,3.5-3.57v-1.43C22,6.43,17.52,1.95,12,1.95z M12,14.95c-1.66,0-3-1.34-3-3 s1.34-3,3-3s3,1.34,3,3S13.66,14.95,12,14.95z\"/></svg>",
+      "Conversation": "<svg height=\"48\" viewBox=\"0 0 24 26\" width=\"24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M0 0h24v24H0V0z\" fill=\"none\"/><path d=\"M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z\"/></svg>",
+      "Info": "<svg height=\"48\" viewBox=\"0 0 24 26\" width=\"24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M0 0h24v24H0z\" fill=\"none\"/><path d=\"M11 17h2v-6h-2v6zm1-15C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zM11 9h2V7h-2v2z\"/></svg>",
+      "Assessment": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 26\"><path fill=\"none\" d=\"M0 0h24v24H0V0z\"/><path d=\"M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z\"/></svg>",
+      "Attach": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 28\"><path fill=\"none\" d=\"M0 0h24v24H0V0z\"/><path d=\"M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z\"/></svg>",
+      "Thumb-up-down": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 28\"><path fill=\"none\" d=\"M0 0h24v24H0V0zm0 0h24v24H0V0z\"/><path d=\"M12 6c0-.55-.45-1-1-1H5.82l.66-3.18.02-.23c0-.31-.13-.59-.33-.8L5.38 0 .44 4.94C.17 5.21 0 5.59 0 6v6.5c0 .83.67 1.5 1.5 1.5h6.75c.62 0 1.15-.38 1.38-.91l2.26-5.29c.07-.17.11-.36.11-.55V6zm-2 1.13L7.92 12H2V6.21l1.93-1.93L3.36 7H10v.13zM22.5 10h-6.75c-.62 0-1.15.38-1.38.91l-2.26 5.29c-.07.17-.11.36-.11.55V18c0 .55.45 1 1 1h5.18l-.66 3.18-.02.24c0 .31.13.59.33.8l.79.78 4.94-4.94c.27-.27.44-.65.44-1.06v-6.5c0-.83-.67-1.5-1.5-1.5zm-.5 7.79l-1.93 1.93.57-2.72H14v-.13L16.08 12H22v5.79z\"/></svg>",
+      "Update": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 26\"><path fill=\"none\" d=\"M0 0h24v24H0V0z\"/><path d=\"M11 8v5l4.25 2.52.77-1.28-3.52-2.09V8zm10 2V3l-2.64 2.64C16.74 4.01 14.49 3 12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9h-2c0 3.86-3.14 7-7 7s-7-3.14-7-7 3.14-7 7-7c1.93 0 3.68.79 4.95 2.05L14 10h7z\"/></svg>",
+      "Receipt": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 28\"><path fill=\"none\" d=\"M0 0h24v24H0V0z\"/><path d=\"M19.5 3.5L18 2l-1.5 1.5L15 2l-1.5 1.5L12 2l-1.5 1.5L9 2 7.5 3.5 6 2 4.5 3.5 3 2v20l1.5-1.5L6 22l1.5-1.5L9 22l1.5-1.5L12 22l1.5-1.5L15 22l1.5-1.5L18 22l1.5-1.5L21 22V2l-1.5 1.5zM19 19.09H5V4.91h14v14.18zM6 15h12v2H6zm0-4h12v2H6zm0-4h12v2H6z\"/></svg>",
+      "Car": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 26\"><path fill=\"none\" d=\"M0 0h24v24H0V0z\"/><path d=\"M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.85 7h10.29l1.08 3.11H5.77L6.85 7zM19 17H5v-5h14v5z\"/><circle cx=\"7.5\" cy=\"14.5\" r=\"1.5\"/><circle cx=\"16.5\" cy=\"14.5\" r=\"1.5\"/></svg>",
+      "Business": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 26\"><path fill=\"none\" d=\"M0 0h24v24H0V0z\"/><path d=\"M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z\"/></svg>",
+      "Face": "<svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\" viewBox=\"0 0 24 24\" width=\"24px\"><path d=\"M0 0h24v24H0V0z\" fill=\"none\"/><path d=\"M10.25 13c0 .69-.56 1.25-1.25 1.25S7.75 13.69 7.75 13s.56-1.25 1.25-1.25 1.25.56 1.25 1.25zM15 11.75c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25-.56-1.25-1.25-1.25zm7 .25c0 5.52-4.48 10-10 10S2 17.52 2 12 6.48 2 12 2s10 4.48 10 10zM10.66 4.12C12.06 6.44 14.6 8 17.5 8c.46 0 .91-.05 1.34-.12C17.44 5.56 14.9 4 12 4c-.46 0-.91.05-1.34.12zM4.42 9.47c1.71-.97 3.03-2.55 3.66-4.44C6.37 6 5.05 7.58 4.42 9.47zM20 12c0-.78-.12-1.53-.33-2.24-.7.15-1.42.24-2.17.24-3.13 0-5.92-1.44-7.76-3.69C8.69 8.87 6.6 10.88 4 11.86c.01.04 0 .09 0 .14 0 4.41 3.59 8 8 8s8-3.59 8-8z\"/></svg>",
+      "View-List": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 26\"><path opacity=\".87\" fill=\"none\" d=\"M0 0h24v24H0V0z\"/><path d=\"M3 5v14h17V5H3zm4 2v2H5V7h2zm-2 6v-2h2v2H5zm0 2h2v2H5v-2zm13 2H9v-2h9v2zm0-4H9v-2h9v2zm0-4H9V7h9v2z\"/></svg>",
+      "Contact-Mail": "<svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\" viewBox=\"0 0 24 24\" width=\"24px\"><path d=\"M0 0h24v24H0z\" fill=\"none\"/><path d=\"M22 3H2C.9 3 0 3.9 0 5v14c0 1.1.9 2 2 2h20c1.1 0 1.99-.9 1.99-2L24 5c0-1.1-.9-2-2-2zm0 16H2V5h20v14zM21 6h-7v5h7V6zm-1 2l-2.5 1.75L15 8V7l2.5 1.75L20 7v1zM9 12c1.65 0 3-1.35 3-3s-1.35-3-3-3-3 1.35-3 3 1.35 3 3 3zm0-4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm6 8.59c0-2.5-3.97-3.58-6-3.58s-6 1.08-6 3.58V18h12v-1.41zM5.48 16c.74-.5 2.22-1 3.52-1s2.77.49 3.52 1H5.48z\"/></svg>",
+      "Check-Circle": "<svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\" viewBox=\"0 0 24 24\" width=\"24px\"><path d=\"M0 0h24v24H0V0z\" fill=\"none\"/><path d=\"M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm4.59-12.42L10 14.17l-2.59-2.58L6 13l4 4 8-8z\"/></svg>"
+    }
+  },
+  "dst": [
+    {
+      "type": "domainStory:activity",
+      "name": "se",
+      "id": "connection_0615",
+      "pickedColor": "black",
+      "number": null,
+      "waypoints": [
+        {
+          "original": {
+            "x": 708,
+            "y": 688
+          },
+          "x": 751,
+          "y": 688
+        },
+        {
+          "original": {
+            "x": 880,
+            "y": 688
+          },
+          "x": 842,
+          "y": 688
+        }
+      ],
+      "source": "shape_3882",
+      "target": "shape_0854",
+      "multipleNumberAllowed": false
+    },
+    {
+      "type": "domainStory:activity",
+      "name": "de",
+      "id": "connection_0683",
+      "pickedColor": "black",
+      "number": null,
+      "waypoints": [
+        {
+          "original": {
+            "x": 583,
+            "y": 311
+          },
+          "x": 623,
+          "y": 323
+        },
+        {
+          "original": {
+            "x": 707,
+            "y": 347
+          },
+          "x": 669,
+          "y": 336
+        }
+      ],
+      "source": "shape_9423",
+      "target": "shape_5471",
+      "multipleNumberAllowed": false
+    },
+    {
+      "type": "domainStory:activity",
+      "name": "Cadastra ou Adiciona Itens",
+      "id": "connection_0742",
+      "pickedColor": "black",
+      "number": 1,
+      "waypoints": [
+        {
+          "original": {
+            "x": 201,
+            "y": 307
+          },
+          "x": 243,
+          "y": 307
+        },
+        {
+          "original": {
+            "x": 567,
+            "y": 305
+          },
+          "x": 545,
+          "y": 305
+        }
+      ],
+      "source": "shape_7256",
+      "target": "shape_9423",
+      "multipleNumberAllowed": false
+    },
+    {
+      "type": "domainStory:connection",
+      "name": "",
+      "id": "connection_0972",
+      "waypoints": [
+        {
+          "original": {
+            "x": 707,
+            "y": 268
+          },
+          "x": 707,
+          "y": 230
+        },
+        {
+          "original": {
+            "x": 708,
+            "y": 135
+          },
+          "x": 708,
+          "y": 163
+        }
+      ],
+      "source": "shape_4657",
+      "target": "shape_5945"
+    },
+    {
+      "type": "domainStory:activity",
+      "name": "de",
+      "id": "connection_1324",
+      "pickedColor": "black",
+      "number": null,
+      "waypoints": [
+        {
+          "original": {
+            "x": 580,
+            "y": 688
+          },
+          "x": 623,
+          "y": 688
+        },
+        {
+          "original": {
+            "x": 708,
+            "y": 688
+          },
+          "x": 670,
+          "y": 688
+        }
+      ],
+      "source": "shape_6864",
+      "target": "shape_3882",
+      "multipleNumberAllowed": false
+    },
+    {
+      "type": "domainStory:activity",
+      "name": "a partir de",
+      "id": "connection_2212",
+      "pickedColor": "black",
+      "number": null,
+      "waypoints": [
+        {
+          "original": {
+            "x": 880,
+            "y": 475
+          },
+          "x": 923,
+          "y": 475
+        },
+        {
+          "original": {
+            "x": 1145,
+            "y": 475
+          },
+          "x": 1107,
+          "y": 475
+        }
+      ],
+      "source": "shape_8328",
+      "target": "shape_3535",
+      "multipleNumberAllowed": false
+    },
+    {
+      "type": "domainStory:activity",
+      "name": "Verifica",
+      "id": "connection_2694",
+      "pickedColor": "black",
+      "number": 4,
+      "waypoints": [
+        {
+          "original": {
+            "x": 580,
+            "y": 475
+          },
+          "x": 542,
+          "y": 496
+        },
+        {
+          "original": {
+            "x": 193,
+            "y": 688
+          },
+          "x": 220,
+          "y": 673
+        }
+      ],
+      "source": "shape_9736",
+      "target": "shape_8195",
+      "multipleNumberAllowed": false
+    },
+    {
+      "type": "domainStory:activity",
+      "name": "Cancelada, Rejeitada ou Finalizada",
+      "id": "connection_4324",
+      "pickedColor": "black",
+      "number": null,
+      "waypoints": [
+        {
+          "original": {
+            "x": 880,
+            "y": 688
+          },
+          "x": 923,
+          "y": 688
+        },
+        {
+          "original": {
+            "x": 1145,
+            "y": 688
+          },
+          "x": 1107,
+          "y": 688
+        }
+      ],
+      "source": "shape_0854",
+      "target": "shape_1302",
+      "multipleNumberAllowed": false
+    },
+    {
+      "type": "domainStory:activity",
+      "name": "no",
+      "id": "connection_4628",
+      "pickedColor": "black",
+      "number": null,
+      "waypoints": [
+        {
+          "original": {
+            "x": 583,
+            "y": 311
+          },
+          "x": 582,
+          "y": 390.75
+        },
+        {
+          "original": {
+            "x": 580,
+            "y": 475
+          },
+          "x": 581,
+          "y": 437
+        }
+      ],
+      "source": "shape_9423",
+      "target": "shape_9736",
+      "multipleNumberAllowed": false
+    },
+    {
+      "type": "domainStory:activity",
+      "name": "Adiciona Itens",
+      "id": "connection_5697",
+      "pickedColor": "black",
+      "number": 3,
+      "waypoints": [
+        {
+          "original": {
+            "x": 580,
+            "y": 475
+          },
+          "x": 580,
+          "y": 522
+        },
+        {
+          "original": {
+            "x": 580,
+            "y": 688
+          },
+          "x": 580,
+          "y": 650
+        }
+      ],
+      "source": "shape_9736",
+      "target": "shape_6864",
+      "multipleNumberAllowed": false
+    },
+    {
+      "type": "domainStory:activity",
+      "name": "Se estiver baixo, informa",
+      "id": "connection_6024",
+      "pickedColor": "black",
+      "number": null,
+      "waypoints": [
+        {
+          "original": {
+            "x": 193,
+            "y": 688
+          },
+          "x": 193,
+          "y": 650
+        },
+        {
+          "original": {
+            "x": 193,
+            "y": 516
+          },
+          "x": 193,
+          "y": 563
+        }
+      ],
+      "source": "shape_8195",
+      "target": "shape_1947",
+      "multipleNumberAllowed": false
+    },
+    {
+      "type": "domainStory:activity",
+      "name": "Remove Itens",
+      "id": "connection_6450",
+      "pickedColor": "black",
+      "number": 2,
+      "waypoints": [
+        {
+          "original": {
+            "x": 580,
+            "y": 475
+          },
+          "x": 623,
+          "y": 475
+        },
+        {
+          "original": {
+            "x": 880,
+            "y": 475
+          },
+          "x": 842,
+          "y": 475
+        }
+      ],
+      "source": "shape_9736",
+      "target": "shape_8328",
+      "multipleNumberAllowed": false
+    },
+    {
+      "type": "domainStory:activity",
+      "name": "de",
+      "id": "connection_7625",
+      "pickedColor": "black",
+      "number": null,
+      "waypoints": [
+        {
+          "original": {
+            "x": 583,
+            "y": 311
+          },
+          "x": 615,
+          "y": 300
+        },
+        {
+          "original": {
+            "x": 707,
+            "y": 268
+          },
+          "x": 669,
+          "y": 281
+        }
+      ],
+      "source": "shape_9423",
+      "target": "shape_4657",
+      "multipleNumberAllowed": false
+    },
+    {
+      "type": "domainStory:activity",
+      "name": "para",
+      "id": "connection_9940",
+      "pickedColor": "black",
+      "number": null,
+      "waypoints": [
+        {
+          "original": {
+            "x": 193,
+            "y": 516
+          },
+          "x": 194,
+          "y": 478
+        },
+        {
+          "original": {
+            "x": 196,
+            "y": 298
+          },
+          "x": 195,
+          "y": 354
+        }
+      ],
+      "source": "shape_1947",
+      "target": "shape_7256",
+      "multipleNumberAllowed": false
+    },
+    {
+      "type": "domainStory:workObjectDocument",
+      "name": "Ordem de Servico",
+      "id": "shape_0854",
+      "x": 842,
+      "y": 650
+    },
+    {
+      "type": "domainStory:workObjectCheck-Circle",
+      "name": "Estado",
+      "id": "shape_1302",
+      "x": 1107,
+      "y": 650
+    },
+    {
+      "type": "domainStory:workObjectContact-Mail",
+      "name": "email",
+      "id": "shape_1947",
+      "x": 155,
+      "y": 478
+    },
+    {
+      "type": "domainStory:workObjectDocument",
+      "name": "Ordem de Servico",
+      "id": "shape_3535",
+      "x": 1107,
+      "y": 437
+    },
+    {
+      "name": "Insumos",
+      "id": "shape_3882",
+      "type": "domainStory:workObjectFace",
+      "x": 670,
+      "y": 650
+    },
+    {
+      "type": "domainStory:workObjectFace",
+      "name": "Insumos",
+      "id": "shape_4657",
+      "x": 669,
+      "y": 230
+    },
+    {
+      "type": "domainStory:workObjectAssessment",
+      "name": "Pecas",
+      "id": "shape_5471",
+      "x": 669,
+      "y": 309
+    },
+    {
+      "type": "domainStory:textAnnotation",
+      "name": "",
+      "id": "shape_5945",
+      "x": 658,
+      "y": 120,
+      "text": "Ferramentas e Mao de Obra",
+      "number": 42.754644942877015,
+      "height": 42.754644942877015,
+      "width": 99.98981254300116
+    },
+    {
+      "type": "domainStory:workObjectView-List",
+      "name": "(Estoque)Pecas e Insumos",
+      "id": "shape_6864",
+      "x": 542,
+      "y": 650
+    },
+    {
+      "type": "domainStory:actorGroup",
+      "name": "Atendente Mecanich`s Ltmd",
+      "id": "shape_7256",
+      "x": 163,
+      "y": 269
+    },
+    {
+      "name": "(Estoque)Pecas e Insumos",
+      "id": "shape_8195",
+      "type": "domainStory:workObjectView-List",
+      "x": 155,
+      "y": 650
+    },
+    {
+      "type": "domainStory:workObjectView-List",
+      "name": "(Estoque) Pecas e Insumos",
+      "id": "shape_8328",
+      "x": 842,
+      "y": 437
+    },
+    {
+      "type": "domainStory:workObjectView-List",
+      "name": "(Estoque) Pecas e Insumos",
+      "id": "shape_9423",
+      "x": 545,
+      "y": 273
+    },
+    {
+      "type": "domainStory:actorSystem",
+      "name": "Sistema",
+      "id": "shape_9736",
+      "x": 542,
+      "y": 437
+    },
+    {
+      "type": "domainStory:group",
+      "name": "Informando tipos de \"Itens\"",
+      "id": "shape_9745",
+      "pickedColor": "#000000",
+      "x": 525,
+      "y": 210,
+      "height": 194,
+      "width": 244
+    },
+    {
+      "info": ""
+    },
+    {
+      "version": "3.1.0"
+    }
+  ]
+}
