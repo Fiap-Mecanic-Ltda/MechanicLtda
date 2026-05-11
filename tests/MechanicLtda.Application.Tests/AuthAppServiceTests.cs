@@ -46,6 +46,9 @@ public class AuthAppServiceTests
 
     public AuthAppServiceTests()
     {
+        // Define a variável de ambiente necessária para GerarTokenAsync
+        Environment.SetEnvironmentVariable("JWT_SECRET_KEY", "chave-secreta-de-teste-super-segura-12345678");
+
         var userStoreMock = new Mock<IUserStore<Usuario>>();
 
         _userManagerMock = new Mock<UserManager<Usuario>>(
@@ -61,11 +64,9 @@ public class AuthAppServiceTests
 
         _fakeSignInManager = new FakeSignInManager(_userManagerMock.Object);
 
-        // ConfigurationBuilder com dados reais evita retorno null no indexer de IConfigurationSection
         _configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["JwtSettings:SecretKey"]        = "chave-secreta-de-teste-super-segura-12345678",
                 ["JwtSettings:ExpiracaoMinutos"] = "60",
                 ["JwtSettings:Issuer"]           = "mechanic-tests",
                 ["JwtSettings:Audience"]         = "mechanic-tests",

@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -14,20 +13,15 @@ namespace MechanicLtda.API.Extensions
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme    = JwtBearerDefaults.AuthenticationScheme;
             })
-            .AddJwtBearer(); // Sem lambda: configuração aplicada via Configure<> abaixo
+            .AddJwtBearer();
 
-            // Configure<> registra um delegate que executa de forma LAZY,
-            // somente quando JwtBearerOptions é resolvido pela primeira vez.
-            // Nesse ponto, toda a configuração (incluindo a injetada pela
-            // WebApplicationFactory nos testes) já foi aplicada ao IConfiguration.
             services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
             {
                 var jwtSettings = configuration.GetSection("JwtSettings");
 
-                var secretKeyValue = jwtSettings["SecretKey"]
+                var secretKeyValue = Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
                     ?? throw new InvalidOperationException(
-                        "JwtSettings:SecretKey não está configurada. " +
-                        "Verifique o appsettings.json, User Secrets ou variáveis de ambiente.");
+                        "A variável de ambiente 'JWT_SECRET_KEY' não está configurada.");
 
                 var secretKey = Encoding.UTF8.GetBytes(secretKeyValue);
 
