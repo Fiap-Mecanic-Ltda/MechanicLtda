@@ -147,9 +147,12 @@ namespace MechanicLtda.Application.AppServices
 
             claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
-            var jwtSettings = _configuration.GetSection("JwtSettings");
-            var secretKey   = Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!);
-            var expiracao   = DateTime.UtcNow.AddMinutes(Convert.ToDouble(jwtSettings["ExpiracaoMinutos"]));
+            var jwtSettings  = _configuration.GetSection("JwtSettings");
+            var rawSecretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
+                               ?? throw new InvalidOperationException("A variável de ambiente 'JWT_SECRET_KEY' não está configurada.");
+
+            var secretKey  = Encoding.UTF8.GetBytes(rawSecretKey);
+            var expiracao  = DateTime.UtcNow.AddMinutes(Convert.ToDouble(jwtSettings["ExpiracaoMinutos"]));
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {

@@ -19,10 +19,14 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     public const string AdminEmail = "admin@mechanic.com";
     public const string AdminSenha = "Admin@123";
 
-    // Root compartilhado: garante que TODOS os DbContext — independente do
-    // service provider interno que cada um cria — acessem os mesmos dados.
     private readonly string                _dbName  = $"TestDb_{Guid.NewGuid()}";
     private readonly InMemoryDatabaseRoot  _dbRoot  = new();
+
+    public CustomWebApplicationFactory()
+    {
+        // Garante que a variável de ambiente esteja disponível para GerarTokenAsync
+        Environment.SetEnvironmentVariable("JWT_SECRET_KEY", "ChaveSecretaDeTeste_MechanicLtda_2024!");
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -30,7 +34,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         {
             config.AddInMemoryCollection(new Dictionary<string, string>
             {
-                ["JwtSettings:SecretKey"]        = "ChaveSecretaDeTeste_MechanicLtda_2024!",
                 ["JwtSettings:Issuer"]           = "MechanicLtda",
                 ["JwtSettings:Audience"]         = "MechanicLtdaUsers",
                 ["JwtSettings:ExpiracaoMinutos"] = "60"
@@ -47,10 +50,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
             descriptors.ForEach(d => services.Remove(d));
 
-            // _dbRoot é a mesma instância para todos os DbContext da factory.
-            // EnableServiceProviderCaching(false) evita conflito com o provider
-            // interno do SQL Server; _dbRoot garante que o banco InMemory seja
-            // compartilhado mesmo com providers internos distintos.
             services.AddDbContext<BancoAPIContext>(options =>
                 options
                     .UseInMemoryDatabase(_dbName, _dbRoot)
