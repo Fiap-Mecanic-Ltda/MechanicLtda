@@ -27,3 +27,4 @@ secrets/
 /coverage-output
 /coverage-report
 .env
+/env .env

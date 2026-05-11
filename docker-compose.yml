@@ -30,6 +30,7 @@ services:
       - JwtSettings__Audience=MechanicLtda.Clients
       - JwtSettings__ExpiracaoMinutos=60
       - Encryption__CpfCnpjKey=${ENCRYPTION_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
     depends_on:
       sqlserver:
         condition: service_healthy
