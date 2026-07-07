@@ -46,7 +46,30 @@ namespace MechanicLtda.Infrastructure.Repositories.Base
 
         public virtual async Task<TEntity?> ObterPorIdAsync(string id)
         {
-            return await _dbSet.FindAsync(id);
+            // Obter a chave primária
+            var keyProperty = _context.Model.FindEntityType(typeof(TEntity))?.FindPrimaryKey()?.Properties.FirstOrDefault();
+
+            if (keyProperty == null)
+                return null;
+
+            // Se a chave é int, converter a string para int
+            if (keyProperty.ClrType == typeof(int) && int.TryParse(id, out var intId))
+                return await _dbSet.FindAsync(intId);
+
+            // Se a chave é string, usar direto
+            if (keyProperty.ClrType == typeof(string))
+                return await _dbSet.FindAsync(id);
+
+            // Para outros tipos, tentar converter
+            try
+            {
+                var convertedId = Convert.ChangeType(id, keyProperty.ClrType);
+                return await _dbSet.FindAsync(convertedId);
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         public async Task<int> SaveChanges()

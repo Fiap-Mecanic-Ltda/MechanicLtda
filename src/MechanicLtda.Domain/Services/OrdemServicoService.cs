@@ -29,7 +29,11 @@ namespace MechanicLtda.Domain.Services
         {
             try
             {
-                var veiculo = await _veiculoRepository.ObterPorIdAsync(veiculoId.ToString())
+                // Converter string para int para buscar o veículo
+                if (!int.TryParse(veiculoId.ToString(), out var veiculoIdInt))
+                    throw new ArgumentException($"VeiculoId inválido: {veiculoId}");
+
+                var veiculo = await _veiculoRepository.ObterPorIdAsync(veiculoIdInt.ToString())
                     ?? throw new KeyNotFoundException($"Veículo com Id '{veiculoId}' não encontrado.");
 
                 if (veiculo.ClienteId != clienteId)
@@ -132,6 +136,55 @@ namespace MechanicLtda.Domain.Services
             }
         }
 
+        public async Task<OrdemServico> AprovarAsync(int id)
+        {
+            try
+            {
+                var ordemServico = await _ordemServicoRepository.ObterPorIdAsync(id.ToString())
+                    ?? throw new KeyNotFoundException($"Ordem de Serviço com Id '{id}' não encontrada.");
+
+                if (ordemServico.Status != StatusOrdemServico.AguardandoAprovacao)
+                    throw new InvalidOperationException($"A OS só pode ser aprovada quando estiver 'Aguardando Aprovação'. Status atual: {ordemServico.Status}.");
+
+                ordemServico.Status          = StatusOrdemServico.EmExecucao;
+                ordemServico.DataModificacao = DateTime.UtcNow;
+
+                return await _ordemServicoRepository.AtualizarAsync(ordemServico);
+            }
+            catch (Exception ex)
+            {
+                Notificar(ex, "Ocorreu um erro no método OrdemServicoService:AprovarAsync", _logger);
+                throw;
+            }
+        }
+
+        public async Task<OrdemServico> RecusarAsync(int id, string motivoRecusa)
+        {
+            try
+            {
+                var ordemServico = await _ordemServicoRepository.ObterPorIdAsync(id.ToString())
+                    ?? throw new KeyNotFoundException($"Ordem de Serviço com Id '{id}' não encontrada.");
+
+                if (ordemServico.Status != StatusOrdemServico.AguardandoAprovacao)
+                    throw new InvalidOperationException($"A OS só pode ser recusada quando estiver 'Aguardando Aprovação'. Status atual: {ordemServico.Status}.");
+
+                // Voltar para Em Diagnóstico para revisão
+                ordemServico.Status          = StatusOrdemServico.EmDiagnostico;
+                ordemServico.DataModificacao = DateTime.UtcNow;
+
+                // Adicionar motivo da recusa na descrição ou em outro campo se disponível
+                if (!string.IsNullOrWhiteSpace(motivoRecusa))
+                    ordemServico.DescricaoProblema = $"{ordemServico.DescricaoProblema}\n[RECUSA]: {motivoRecusa}";
+
+                return await _ordemServicoRepository.AtualizarAsync(ordemServico);
+            }
+            catch (Exception ex)
+            {
+                Notificar(ex, "Ocorreu um erro no método OrdemServicoService:RecusarAsync", _logger);
+                throw;
+            }
+        }
+
         public async Task<OrdemServico> IniciarExecucaoAsync(int id)
         {
             try
@@ -225,6 +278,40 @@ namespace MechanicLtda.Domain.Services
                 Notificar(ex, "Ocorreu um erro no método OrdemServicoService:ObterPorClienteIdAsync", _logger);
                 throw;
             }
+        }
+
+        public async Task<IEnumerable<OrdemServico>> ObterPorStatusAsync(string statusDescricao)
+        {
+            try
+            {
+                // Obter todas as ordens de serviço
+                var todasAsOrdens = await _ordemServicoRepository.ObterTodosAsync();
+
+                // Filtrar por StatusDescricao usando Display
+                var ordensFiltradas = todasAsOrdens.Where(os => GetStatusDescription(os.Status) == statusDescricao);
+
+                return ordensFiltradas;
+            }
+            catch (Exception ex)
+            {
+                Notificar(ex, "Ocorreu um erro no método OrdemServicoService:ObterPorStatusAsync", _logger);
+                throw;
+            }
+        }
+
+        private static string GetStatusDescription(StatusOrdemServico status)
+        {
+            var type = status.GetType();
+            var name = Enum.GetName(type, status);
+            if (name == null) return status.ToString();
+
+            var field = type.GetField(name);
+            if (field == null) return status.ToString();
+
+            var displayAttribute = field.GetCustomAttributes(typeof(System.ComponentModel.DataAnnotations.DisplayAttribute), false)
+                .FirstOrDefault() as System.ComponentModel.DataAnnotations.DisplayAttribute;
+
+            return displayAttribute?.Name ?? status.ToString();
         }
 
         public async Task<OrdemServico?> ObterPorIdAsync(string id)

@@ -9,7 +9,19 @@ namespace MechanicLtda.API.Extensions
         public static IServiceCollection AddJwtAuthentication(this IServiceCollection services, IConfiguration configuration)
         {
             var jwtSettings = configuration.GetSection("JwtSettings");
-            var secretKey   = Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!);
+
+            var secretKeyString = jwtSettings["SecretKey"];
+            var issuer = jwtSettings["Issuer"];
+            var audience = jwtSettings["Audience"];
+
+            if (string.IsNullOrEmpty(secretKeyString))
+                throw new InvalidOperationException("JWT SecretKey is not configured. Please add 'JwtSettings:SecretKey' to your configuration.");
+            if (string.IsNullOrEmpty(issuer))
+                throw new InvalidOperationException("JWT Issuer is not configured. Please add 'JwtSettings:Issuer' to your configuration.");
+            if (string.IsNullOrEmpty(audience))
+                throw new InvalidOperationException("JWT Audience is not configured. Please add 'JwtSettings:Audience' to your configuration.");
+
+            var secretKey = Encoding.UTF8.GetBytes(secretKeyString);
 
             services.AddAuthentication(options =>
             {
@@ -24,8 +36,8 @@ namespace MechanicLtda.API.Extensions
                     ValidateAudience         = true,
                     ValidateLifetime         = true,
                     ValidateIssuerSigningKey  = true,
-                    ValidIssuer              = jwtSettings["Issuer"],
-                    ValidAudience            = jwtSettings["Audience"],
+                    ValidIssuer              = issuer,
+                    ValidAudience            = audience,
                     IssuerSigningKey         = new SymmetricSecurityKey(secretKey),
                     ClockSkew                = TimeSpan.Zero
                 };

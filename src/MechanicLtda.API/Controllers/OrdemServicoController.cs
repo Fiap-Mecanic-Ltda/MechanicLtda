@@ -67,9 +67,24 @@ namespace MechanicLtda.API.Controllers
                 GravaException(ex, "Falha ao obter ordens de serviço do cliente", _logger);
                 return CustomResponse();
             }
+         }
+
+        /// <summary>Lista as Ordens de Serviço filtradas pelo Status (usando Display).</summary>
+        [HttpGet("status/{statusDescricao}")]
+        public async Task<IActionResult> ObterPorStatus(string statusDescricao)
+        {
+            try
+            {
+                return CustomResponse(await _ordemServicoAppService.ObterPorStatusAsync(statusDescricao));
+            }
+            catch (Exception ex)
+            {
+                GravaException(ex, "Falha ao obter ordens de serviço por status", _logger);
+                return CustomResponse();
+            }
         }
 
-        /// <summary>Cria uma nova Ordem de Serviço com status inicial 'Recebida'.</summary>
+         /// <summary>Cria uma nova Ordem de Serviço com status inicial 'Recebida'. Retorna o ID da OS criada.</summary>
         [HttpPost]
         public async Task<IActionResult> Criar([FromBody] OrdemServicoCreateViewModel model)
         {
@@ -79,7 +94,19 @@ namespace MechanicLtda.API.Controllers
                     return CustomResponse(ModelState);
 
                 var dto = _mapper.Map<OrdemServicoCreateDto>(model);
-                return CustomResponse(await _ordemServicoAppService.AdicionarAsync(dto));
+                var response = await _ordemServicoAppService.AdicionarAsync(dto);
+
+                if (!response.hasErrors)
+                {
+                    var responseViewModel = new OrdemServicoCreateResponseViewModel
+                    {
+                        Id = response.getResponse.Id,
+                        Mensagem = "Ordem de Serviço criada com sucesso."
+                    };
+                    return CustomResponse(responseViewModel);
+                }
+
+                return CustomResponse(response);
             }
             catch (Exception ex)
             {
@@ -133,6 +160,39 @@ namespace MechanicLtda.API.Controllers
             catch (Exception ex)
             {
                 GravaException(ex, "Falha ao mover ordem de serviço para Aguardando Aprovação", _logger);
+                return CustomResponse();
+            }
+        }
+
+        /// <summary>Notificação externa: Cliente aprova a Ordem de Serviço. Requer status atual: Aguardando Aprovação.</summary>
+        [HttpPatch("{id}/aprovar")]
+        public async Task<IActionResult> Aprovar(string id)
+        {
+            try
+            {
+                return CustomResponse(await _ordemServicoAppService.AprovarAsync(id));
+            }
+            catch (Exception ex)
+            {
+                GravaException(ex, "Falha ao aprovar ordem de serviço", _logger);
+                return CustomResponse();
+            }
+        }
+
+        /// <summary>Notificação externa: Cliente recusa a Ordem de Serviço. Requer status atual: Aguardando Aprovação.</summary>
+        [HttpPatch("{id}/recusar")]
+        public async Task<IActionResult> Recusar(string id, [FromBody] RecusaOrdemServicoViewModel model)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return CustomResponse(ModelState);
+
+                return CustomResponse(await _ordemServicoAppService.RecusarAsync(id, model.MotivoRecusa));
+            }
+            catch (Exception ex)
+            {
+                GravaException(ex, "Falha ao recusar ordem de serviço", _logger);
                 return CustomResponse();
             }
         }
