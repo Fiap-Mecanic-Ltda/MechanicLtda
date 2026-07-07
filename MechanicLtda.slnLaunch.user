@@ -1,0 +1,27 @@
+[
+  {
+    "Name": "New Profile",
+    "Projects": [
+      {
+        "Path": "src\\MechanicLtda.Domain\\MechanicLtda.Domain.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "src\\MechanicLtda.Application\\MechanicLtda.Application.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "src\\MechanicLtda.Infrastructure\\MechanicLtda.Infrastructure.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "src\\MechanicLtda.API\\MechanicLtda.API.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "tests\\MechanicLtda.Domain.Tests\\MechanicLtda.Domain.Tests.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]
