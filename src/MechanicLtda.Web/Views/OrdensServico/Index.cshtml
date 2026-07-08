@@ -1,0 +1,41 @@
+@model IEnumerable<OrdemServicoDto>
+@{
+    ViewData["Title"] = "Ordens de serviço";
+}
+
+<section class="page-header">
+    <div>
+        <h1>Ordens de serviço</h1>
+        <p>Acompanhe o atendimento desde a entrada até a entrega.</p>
+    </div>
+    <a class="btn" asp-action="Create">Nova ordem</a>
+</section>
+
+<div class="table-wrap">
+    <table>
+        <thead><tr><th>OS</th><th>Status</th><th>Cliente</th><th>Veículo</th><th>Estimado</th><th>Criada em</th><th></th></tr></thead>
+        <tbody>
+        @foreach (var ordem in Model)
+        {
+            <tr>
+                <td><strong>#@ordem.Id</strong></td>
+                <td><span class="badge">@ordem.StatusDescricao</span></td>
+                <td>#@ordem.ClienteId</td>
+                <td>#@ordem.VeiculoId</td>
+                <td>@(ordem.ValorTotalEstimado?.ToString("C") ?? "-")</td>
+                <td>@ordem.DataCriacao.ToString("dd/MM/yyyy")</td>
+                <td class="actions">
+                    <a class="btn btn-small btn-secondary" asp-action="Details" asp-route-id="@ordem.Id">Abrir</a>
+                    <a class="btn btn-small btn-secondary" asp-action="Edit" asp-route-id="@ordem.Id">Editar</a>
+                    <form asp-action="Delete" asp-route-id="@ordem.Id" method="post"><button class="btn btn-small btn-danger" type="submit">Excluir</button></form>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+@if (!Model.Any())
+{
+    <div class="empty">Nenhuma ordem de serviço cadastrada.</div>
+}
+

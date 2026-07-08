@@ -1,0 +1,20 @@
+@model ItemOrdemServicoFormViewModel
+@{
+    ViewData["Title"] = "Editar item";
+}
+
+<section class="page-header">
+    <div><h1>Editar item</h1><p>Ordem de serviço #@Model.OrdemServicoId</p></div>
+</section>
+
+<form class="form" asp-action="Edit" asp-route-id="@Model.Id" method="post">
+    <partial name="_ValidationSummary" />
+    <input asp-for="OrdemServicoId" type="hidden" />
+    <div class="form-grid">
+        <div class="field field-full"><label asp-for="EstoqueId">Estoque</label><select asp-for="EstoqueId" asp-items="Model.Estoques"><option value="">Serviço manual ou item externo</option></select><span asp-validation-for="EstoqueId"></span></div>
+        <div class="field"><label asp-for="Quantidade"></label><input asp-for="Quantidade" type="number" /><span asp-validation-for="Quantidade"></span></div>
+        <div class="field"><label asp-for="ValorUnitario">Valor unitário</label><input asp-for="ValorUnitario" type="number" step="0.01" /><span asp-validation-for="ValorUnitario"></span></div>
+    </div>
+    <div class="form-actions"><button class="btn" type="submit">Salvar</button><a class="btn btn-secondary" asp-controller="OrdensServico" asp-action="Details" asp-route-id="@Model.OrdemServicoId">Cancelar</a></div>
+</form>
+

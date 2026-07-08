@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] - Mechanic Ltda</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <header class="topbar">
+        <a class="brand" asp-controller="Home" asp-action="Index">Mechanic Ltda</a>
+        <nav class="navlinks" aria-label="Principal">
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <a asp-controller="Clientes" asp-action="Index">Clientes</a>
+                <a asp-controller="Veiculos" asp-action="Index">Veículos</a>
+                <a asp-controller="OrdensServico" asp-action="Index">Ordens</a>
+                <a asp-controller="Estoques" asp-action="Index">Estoque</a>
+                <form class="logout-form" asp-controller="Conta" asp-action="Logout" method="post">
+                    <button type="submit">Sair</button>
+                </form>
+            }
+            else
+            {
+                <a asp-controller="Conta" asp-action="Login">Login</a>
+            }
+            <a href="/swagger">API</a>
+        </nav>
+    </header>
+
+    <main class="shell">
+        @if (TempData["Success"] is string success)
+        {
+            <div class="alert alert-success">@success</div>
+        }
+        @if (TempData["Error"] is string error)
+        {
+            <div class="alert alert-error">@error</div>
+        }
+        @RenderBody()
+    </main>
+</body>
+</html>
+
