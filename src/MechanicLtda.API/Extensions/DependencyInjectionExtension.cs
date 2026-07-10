@@ -4,6 +4,7 @@ using MechanicLtda.Domain.Interfaces.Repositories;
 using MechanicLtda.Domain.Interfaces.Services;
 using MechanicLtda.Domain.Services;
 using MechanicLtda.Infrastructure.Repositories;
+using MechanicLtda.Infrastructure.Services;
 
 namespace MechanicLtda.API.Extensions
 {
@@ -11,10 +12,10 @@ namespace MechanicLtda.API.Extensions
     {
         public static IServiceCollection AddDependencyInjection(this IServiceCollection services)
         {
-            // Notificador — Scoped para que as notificações vivam por requisição
+            // Notificador ï¿½ Scoped para que as notificaï¿½ï¿½es vivam por requisiï¿½ï¿½o
             services.AddScoped<INotificadorService, NotificadorService>();
 
-            // Repositórios
+            // Repositï¿½rios
             services.AddScoped<IUsuarioRepository, UsuarioRepository>();
             services.AddScoped<IClienteRepository, ClienteRepository>();
             services.AddScoped<IVeiculoRepository, VeiculoRepository>();
@@ -22,6 +23,10 @@ namespace MechanicLtda.API.Extensions
             services.AddScoped<IItemOrdemServicoRepository, ItemOrdemServicoRepository>();
             services.AddScoped<IEstoqueRepository, EstoqueRepository>();
             services.AddScoped<IOrcamentoRepository, OrcamentoRepository>();
+            services.AddScoped<IOrdemServicoAprovacaoTokenRepository, OrdemServicoAprovacaoTokenRepository>();
+
+            // ServiÃ§os de Infraestrutura
+            services.AddScoped<IEmailService, EmailService>();
 
             // Domain Services
             services.AddScoped<IUsuarioService, UsuarioService>();

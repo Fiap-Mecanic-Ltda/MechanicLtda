@@ -5,6 +5,7 @@ using MechanicLtda.Domain.Interfaces.Services;
 using MechanicLtda.Domain.Services.Base;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Security.Cryptography;
 
 namespace MechanicLtda.Domain.Services
 {
@@ -12,16 +13,22 @@ namespace MechanicLtda.Domain.Services
     {
         private readonly IOrdemServicoRepository _ordemServicoRepository;
         private readonly IVeiculoRepository _veiculoRepository;
+        private readonly IOrdemServicoAprovacaoTokenRepository _ordemServicoAprovacaoTokenRepository;
+        private readonly IEmailService _emailService;
         private readonly ILogger<OrdemServicoService> _logger;
 
         public OrdemServicoService(ILogger<OrdemServicoService> logger,
                                    IConfiguration configuration,
                                    INotificadorService notificadorService,
                                    IOrdemServicoRepository ordemServicoRepository,
-                                   IVeiculoRepository veiculoRepository) : base(notificadorService, configuration)
+                                   IVeiculoRepository veiculoRepository,
+                                   IOrdemServicoAprovacaoTokenRepository ordemServicoAprovacaoTokenRepository,
+                                   IEmailService emailService) : base(notificadorService, configuration)
         {
             _ordemServicoRepository = ordemServicoRepository;
             _veiculoRepository = veiculoRepository;
+            _ordemServicoAprovacaoTokenRepository = ordemServicoAprovacaoTokenRepository;
+            _emailService = emailService;
             _logger = logger;
         }
 
@@ -29,15 +36,15 @@ namespace MechanicLtda.Domain.Services
         {
             try
             {
-                // Converter string para int para buscar o veÌculo
+                // Converter string para int para buscar o ve√≠culo
                 if (!int.TryParse(veiculoId.ToString(), out var veiculoIdInt))
-                    throw new ArgumentException($"VeiculoId inv·lido: {veiculoId}");
+                    throw new ArgumentException($"VeiculoId inv√°lido: {veiculoId}");
 
                 var veiculo = await _veiculoRepository.ObterPorIdAsync(veiculoIdInt.ToString())
-                    ?? throw new KeyNotFoundException($"VeÌculo com Id '{veiculoId}' n„o encontrado.");
+                    ?? throw new KeyNotFoundException($"Ve√≠culo com Id '{veiculoId}' n√£o encontrado.");
 
                 if (veiculo.ClienteId != clienteId)
-                    throw new InvalidOperationException("O veÌculo informado n„o pertence ao cliente indicado.");
+                    throw new InvalidOperationException("O ve√≠culo informado n√£o pertence ao cliente indicado.");
 
                 var ordemServico = new OrdemServico
                 {
@@ -49,11 +56,16 @@ namespace MechanicLtda.Domain.Services
                     DataCriacao        = DateTime.Now
                 };
 
-                return await _ordemServicoRepository.AdicionarAsync(ordemServico);
+                var novaOrdem = await _ordemServicoRepository.AdicionarAsync(ordemServico);
+
+                var resultado = await _ordemServicoRepository.ObterPorIdAsync(novaOrdem.Id.ToString()) ?? novaOrdem;
+                await EnviarEmailNotificacaoStatusAsync(resultado);
+
+                return resultado;
             }
             catch (Exception ex)
             {
-                Notificar(ex, "Ocorreu um erro no mÈtodo OrdemServicoService:AdicionarAsync", _logger);
+                Notificar(ex, "Ocorreu um erro no m√©todo OrdemServicoService:AdicionarAsync", _logger);
                 throw;
             }
         }
@@ -63,19 +75,22 @@ namespace MechanicLtda.Domain.Services
             try
             {
                 var existente = await _ordemServicoRepository.ObterPorIdAsync(ordemServico.Id.ToString())
-                    ?? throw new KeyNotFoundException($"Ordem de ServiÁo com Id '{ordemServico.Id}' n„o encontrada.");
+                    ?? throw new KeyNotFoundException($"Ordem de Servi√ßo com Id '{ordemServico.Id}' n√£o encontrada.");
 
                 var veiculo = await _veiculoRepository.ObterPorIdAsync(ordemServico.VeiculoId.ToString())
-                    ?? throw new KeyNotFoundException($"VeÌculo com Id '{ordemServico.VeiculoId}' n„o encontrado.");
+                    ?? throw new KeyNotFoundException($"Ve√≠culo com Id '{ordemServico.VeiculoId}' n√£o encontrado.");
 
                 if (veiculo.ClienteId != ordemServico.ClienteId)
-                    throw new InvalidOperationException("O veÌculo informado n„o pertence ao cliente indicado.");
+                    throw new InvalidOperationException("O ve√≠culo informado n√£o pertence ao cliente indicado.");
+
+                var statusAnterior = existente.Status;
 
                 ordemServico.Status          = existente.Status;
                 ordemServico.DataCriacao     = existente.DataCriacao;
                 ordemServico.DataModificacao = DateTime.UtcNow;
+                ordemServico.Cliente         = existente.Cliente;
 
-                // Gatilho: ao preencher descriÁ„o + valor estimado na OS recebida, avanÁa para Em DiagnÛstico
+                // Gatilho: ao preencher descri√ß√£o + valor estimado na OS recebida, avan√ßa para Em Diagn√≥stico
                 if (!string.IsNullOrWhiteSpace(ordemServico.DescricaoProblema) &&
                     ordemServico.ValorTotalEstimado.HasValue &&
                     existente.Status == StatusOrdemServico.Recebida)
@@ -83,11 +98,16 @@ namespace MechanicLtda.Domain.Services
                     ordemServico.Status = StatusOrdemServico.EmDiagnostico;
                 }
 
-                return await _ordemServicoRepository.AtualizarAsync(ordemServico);
+                var resultado = await _ordemServicoRepository.AtualizarAsync(ordemServico);
+
+                if (resultado.Status != statusAnterior)
+                    await EnviarEmailNotificacaoStatusAsync(resultado);
+
+                return resultado;
             }
             catch (Exception ex)
             {
-                Notificar(ex, "Ocorreu um erro no mÈtodo OrdemServicoService:AtualizarAsync", _logger);
+                Notificar(ex, "Ocorreu um erro no m√©todo OrdemServicoService:AtualizarAsync", _logger);
                 throw;
             }
         }
@@ -97,19 +117,23 @@ namespace MechanicLtda.Domain.Services
             try
             {
                 var ordemServico = await _ordemServicoRepository.ObterPorIdAsync(id.ToString())
-                    ?? throw new KeyNotFoundException($"Ordem de ServiÁo com Id '{id}' n„o encontrada.");
+                    ?? throw new KeyNotFoundException($"Ordem de Servi√ßo com Id '{id}' n√£o encontrada.");
 
                 if (ordemServico.Status != StatusOrdemServico.Recebida)
-                    throw new InvalidOperationException($"A OS sÛ pode ir para 'Em DiagnÛstico' quando estiver 'Recebida'. Status atual: {ordemServico.Status}.");
+                    throw new InvalidOperationException($"A OS s√≥ pode ir para 'Em Diagn√≥stico' quando estiver 'Recebida'. Status atual: {ordemServico.Status}.");
 
                 ordemServico.Status          = StatusOrdemServico.EmDiagnostico;
                 ordemServico.DataModificacao = DateTime.UtcNow;
 
-                return await _ordemServicoRepository.AtualizarAsync(ordemServico);
+                var resultado = await _ordemServicoRepository.AtualizarAsync(ordemServico);
+
+                await EnviarEmailNotificacaoStatusAsync(resultado);
+
+                return resultado;
             }
             catch (Exception ex)
             {
-                Notificar(ex, "Ocorreu um erro no mÈtodo OrdemServicoService:IniciarDiagnosticoAsync", _logger);
+                Notificar(ex, "Ocorreu um erro no m√©todo OrdemServicoService:IniciarDiagnosticoAsync", _logger);
                 throw;
             }
         }
@@ -119,21 +143,104 @@ namespace MechanicLtda.Domain.Services
             try
             {
                 var ordemServico = await _ordemServicoRepository.ObterPorIdAsync(id.ToString())
-                    ?? throw new KeyNotFoundException($"Ordem de ServiÁo com Id '{id}' n„o encontrada.");
+                    ?? throw new KeyNotFoundException($"Ordem de Servi√ßo com Id '{id}' n√£o encontrada.");
 
                 if (ordemServico.Status != StatusOrdemServico.EmDiagnostico)
-                    throw new InvalidOperationException($"A OS sÛ pode ir para 'Aguardando AprovaÁ„o' quando estiver 'Em DiagnÛstico'. Status atual: {ordemServico.Status}.");
+                    throw new InvalidOperationException($"A OS s√≥ pode ir para 'Aguardando Aprova√ß√£o' quando estiver 'Em Diagn√≥stico'. Status atual: {ordemServico.Status}.");
 
                 ordemServico.Status          = StatusOrdemServico.AguardandoAprovacao;
                 ordemServico.DataModificacao = DateTime.UtcNow;
 
-                return await _ordemServicoRepository.AtualizarAsync(ordemServico);
+                var resultado = await _ordemServicoRepository.AtualizarAsync(ordemServico);
+
+                await EnviarEmailNotificacaoStatusAsync(resultado);
+                await EnviarEmailAprovacaoAsync(resultado);
+
+                return resultado;
             }
             catch (Exception ex)
             {
-                Notificar(ex, "Ocorreu um erro no mÈtodo OrdemServicoService:AguardarAprovacaoAsync", _logger);
+                Notificar(ex, "Ocorreu um erro no m√©todo OrdemServicoService:AguardarAprovacaoAsync", _logger);
                 throw;
             }
+        }
+
+        private async Task EnviarEmailNotificacaoStatusAsync(OrdemServico ordemServico)
+        {
+            try
+            {
+                if (ordemServico.Cliente == null || string.IsNullOrWhiteSpace(ordemServico.Cliente.Email))
+                {
+                    _logger.LogWarning("OS {Id}: cliente sem e-mail cadastrado, notifica√ß√£o de status n√£o enviada.", ordemServico.Id);
+                    return;
+                }
+
+                var statusDescricao = GetStatusDescription(ordemServico.Status);
+
+                var corpoHtml = $"""
+                    <p>Ol√°, {ordemServico.Cliente.Nome}.</p>
+                    <p>Sua Ordem de Servi√ßo #{ordemServico.Id} teve o status atualizado para: <strong>{statusDescricao}</strong>.</p>
+                    """;
+
+                await _emailService.EnviarEmailAsync(ordemServico.Cliente.Email, ordemServico.Cliente.Nome,
+                    $"Atualiza√ß√£o da Ordem de Servi√ßo #{ordemServico.Id}", corpoHtml);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Falha ao enviar e-mail de notifica√ß√£o de status para a OS {Id}. A transi√ß√£o de status n√£o foi afetada.", ordemServico.Id);
+            }
+        }
+
+        private async Task EnviarEmailAprovacaoAsync(OrdemServico ordemServico)
+        {
+            try
+            {
+                if (ordemServico.Cliente == null || string.IsNullOrWhiteSpace(ordemServico.Cliente.Email))
+                {
+                    _logger.LogWarning("OS {Id}: cliente sem e-mail cadastrado, notifica√ß√£o de aprova√ß√£o n√£o enviada.", ordemServico.Id);
+                    return;
+                }
+
+                var horasExpiracao = _configuration.GetValue<int?>("AppSettings:AprovacaoTokenExpiracaoHoras") ?? 72;
+
+                var token = new OrdemServicoAprovacaoToken
+                {
+                    OrdemServicoId = ordemServico.Id,
+                    Token          = GerarTokenSeguro(),
+                    DataCriacao    = DateTime.UtcNow,
+                    DataExpiracao  = DateTime.UtcNow.AddHours(horasExpiracao),
+                    Utilizado      = false
+                };
+
+                await _ordemServicoAprovacaoTokenRepository.AdicionarAsync(token);
+
+                var baseUrl = _configuration["AppSettings:BaseUrlAprovacao"]?.TrimEnd('/')
+                    ?? throw new InvalidOperationException("AppSettings:BaseUrlAprovacao n√£o configurado.");
+
+                var linkAprovar = $"{baseUrl}/api/AprovacaoOrdemServico/{token.Token}/aprovar";
+                var linkRecusar = $"{baseUrl}/api/AprovacaoOrdemServico/{token.Token}/recusar";
+
+                var corpoHtml = $"""
+                    <p>Ol√°, {ordemServico.Cliente.Nome}.</p>
+                    <p>Sua Ordem de Servi√ßo #{ordemServico.Id} est√° aguardando sua aprova√ß√£o.</p>
+                    <p><a href="{linkAprovar}">Aprovar Ordem de Servi√ßo</a></p>
+                    <p><a href="{linkRecusar}">Recusar Ordem de Servi√ßo</a></p>
+                    <p>Este link expira em {horasExpiracao} horas.</p>
+                    """;
+
+                await _emailService.EnviarEmailAsync(ordemServico.Cliente.Email, ordemServico.Cliente.Nome,
+                    "Aprova√ß√£o de Ordem de Servi√ßo pendente", corpoHtml);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Falha ao enviar e-mail de aprova√ß√£o para a OS {Id}. A transi√ß√£o de status n√£o foi afetada.", ordemServico.Id);
+            }
+        }
+
+        private static string GerarTokenSeguro()
+        {
+            return Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
+                .Replace("+", "-").Replace("/", "_").Replace("=", "");
         }
 
         public async Task<OrdemServico> AprovarAsync(int id)
@@ -141,19 +248,23 @@ namespace MechanicLtda.Domain.Services
             try
             {
                 var ordemServico = await _ordemServicoRepository.ObterPorIdAsync(id.ToString())
-                    ?? throw new KeyNotFoundException($"Ordem de ServiÁo com Id '{id}' n„o encontrada.");
+                    ?? throw new KeyNotFoundException($"Ordem de Servi√ßo com Id '{id}' n√£o encontrada.");
 
                 if (ordemServico.Status != StatusOrdemServico.AguardandoAprovacao)
-                    throw new InvalidOperationException($"A OS sÛ pode ser aprovada quando estiver 'Aguardando AprovaÁ„o'. Status atual: {ordemServico.Status}.");
+                    throw new InvalidOperationException($"A OS s√≥ pode ser aprovada quando estiver 'Aguardando Aprova√ß√£o'. Status atual: {ordemServico.Status}.");
 
                 ordemServico.Status          = StatusOrdemServico.EmExecucao;
                 ordemServico.DataModificacao = DateTime.UtcNow;
 
-                return await _ordemServicoRepository.AtualizarAsync(ordemServico);
+                var resultado = await _ordemServicoRepository.AtualizarAsync(ordemServico);
+
+                await EnviarEmailNotificacaoStatusAsync(resultado);
+
+                return resultado;
             }
             catch (Exception ex)
             {
-                Notificar(ex, "Ocorreu um erro no mÈtodo OrdemServicoService:AprovarAsync", _logger);
+                Notificar(ex, "Ocorreu um erro no m√©todo OrdemServicoService:AprovarAsync", _logger);
                 throw;
             }
         }
@@ -163,24 +274,28 @@ namespace MechanicLtda.Domain.Services
             try
             {
                 var ordemServico = await _ordemServicoRepository.ObterPorIdAsync(id.ToString())
-                    ?? throw new KeyNotFoundException($"Ordem de ServiÁo com Id '{id}' n„o encontrada.");
+                    ?? throw new KeyNotFoundException($"Ordem de Servi√ßo com Id '{id}' n√£o encontrada.");
 
                 if (ordemServico.Status != StatusOrdemServico.AguardandoAprovacao)
-                    throw new InvalidOperationException($"A OS sÛ pode ser recusada quando estiver 'Aguardando AprovaÁ„o'. Status atual: {ordemServico.Status}.");
+                    throw new InvalidOperationException($"A OS s√≥ pode ser recusada quando estiver 'Aguardando Aprova√ß√£o'. Status atual: {ordemServico.Status}.");
 
-                // Voltar para Em DiagnÛstico para revis„o
+                // Voltar para Em Diagn√≥stico para revis√£o
                 ordemServico.Status          = StatusOrdemServico.EmDiagnostico;
                 ordemServico.DataModificacao = DateTime.UtcNow;
 
-                // Adicionar motivo da recusa na descriÁ„o ou em outro campo se disponÌvel
+                // Adicionar motivo da recusa na descri√ß√£o ou em outro campo se dispon√≠vel
                 if (!string.IsNullOrWhiteSpace(motivoRecusa))
                     ordemServico.DescricaoProblema = $"{ordemServico.DescricaoProblema}\n[RECUSA]: {motivoRecusa}";
 
-                return await _ordemServicoRepository.AtualizarAsync(ordemServico);
+                var resultado = await _ordemServicoRepository.AtualizarAsync(ordemServico);
+
+                await EnviarEmailNotificacaoStatusAsync(resultado);
+
+                return resultado;
             }
             catch (Exception ex)
             {
-                Notificar(ex, "Ocorreu um erro no mÈtodo OrdemServicoService:RecusarAsync", _logger);
+                Notificar(ex, "Ocorreu um erro no m√©todo OrdemServicoService:RecusarAsync", _logger);
                 throw;
             }
         }
@@ -190,19 +305,23 @@ namespace MechanicLtda.Domain.Services
             try
             {
                 var ordemServico = await _ordemServicoRepository.ObterPorIdAsync(id.ToString())
-                    ?? throw new KeyNotFoundException($"Ordem de ServiÁo com Id '{id}' n„o encontrada.");
+                    ?? throw new KeyNotFoundException($"Ordem de Servi√ßo com Id '{id}' n√£o encontrada.");
 
                 if (ordemServico.Status != StatusOrdemServico.AguardandoAprovacao)
-                    throw new InvalidOperationException($"A OS sÛ pode ir para 'Em ExecuÁ„o' quando estiver 'Aguardando AprovaÁ„o'. Status atual: {ordemServico.Status}.");
+                    throw new InvalidOperationException($"A OS s√≥ pode ir para 'Em Execu√ß√£o' quando estiver 'Aguardando Aprova√ß√£o'. Status atual: {ordemServico.Status}.");
 
                 ordemServico.Status          = StatusOrdemServico.EmExecucao;
                 ordemServico.DataModificacao = DateTime.UtcNow;
 
-                return await _ordemServicoRepository.AtualizarAsync(ordemServico);
+                var resultado = await _ordemServicoRepository.AtualizarAsync(ordemServico);
+
+                await EnviarEmailNotificacaoStatusAsync(resultado);
+
+                return resultado;
             }
             catch (Exception ex)
             {
-                Notificar(ex, "Ocorreu um erro no mÈtodo OrdemServicoService:IniciarExecucaoAsync", _logger);
+                Notificar(ex, "Ocorreu um erro no m√©todo OrdemServicoService:IniciarExecucaoAsync", _logger);
                 throw;
             }
         }
@@ -212,19 +331,23 @@ namespace MechanicLtda.Domain.Services
             try
             {
                 var ordemServico = await _ordemServicoRepository.ObterPorIdAsync(id.ToString())
-                    ?? throw new KeyNotFoundException($"Ordem de ServiÁo com Id '{id}' n„o encontrada.");
+                    ?? throw new KeyNotFoundException($"Ordem de Servi√ßo com Id '{id}' n√£o encontrada.");
 
                 if (ordemServico.Status != StatusOrdemServico.EmExecucao)
-                    throw new InvalidOperationException($"A OS sÛ pode ser 'Finalizada' quando estiver 'Em ExecuÁ„o'. Status atual: {ordemServico.Status}.");
+                    throw new InvalidOperationException($"A OS s√≥ pode ser 'Finalizada' quando estiver 'Em Execu√ß√£o'. Status atual: {ordemServico.Status}.");
 
                 ordemServico.Status          = StatusOrdemServico.Finalizada;
                 ordemServico.DataModificacao = DateTime.UtcNow;
 
-                return await _ordemServicoRepository.AtualizarAsync(ordemServico);
+                var resultado = await _ordemServicoRepository.AtualizarAsync(ordemServico);
+
+                await EnviarEmailNotificacaoStatusAsync(resultado);
+
+                return resultado;
             }
             catch (Exception ex)
             {
-                Notificar(ex, "Ocorreu um erro no mÈtodo OrdemServicoService:FinalizarAsync", _logger);
+                Notificar(ex, "Ocorreu um erro no m√©todo OrdemServicoService:FinalizarAsync", _logger);
                 throw;
             }
         }
@@ -234,19 +357,23 @@ namespace MechanicLtda.Domain.Services
             try
             {
                 var ordemServico = await _ordemServicoRepository.ObterPorIdAsync(id.ToString())
-                    ?? throw new KeyNotFoundException($"Ordem de ServiÁo com Id '{id}' n„o encontrada.");
+                    ?? throw new KeyNotFoundException($"Ordem de Servi√ßo com Id '{id}' n√£o encontrada.");
 
                 if (ordemServico.Status != StatusOrdemServico.Finalizada)
-                    throw new InvalidOperationException($"A OS sÛ pode ser 'Entregue' quando estiver 'Finalizada'. Status atual: {ordemServico.Status}.");
+                    throw new InvalidOperationException($"A OS s√≥ pode ser 'Entregue' quando estiver 'Finalizada'. Status atual: {ordemServico.Status}.");
 
                 ordemServico.Status          = StatusOrdemServico.Entregue;
                 ordemServico.DataModificacao = DateTime.UtcNow;
 
-                return await _ordemServicoRepository.AtualizarAsync(ordemServico);
+                var resultado = await _ordemServicoRepository.AtualizarAsync(ordemServico);
+
+                await EnviarEmailNotificacaoStatusAsync(resultado);
+
+                return resultado;
             }
             catch (Exception ex)
             {
-                Notificar(ex, "Ocorreu um erro no mÈtodo OrdemServicoService:EntregarAsync", _logger);
+                Notificar(ex, "Ocorreu um erro no m√©todo OrdemServicoService:EntregarAsync", _logger);
                 throw;
             }
         }
@@ -259,7 +386,7 @@ namespace MechanicLtda.Domain.Services
             }
             catch (Exception ex)
             {
-                Notificar(ex, "Ocorreu um erro no mÈtodo OrdemServicoService:ObterTodosAsync", _logger);
+                Notificar(ex, "Ocorreu um erro no m√©todo OrdemServicoService:ObterTodosAsync", _logger);
                 throw;
             }
         }
@@ -269,13 +396,13 @@ namespace MechanicLtda.Domain.Services
             try
             {
                 if (!int.TryParse(clienteId, out var id))
-                    throw new ArgumentException("ClienteId inv·lido.");
+                    throw new ArgumentException("ClienteId inv√°lido.");
 
                 return await _ordemServicoRepository.ObterPorClienteIdAsync(id);
             }
             catch (Exception ex)
             {
-                Notificar(ex, "Ocorreu um erro no mÈtodo OrdemServicoService:ObterPorClienteIdAsync", _logger);
+                Notificar(ex, "Ocorreu um erro no m√©todo OrdemServicoService:ObterPorClienteIdAsync", _logger);
                 throw;
             }
         }
@@ -284,7 +411,7 @@ namespace MechanicLtda.Domain.Services
         {
             try
             {
-                // Obter todas as ordens de serviÁo
+                // Obter todas as ordens de servi√ßo
                 var todasAsOrdens = await _ordemServicoRepository.ObterTodosAsync();
 
                 // Filtrar por StatusDescricao usando Display
@@ -294,7 +421,7 @@ namespace MechanicLtda.Domain.Services
             }
             catch (Exception ex)
             {
-                Notificar(ex, "Ocorreu um erro no mÈtodo OrdemServicoService:ObterPorStatusAsync", _logger);
+                Notificar(ex, "Ocorreu um erro no m√©todo OrdemServicoService:ObterPorStatusAsync", _logger);
                 throw;
             }
         }
@@ -322,7 +449,7 @@ namespace MechanicLtda.Domain.Services
             }
             catch (Exception ex)
             {
-                Notificar(ex, "Ocorreu um erro no mÈtodo OrdemServicoService:ObterPorIdAsync", _logger);
+                Notificar(ex, "Ocorreu um erro no m√©todo OrdemServicoService:ObterPorIdAsync", _logger);
                 throw;
             }
         }
@@ -332,13 +459,43 @@ namespace MechanicLtda.Domain.Services
             try
             {
                 _ = await _ordemServicoRepository.ObterPorIdAsync(id)
-                    ?? throw new KeyNotFoundException($"Ordem de ServiÁo com Id '{id}' n„o encontrada.");
+                    ?? throw new KeyNotFoundException($"Ordem de Servi√ßo com Id '{id}' n√£o encontrada.");
 
                 await _ordemServicoRepository.RemoverAsync(id);
             }
             catch (Exception ex)
             {
-                Notificar(ex, "Ocorreu um erro no mÈtodo OrdemServicoService:RemoverAsync", _logger);
+                Notificar(ex, "Ocorreu um erro no m√©todo OrdemServicoService:RemoverAsync", _logger);
+                throw;
+            }
+        }
+
+        public async Task<OrdemServico> ConfirmarAprovacaoPorTokenAsync(string token, bool aprovado, string? motivoRecusa)
+        {
+            try
+            {
+                var tokenEntity = await _ordemServicoAprovacaoTokenRepository.ObterPorTokenAsync(token)
+                    ?? throw new KeyNotFoundException("Token de aprova√ß√£o inv√°lido.");
+
+                if (tokenEntity.Utilizado)
+                    throw new InvalidOperationException("Este token de aprova√ß√£o j√° foi utilizado.");
+
+                if (tokenEntity.DataExpiracao < DateTime.UtcNow)
+                    throw new InvalidOperationException("Este token de aprova√ß√£o expirou.");
+
+                var ordemServico = aprovado
+                    ? await AprovarAsync(tokenEntity.OrdemServicoId)
+                    : await RecusarAsync(tokenEntity.OrdemServicoId, motivoRecusa ?? string.Empty);
+
+                tokenEntity.Utilizado      = true;
+                tokenEntity.DataUtilizacao = DateTime.UtcNow;
+                await _ordemServicoAprovacaoTokenRepository.AtualizarAsync(tokenEntity);
+
+                return ordemServico;
+            }
+            catch (Exception ex)
+            {
+                Notificar(ex, "Ocorreu um erro no m√©todo OrdemServicoService:ConfirmarAprovacaoPorTokenAsync", _logger);
                 throw;
             }
         }
