@@ -84,7 +84,7 @@ namespace MechanicLtda.Application.AppServices
             try
             {
                 if (!int.TryParse(id, out var ordemId))
-                    return response.addError("Id inválido.");
+                    return response.addError("Id invï¿½lido.");
 
                 var resultado = await _ordemServicoService.AprovarAsync(ordemId);
                 return response.setResponse(_mapper.Map<OrdemServicoDto>(resultado));
@@ -100,9 +100,25 @@ namespace MechanicLtda.Application.AppServices
             try
             {
                 if (!int.TryParse(id, out var ordemId))
-                    return response.addError("Id inválido.");
+                    return response.addError("Id invï¿½lido.");
 
                 var resultado = await _ordemServicoService.RecusarAsync(ordemId, motivoRecusa);
+                return response.setResponse(_mapper.Map<OrdemServicoDto>(resultado));
+            }
+            catch (KeyNotFoundException ex) { return response.addError(ex.Message); }
+            catch (InvalidOperationException ex) { return response.addError(ex.Message); }
+            catch (Exception ex) { return response.addError(ex); }
+        }
+
+        public async Task<ResponseDto<OrdemServicoDto>> ConfirmarAprovacaoPorTokenAsync(string token, bool aprovado, string? motivoRecusa)
+        {
+            var response = new ResponseDto<OrdemServicoDto>();
+            try
+            {
+                if (string.IsNullOrWhiteSpace(token))
+                    return response.addError("Token invï¿½lido.");
+
+                var resultado = await _ordemServicoService.ConfirmarAprovacaoPorTokenAsync(token, aprovado, motivoRecusa);
                 return response.setResponse(_mapper.Map<OrdemServicoDto>(resultado));
             }
             catch (KeyNotFoundException ex) { return response.addError(ex.Message); }
