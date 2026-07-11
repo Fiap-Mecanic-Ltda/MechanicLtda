@@ -1,4 +1,4 @@
-using MechanicLtda.Domain.Entities;
+﻿using MechanicLtda.Domain.Entities;
 using MechanicLtda.Infrastructure.FluentAPI.ConfiguracaoTabelas.Base;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,6 +19,11 @@ namespace MechanicLtda.Infrastructure.FluentAPI.ConfiguracaoTabelas
                 entity.Property(e => e.ValorTotalEstimado)
                       .HasColumnType("decimal(18,2)");
 
+                entity.Property(e => e.DataInicioExecucao)
+                      .IsRequired(false);
+
+                entity.Property(e => e.DataFimExecucao)
+                      .IsRequired(false);
                 entity.Property(e => e.Status)
                       .IsRequired()
                       .HasConversion<int>();

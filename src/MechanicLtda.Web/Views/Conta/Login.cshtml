@@ -1,0 +1,37 @@
+@model LoginRazorViewModel
+@{
+    ViewData["Title"] = "Login";
+}
+
+<section class="login-shell">
+    <form class="form login-form" asp-controller="Conta" asp-action="Login" method="post">
+        <input asp-for="ReturnUrl" type="hidden" />
+        <div class="page-header login-header">
+            <div>
+                <h1>Entrar</h1>
+                <p>Acesse a interface da oficina.</p>
+            </div>
+        </div>
+
+        <partial name="_ValidationSummary" />
+
+        <div class="form-grid">
+            <div class="field field-full">
+                <label asp-for="Email"></label>
+                <input asp-for="Email" autocomplete="username" />
+                <span asp-validation-for="Email"></span>
+            </div>
+            <div class="field field-full">
+                <label asp-for="Senha"></label>
+                <input asp-for="Senha" autocomplete="current-password" />
+                <span asp-validation-for="Senha"></span>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button class="btn" type="submit">Entrar</button>
+            <a class="btn btn-secondary" href="/swagger">API</a>
+        </div>
+    </form>
+</section>
+

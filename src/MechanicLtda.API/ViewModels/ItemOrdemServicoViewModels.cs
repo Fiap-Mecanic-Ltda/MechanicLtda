@@ -6,6 +6,11 @@ namespace MechanicLtda.API.ViewModels
     {
         public int? EstoqueId { get; set; }
 
+        public int? ServicoOficinaId { get; set; }
+
+        [MaxLength(1000, ErrorMessage = "A descrição do serviço deve ter no máximo 1000 caracteres.")]
+        public string? DescricaoServico { get; set; }
+
         [Required(ErrorMessage = "A quantidade é obrigatória.")]
         [Range(1, int.MaxValue, ErrorMessage = "A quantidade deve ser maior que zero.")]
         public int Quantidade { get; set; }
@@ -19,6 +24,11 @@ namespace MechanicLtda.API.ViewModels
     {
         public int? EstoqueId { get; set; }
 
+        public int? ServicoOficinaId { get; set; }
+
+        [MaxLength(1000, ErrorMessage = "A descrição do serviço deve ter no máximo 1000 caracteres.")]
+        public string? DescricaoServico { get; set; }
+
         [Required(ErrorMessage = "A quantidade é obrigatória.")]
         [Range(1, int.MaxValue, ErrorMessage = "A quantidade deve ser maior que zero.")]
         public int Quantidade { get; set; }
@@ -28,3 +38,5 @@ namespace MechanicLtda.API.ViewModels
         public decimal ValorUnitario { get; set; }
     }
 }
+
+

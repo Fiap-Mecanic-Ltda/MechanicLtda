@@ -1,0 +1,40 @@
+@model IEnumerable<ClienteDto>
+@{
+    ViewData["Title"] = "Clientes";
+}
+
+<section class="page-header">
+    <div>
+        <h1>Clientes</h1>
+        <p>Cadastro e manutenção da base de clientes.</p>
+    </div>
+    <a class="btn" asp-action="Create">Novo cliente</a>
+</section>
+
+<div class="table-wrap">
+    <table>
+        <thead><tr><th>Nome</th><th>E-mail</th><th>Telefone</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+        @foreach (var cliente in Model)
+        {
+            <tr>
+                <td>@cliente.Nome</td>
+                <td>@cliente.Email</td>
+                <td>@(cliente.Telefone ?? "-")</td>
+                <td><span class="badge @(cliente.Ativo ? "badge-ok" : "badge-muted")">@(cliente.Ativo ? "Ativo" : "Inativo")</span></td>
+                <td class="actions">
+                    <a class="btn btn-small btn-secondary" asp-action="Edit" asp-route-id="@cliente.Id">Editar</a>
+                    <form asp-action="Delete" asp-route-id="@cliente.Id" method="post">
+                        <button class="btn btn-small btn-danger" type="submit">Excluir</button>
+                    </form>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+@if (!Model.Any())
+{
+    <div class="empty">Nenhum cliente cadastrado.</div>
+}
+

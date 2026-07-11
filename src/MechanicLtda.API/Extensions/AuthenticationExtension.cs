@@ -1,3 +1,4 @@
+using MechanicLtda.Application.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -19,9 +20,7 @@ namespace MechanicLtda.API.Extensions
             {
                 var jwtSettings = configuration.GetSection("JwtSettings");
 
-                var secretKeyValue = Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
-                    ?? throw new InvalidOperationException(
-                        "A variável de ambiente 'JWT_SECRET_KEY' não está configurada.");
+                var secretKeyValue = JwtSecretProvider.GetSecretKey(configuration);
 
                 var secretKey = Encoding.UTF8.GetBytes(secretKeyValue);
 
@@ -42,3 +41,4 @@ namespace MechanicLtda.API.Extensions
         }
     }
 }
+

@@ -12,6 +12,10 @@ namespace MechanicLtda.Domain.Entities
 
         public DateTime? DataModificacao { get; set; }
 
+        public DateTime? DataInicioExecucao { get; set; }
+
+        public DateTime? DataFimExecucao { get; set; }
+
         [Required]
         public StatusOrdemServico Status { get; set; } = StatusOrdemServico.Recebida;
 
@@ -36,5 +40,11 @@ namespace MechanicLtda.Domain.Entities
         public ICollection<ItemOrdemServico> ItensOrdemServico { get; set; } = [];
 
         public Orcamento? Orcamento { get; set; }
+
+        [NotMapped]
+        public TimeSpan? TempoExecucao =>
+            DataInicioExecucao.HasValue && DataFimExecucao.HasValue
+                ? DataFimExecucao.Value - DataInicioExecucao.Value
+                : null;
     }
 }

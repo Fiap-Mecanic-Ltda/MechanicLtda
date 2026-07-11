@@ -1,5 +1,6 @@
-﻿using MechanicLtda.Application.AppServices.Interfaces;
+using MechanicLtda.Application.AppServices.Interfaces;
 using MechanicLtda.Application.DTOs;
+using MechanicLtda.Application.Security;
 using MechanicLtda.Domain.Entities;
 using MechanicLtda.Domain.Enums;
 using Microsoft.AspNetCore.Identity;
@@ -148,8 +149,7 @@ namespace MechanicLtda.Application.AppServices
             claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
             var jwtSettings  = _configuration.GetSection("JwtSettings");
-            var rawSecretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
-                               ?? throw new InvalidOperationException("A variável de ambiente 'JWT_SECRET_KEY' não está configurada.");
+            var rawSecretKey = JwtSecretProvider.GetSecretKey(_configuration);
 
             var secretKey  = Encoding.UTF8.GetBytes(rawSecretKey);
             var expiracao  = DateTime.UtcNow.AddMinutes(Convert.ToDouble(jwtSettings["ExpiracaoMinutos"]));

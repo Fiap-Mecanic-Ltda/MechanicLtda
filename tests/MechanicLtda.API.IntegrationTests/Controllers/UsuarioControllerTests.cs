@@ -62,6 +62,39 @@ public class UsuarioControllerTests : IClassFixture<CustomWebApplicationFactory>
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
+    // ─── Autorização por role ────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetUsuarios_ComTokenDeFuncionario_DeveRetornar403()
+    {
+        // Arrange — UsuarioController exige Roles.Administrador especificamente
+        // (diferente da maioria dos controllers, que aceitam Roles.Admin = Administrador+Funcionario)
+        var token = await AuthHelper.ObterTokenAsync(
+            _client, CustomWebApplicationFactory.FuncionarioEmail, CustomWebApplicationFactory.FuncionarioSenha);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        // Act
+        var response = await _client.GetAsync("/api/usuario");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetUsuarios_ComTokenDeCliente_DeveRetornar403()
+    {
+        // Arrange
+        var token = await AuthHelper.ObterTokenAsync(
+            _client, CustomWebApplicationFactory.ClienteEmail, CustomWebApplicationFactory.ClienteSenha);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        // Act
+        var response = await _client.GetAsync("/api/usuario");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
     // ─── POST /api/usuario ───────────────────────────────────────────────────────
 
     [Fact]

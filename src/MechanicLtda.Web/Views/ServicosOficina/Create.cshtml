@@ -1,0 +1,19 @@
+@model ServicoOficinaFormViewModel
+@{
+    ViewData["Title"] = "Novo servico";
+}
+
+<section class="page-header">
+    <div><h1>Novo servi&ccedil;o</h1><p>Cadastre os servi&ccedil;os executados pela oficina.</p></div>
+</section>
+
+<form class="form" asp-action="Create" method="post">
+    <partial name="_ValidationSummary" />
+    <div class="form-grid">
+        <div class="field field-full"><label asp-for="Nome"></label><input asp-for="Nome" /><span asp-validation-for="Nome"></span></div>
+        <div class="field field-full"><label asp-for="Descricao">Descri&ccedil;&atilde;o</label><textarea asp-for="Descricao" rows="4"></textarea><span asp-validation-for="Descricao"></span></div>
+        <div class="field"><label asp-for="ValorBase">Valor base</label><input asp-for="ValorBase" type="number" step="0.01" /><span asp-validation-for="ValorBase"></span></div>
+        <div class="field"><label asp-for="Ativo"></label><input asp-for="Ativo" type="checkbox" /></div>
+    </div>
+    <div class="form-actions"><button class="btn" type="submit">Salvar</button><a class="btn btn-secondary" asp-action="Index">Cancelar</a></div>
+</form>

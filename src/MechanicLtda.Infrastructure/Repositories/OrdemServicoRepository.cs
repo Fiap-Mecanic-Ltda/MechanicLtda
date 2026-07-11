@@ -1,4 +1,4 @@
-using MechanicLtda.Domain.Entities;
+﻿using MechanicLtda.Domain.Entities;
 using MechanicLtda.Domain.Interfaces.Repositories;
 using MechanicLtda.Infrastructure.Repositories.Base;
 using Microsoft.EntityFrameworkCore;
@@ -35,6 +35,19 @@ namespace MechanicLtda.Infrastructure.Repositories
                 .Include(o => o.Cliente)
                 .Where(o => o.ClienteId == clienteId)
                 .ToListAsync();
+        }
+
+        public async Task<(int Quantidade, double MediaMinutos)> ObterTempoMedioExecucaoAsync()
+        {
+            var duracoes = await _dbSet
+                .AsNoTracking()
+                .Where(o => o.DataInicioExecucao.HasValue && o.DataFimExecucao.HasValue)
+                .Select(o => EF.Functions.DateDiffMinute(o.DataInicioExecucao!.Value, o.DataFimExecucao!.Value))
+                .ToListAsync();
+
+            return duracoes.Count == 0
+                ? (0, 0)
+                : (duracoes.Count, duracoes.Average());
         }
     }
 }

@@ -1,0 +1,88 @@
+@model DashboardViewModel
+@{
+    ViewData["Title"] = "Painel";
+}
+
+<section class="page-header">
+    <div>
+        <h1>Painel da oficina</h1>
+        <p>Visão rápida de clientes, veículos, ordens e estoque.</p>
+    </div>
+    <a class="btn" asp-controller="OrdensServico" asp-action="Create">Nova ordem</a>
+</section>
+
+<section class="grid grid-4">
+    <article class="card metric">
+        <div class="label">Clientes</div>
+        <div class="value">@Model.TotalClientes</div>
+    </article>
+    <article class="card metric">
+        <div class="label">Veículos</div>
+        <div class="value">@Model.TotalVeiculos</div>
+    </article>
+    <article class="card metric">
+        <div class="label">Ordens abertas</div>
+        <div class="value">@Model.TotalOrdensAbertas</div>
+    </article>
+    <article class="card metric">
+        <div class="label">Baixo estoque</div>
+        <div class="value">@Model.TotalItensBaixoEstoque</div>
+    </article>
+</section>
+
+<section class="grid grid-2" style="margin-top: 18px;">
+    <article class="panel">
+        <h2>Ordens recentes</h2>
+        @if (!Model.OrdensRecentes.Any())
+        {
+            <div class="empty">Nenhuma ordem encontrada.</div>
+        }
+        else
+        {
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>OS</th><th>Status</th><th>Data</th><th></th></tr></thead>
+                    <tbody>
+                    @foreach (var ordem in Model.OrdensRecentes)
+                    {
+                        <tr>
+                            <td>#@ordem.Id</td>
+                            <td><span class="badge">@ordem.StatusDescricao</span></td>
+                            <td>@ordem.DataCriacao.ToString("dd/MM/yyyy")</td>
+                            <td><a asp-controller="OrdensServico" asp-action="Details" asp-route-id="@ordem.Id">Abrir</a></td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </article>
+
+    <article class="panel">
+        <h2>Estoque crítico</h2>
+        @if (!Model.EstoquesCriticos.Any())
+        {
+            <div class="empty">Nenhum item abaixo do mínimo.</div>
+        }
+        else
+        {
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Item</th><th>Qtd.</th><th>Mín.</th><th></th></tr></thead>
+                    <tbody>
+                    @foreach (var item in Model.EstoquesCriticos)
+                    {
+                        <tr>
+                            <td>@item.Nome</td>
+                            <td><span class="badge badge-warn">@item.QuantidadeAtual</span></td>
+                            <td>@item.QuantidadeMinima</td>
+                            <td><a asp-controller="Estoques" asp-action="Repor" asp-route-id="@item.Id">Repor</a></td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </article>
+</section>
+
