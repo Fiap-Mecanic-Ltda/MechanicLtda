@@ -1,0 +1,46 @@
+# O contexto de build do docker-compose é a raiz do repositório ("."),
+# então é este arquivo (e não os .dockerignore dentro de src/*) que o Docker
+# efetivamente respeita ao montar o contexto enviado ao daemon.
+
+**/.classpath
+**/.dockerignore
+**/.env
+**/.env.*
+**/.git
+**/.gitignore
+**/.project
+**/.settings
+**/.toolstarget
+**/.vs
+**/.vscode
+**/*.*proj.user
+**/*.dbmdl
+**/*.jfm
+**/azds.yaml
+**/bin
+**/charts
+**/docker-compose*
+**/node_modules
+**/npm-debug.log
+**/obj
+**/secrets.dev.yaml
+**/values.dev.yaml
+**/appsettings.Development.json
+**/appsettings.*.json
+!**/appsettings.json
+
+# Artefatos locais que não fazem parte da imagem
+coverage-output/
+coverage-report/
+graphify-out/
+tests/**/bin
+tests/**/obj
+
+LICENSE
+README.md
+
+!**/.gitignore
+!.git/HEAD
+!.git/config
+!.git/packed-refs
+!.git/refs/heads/**

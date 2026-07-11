@@ -8,35 +8,24 @@ namespace MechanicLtda.API.ViewModels
 
         public int? ServicoOficinaId { get; set; }
 
-        [MaxLength(1000, ErrorMessage = "A descrição do serviço deve ter no máximo 1000 caracteres.")]
+        [MaxLength(1000, ErrorMessage = "A descriÃ§Ã£o do serviÃ§o deve ter no mÃ¡ximo 1000 caracteres.")]
         public string? DescricaoServico { get; set; }
 
-        [Required(ErrorMessage = "A quantidade é obrigatória.")]
+        [Required(ErrorMessage = "A quantidade Ã© obrigatÃ³ria.")]
         [Range(1, int.MaxValue, ErrorMessage = "A quantidade deve ser maior que zero.")]
         public int Quantidade { get; set; }
 
-        [Required(ErrorMessage = "O valor unitário é obrigatório.")]
-        [Range(0.01, double.MaxValue, ErrorMessage = "O valor unitário deve ser maior que zero.")]
+        [Required(ErrorMessage = "O valor unitÃ¡rio Ã© obrigatÃ³rio.")]
+        [Range(0.01, double.MaxValue, ErrorMessage = "O valor unitÃ¡rio deve ser maior que zero.")]
         public decimal ValorUnitario { get; set; }
     }
 
-    public class ItemOrdemServicoUpdateViewModel
+    /// <summary>
+    /// IdÃªntico a <see cref="ItemOrdemServicoCreateViewModel"/> â€” mantido como tipo prÃ³prio
+    /// (em vez de reaproveitar o Create diretamente) para preservar contratos de API
+    /// independentes entre POST e PUT, caso venham a divergir no futuro.
+    /// </summary>
+    public class ItemOrdemServicoUpdateViewModel : ItemOrdemServicoCreateViewModel
     {
-        public int? EstoqueId { get; set; }
-
-        public int? ServicoOficinaId { get; set; }
-
-        [MaxLength(1000, ErrorMessage = "A descrição do serviço deve ter no máximo 1000 caracteres.")]
-        public string? DescricaoServico { get; set; }
-
-        [Required(ErrorMessage = "A quantidade é obrigatória.")]
-        [Range(1, int.MaxValue, ErrorMessage = "A quantidade deve ser maior que zero.")]
-        public int Quantidade { get; set; }
-
-        [Required(ErrorMessage = "O valor unitário é obrigatório.")]
-        [Range(0.01, double.MaxValue, ErrorMessage = "O valor unitário deve ser maior que zero.")]
-        public decimal ValorUnitario { get; set; }
     }
 }
-
-

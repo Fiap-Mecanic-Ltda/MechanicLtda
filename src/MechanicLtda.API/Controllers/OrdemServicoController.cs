@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using MechanicLtda.API.Authorization;
+using MechanicLtda.Bootstrap.Authorization;
 using MechanicLtda.API.Controllers.Base;
 using MechanicLtda.API.ViewModels;
 using MechanicLtda.Application.AppServices.Interfaces;

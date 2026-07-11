@@ -1,11 +1,12 @@
-﻿using MechanicLtda.Application.AppServices;
+using MechanicLtda.Application.AppServices;
 using MechanicLtda.Application.AppServices.Interfaces;
 using MechanicLtda.Domain.Interfaces.Repositories;
 using MechanicLtda.Domain.Interfaces.Services;
 using MechanicLtda.Domain.Services;
 using MechanicLtda.Infrastructure.Repositories;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace MechanicLtda.API.Extensions
+namespace MechanicLtda.Bootstrap.Extensions
 {
     public static class DependencyInjectionExtension
     {

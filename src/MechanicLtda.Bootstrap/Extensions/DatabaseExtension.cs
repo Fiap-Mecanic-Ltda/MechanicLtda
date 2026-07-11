@@ -2,8 +2,10 @@ using MechanicLtda.Domain.Entities;
 using MechanicLtda.Infrastructure;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace MechanicLtda.API.Extensions
+namespace MechanicLtda.Bootstrap.Extensions
 {
     public static class DatabaseExtension
     {

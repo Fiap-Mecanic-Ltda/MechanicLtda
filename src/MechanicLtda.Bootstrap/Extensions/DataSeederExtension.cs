@@ -1,10 +1,12 @@
 using MechanicLtda.Domain.Entities;
 using MechanicLtda.Domain.Enums;
 using MechanicLtda.Infrastructure;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace MechanicLtda.Web.Extensions
+namespace MechanicLtda.Bootstrap.Extensions
 {
     public static class DataSeederExtension
     {
@@ -26,11 +28,11 @@ namespace MechanicLtda.Web.Extensions
             else
                 await context.Database.EnsureCreatedAsync();
 
-            // Evita re-seed caso j� existam dados
+            // Evita re-seed caso já existam dados
             if (await context.Clientes.AnyAsync())
                 return;
 
-            // -- Usu�rio admin ------------------------------------------------
+            // ── Usuário admin ────────────────────────────────────────────────
             if (await userManager.FindByEmailAsync("admin@mechanic.com") is null)
             {
                 var admin = new Usuario
@@ -45,7 +47,7 @@ namespace MechanicLtda.Web.Extensions
                 await userManager.AddToRoleAsync(admin, "Administrador");
             }
 
-            // -- Clientes -----------------------------------------------------
+            // ── Clientes ─────────────────────────────────────────────────────
             var clientes = new List<Cliente>
             {
                 new() { Nome = "Carlos Oliveira",  Email = "carlos@email.com",  Telefone = "11999990001", CpfCnpj = "123.456.789-01", Ativo = true, DataCriacao = DateTime.UtcNow },
@@ -56,7 +58,7 @@ namespace MechanicLtda.Web.Extensions
             context.Clientes.AddRange(clientes);
             await context.SaveChangesAsync();
 
-            // -- Ve�culos -----------------------------------------------------
+            // ── Veículos ─────────────────────────────────────────────────────
             var veiculos = new List<Veiculo>
             {
                 new() { Placa = "ABC1D23", Marca = "Toyota",     Modelo = "Corolla",  Ano = 2021, Ativo = true, ClienteId = clientes[0].Id, DataCriacao = DateTime.UtcNow },
@@ -68,10 +70,10 @@ namespace MechanicLtda.Web.Extensions
             context.Veiculos.AddRange(veiculos);
             await context.SaveChangesAsync();
 
-            // -- Estoque ------------------------------------------------------
+            // ── Estoque ──────────────────────────────────────────────────────
             var estoques = new List<Estoque>
             {
-                new() { Nome = "�leo Motor 5W30",      Tipo = TipoEstoque.Insumo, QuantidadeAtual = 50, QuantidadeMinima = 10, DataUltimaAtualizacao = DateTime.UtcNow },
+                new() { Nome = "Óleo Motor 5W30",      Tipo = TipoEstoque.Insumo, QuantidadeAtual = 50, QuantidadeMinima = 10, DataUltimaAtualizacao = DateTime.UtcNow },
                 new() { Nome = "Filtro de Ar",          Tipo = TipoEstoque.Peca,   QuantidadeAtual = 30, QuantidadeMinima = 5,  DataUltimaAtualizacao = DateTime.UtcNow },
                 new() { Nome = "Pastilha de Freio",     Tipo = TipoEstoque.Peca,   QuantidadeAtual = 20, QuantidadeMinima = 4,  DataUltimaAtualizacao = DateTime.UtcNow },
                 new() { Nome = "Fluido de Freio DOT 4", Tipo = TipoEstoque.Insumo, QuantidadeAtual = 15, QuantidadeMinima = 3,  DataUltimaAtualizacao = DateTime.UtcNow },
@@ -81,14 +83,14 @@ namespace MechanicLtda.Web.Extensions
             context.Estoques.AddRange(estoques);
             await context.SaveChangesAsync();
 
-            // -- Ordens de Servi�o --------------------------------------------
+            // ── Ordens de Serviço ────────────────────────────────────────────
             var ordens = new List<OrdemServico>
             {
                 new()
                 {
                     ClienteId          = clientes[0].Id,
                     VeiculoId          = veiculos[0].Id,
-                    DescricaoProblema  = "Troca de �leo e filtro de ar.",
+                    DescricaoProblema  = "Troca de óleo e filtro de ar.",
                     Status             = StatusOrdemServico.EmExecucao,
                     ValorTotalEstimado = 250.00m,
                     DataCriacao        = DateTime.UtcNow
@@ -97,7 +99,7 @@ namespace MechanicLtda.Web.Extensions
                 {
                     ClienteId          = clientes[1].Id,
                     VeiculoId          = veiculos[1].Id,
-                    DescricaoProblema  = "Revis�o de freios dianteiros e traseiros.",
+                    DescricaoProblema  = "Revisão de freios dianteiros e traseiros.",
                     Status             = StatusOrdemServico.Recebida,
                     ValorTotalEstimado = 420.00m,
                     DataCriacao        = DateTime.UtcNow
@@ -106,7 +108,7 @@ namespace MechanicLtda.Web.Extensions
                 {
                     ClienteId          = clientes[2].Id,
                     VeiculoId          = veiculos[2].Id,
-                    DescricaoProblema  = "Substitui��o de correia dentada.",
+                    DescricaoProblema  = "Substituição de correia dentada.",
                     Status             = StatusOrdemServico.AguardandoAprovacao,
                     ValorTotalEstimado = 680.00m,
                     DataCriacao        = DateTime.UtcNow
@@ -116,7 +118,7 @@ namespace MechanicLtda.Web.Extensions
             context.OrdensServico.AddRange(ordens);
             await context.SaveChangesAsync();
 
-            // -- Itens de Ordem de Servi�o ------------------------------------
+            // ── Itens de Ordem de Serviço ────────────────────────────────────
             var itens = new List<ItemOrdemServico>
             {
                 new() { OrdemServicoId = ordens[0].Id, EstoqueId = estoques[0].Id, Quantidade = 1, ValorUnitario = 45.00m,  ValorTotal = 45.00m  },
@@ -129,7 +131,7 @@ namespace MechanicLtda.Web.Extensions
             context.ItensOrdemServico.AddRange(itens);
             await context.SaveChangesAsync();
 
-            // -- Or�amentos ---------------------------------------------------
+            // ── Orçamentos ───────────────────────────────────────────────────
             var orcamentos = new List<Orcamento>
             {
                 new()
@@ -166,4 +168,3 @@ namespace MechanicLtda.Web.Extensions
         }
     }
 }
-

@@ -158,7 +158,7 @@ Isso irá:
 3. Construir e subir a **API** (`mechanicltda-api`) na porta `8080`.
 4. Aplicar migrations e executar o seed inicial automaticamente.
 
-A API estará disponível em `http://localhost:8080` e o Swagger em `http://localhost:8080/swagger`.
+A API estará disponível em `http://localhost:8080` (Swagger em `http://localhost:8080/swagger`) e o Web em `http://localhost:8090`.
 
 Para parar os serviços:
 

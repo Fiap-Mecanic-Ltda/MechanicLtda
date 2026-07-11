@@ -1,41 +1,16 @@
-﻿using AutoMapper;
-using MechanicLtda.Application.DTOs;
-using MechanicLtda.Domain.Entities;
+﻿using MechanicLtda.Application.Mapping;
 
 namespace MechanicLtda.Web.Extensions
 {
-    public class AutoMapperProfile : Profile
-    {
-        public AutoMapperProfile()
-        {
-            CreateMap<UsuarioCreateDto, Usuario>();
-            CreateMap<UsuarioUpdateDto, Usuario>();
-            CreateMap<ClienteUpdateDto, Cliente>();
-            CreateMap<VeiculoUpdateDto, Veiculo>();
-            CreateMap<OrdemServicoUpdateDto, OrdemServico>();
-            CreateMap<ItemOrdemServicoUpdateDto, ItemOrdemServico>();
-            CreateMap<EstoqueCreateDto, Estoque>();
-            CreateMap<EstoqueUpdateDto, Estoque>();
-            CreateMap<ServicoOficinaCreateDto, ServicoOficina>();
-            CreateMap<ServicoOficinaUpdateDto, ServicoOficina>();
-            CreateMap<OrcamentoUpdateDto, Orcamento>();
-
-            CreateMap<Usuario, UsuarioDto>();
-            CreateMap<Cliente, ClienteDto>();
-            CreateMap<Veiculo, VeiculoDto>();
-            CreateMap<OrdemServico, OrdemServicoDto>()
-                .ForMember(dest => dest.TempoExecucaoMinutos, opt => opt.MapFrom(src => src.TempoExecucao.HasValue ? src.TempoExecucao.Value.TotalMinutes : (double?)null));
-            CreateMap<ItemOrdemServico, ItemOrdemServicoDto>();
-            CreateMap<Orcamento, OrcamentoDto>();
-            CreateMap<ServicoOficina, ServicoOficinaDto>();
-        }
-    }
-
+    /// <summary>
+    /// O Web ainda não usa AutoMapper para ViewModel → DTO (mapeamento feito manualmente
+    /// nos controllers); por isso só registra o profile DTO ↔ Entidade compartilhado com a API.
+    /// </summary>
     public static class AutoMapperExtension
     {
         public static IServiceCollection AddAutoMapperProfiles(this IServiceCollection services)
         {
-            services.AddAutoMapper(cfg => cfg.AddProfile<AutoMapperProfile>());
+            services.AddAutoMapper(cfg => cfg.AddProfile<SharedAutoMapperProfile>());
             return services;
         }
     }
