@@ -397,6 +397,190 @@ public class ItemOrdemServicoServiceTests
 
     #endregion
 
+    // ─── AdicionarAsync (vínculo com ServicoOficina) ────────────────────────────
+
+    #region AdicionarAsync_ServicoOficina
+
+    private ItemOrdemServicoService CriarSutComServicoOficinaRepository(
+        Mock<IServicoOficinaRepository> servicoOficinaRepositoryMock) =>
+        new(
+            _loggerMock.Object,
+            _configurationMock.Object,
+            _notificadorMock.Object,
+            _itemRepositoryMock.Object,
+            _ordemServicoRepositoryMock.Object,
+            _estoqueServiceMock.Object,
+            servicoOficinaRepositoryMock.Object,
+            _orcamentoServiceMock.Object);
+
+    private static ServicoOficina CriarServicoOficina(
+        int id = 1, string nome = "Troca de Óleo", decimal valorBase = 150m, bool ativo = true) =>
+        new()
+        {
+            Id           = id,
+            Nome         = nome,
+            Descricao    = "Descrição do serviço",
+            ValorBase    = valorBase,
+            Ativo        = ativo,
+            DataCadastro = DateTime.UtcNow
+        };
+
+    [Fact]
+    public async Task AdicionarAsync_ComServicoOficinaId_QuandoRepositorioNaoConfigurado_DeveLancarInvalidOperationException()
+    {
+        // Arrange — _sut da classe é construído sem IServicoOficinaRepository (fica null)
+        var ordemServico = CriarOrdemServico();
+
+        _ordemServicoRepositoryMock
+            .Setup(r => r.ObterPorIdAsync("1"))
+            .ReturnsAsync(ordemServico);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _sut.AdicionarAsync(
+                ordemServicoId: 1, estoqueId: null, servicoOficinaId: 10,
+                descricaoServico: null, quantidade: 1, valorUnitario: 50m));
+
+        _itemRepositoryMock.Verify(r => r.AdicionarAsync(It.IsAny<ItemOrdemServico>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AdicionarAsync_ComServicoOficinaId_QuandoServicoNaoEncontrado_DeveLancarKeyNotFoundException()
+    {
+        // Arrange
+        var ordemServico = CriarOrdemServico();
+        var servicoOficinaRepositoryMock = new Mock<IServicoOficinaRepository>();
+        servicoOficinaRepositoryMock
+            .Setup(r => r.ObterPorIdAsync("99"))
+            .ReturnsAsync((ServicoOficina?)null);
+
+        _ordemServicoRepositoryMock
+            .Setup(r => r.ObterPorIdAsync("1"))
+            .ReturnsAsync(ordemServico);
+
+        var sut = CriarSutComServicoOficinaRepository(servicoOficinaRepositoryMock);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => sut.AdicionarAsync(
+                ordemServicoId: 1, estoqueId: null, servicoOficinaId: 99,
+                descricaoServico: null, quantidade: 1, valorUnitario: 50m));
+
+        _itemRepositoryMock.Verify(r => r.AdicionarAsync(It.IsAny<ItemOrdemServico>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AdicionarAsync_ComServicoOficinaId_QuandoServicoInativo_DeveLancarInvalidOperationException()
+    {
+        // Arrange
+        var ordemServico = CriarOrdemServico();
+        var servicoInativo = CriarServicoOficina(id: 5, ativo: false);
+        var servicoOficinaRepositoryMock = new Mock<IServicoOficinaRepository>();
+        servicoOficinaRepositoryMock
+            .Setup(r => r.ObterPorIdAsync("5"))
+            .ReturnsAsync(servicoInativo);
+
+        _ordemServicoRepositoryMock
+            .Setup(r => r.ObterPorIdAsync("1"))
+            .ReturnsAsync(ordemServico);
+
+        var sut = CriarSutComServicoOficinaRepository(servicoOficinaRepositoryMock);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => sut.AdicionarAsync(
+                ordemServicoId: 1, estoqueId: null, servicoOficinaId: 5,
+                descricaoServico: null, quantidade: 1, valorUnitario: 50m));
+
+        _itemRepositoryMock.Verify(r => r.AdicionarAsync(It.IsAny<ItemOrdemServico>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AdicionarAsync_ComServicoOficinaIdEValorUnitarioZero_DeveUsarValorBaseDoServico()
+    {
+        // Arrange
+        var ordemServico = CriarOrdemServico();
+        var servico       = CriarServicoOficina(id: 5, valorBase: 200m);
+        var servicoOficinaRepositoryMock = new Mock<IServicoOficinaRepository>();
+        servicoOficinaRepositoryMock
+            .Setup(r => r.ObterPorIdAsync("5"))
+            .ReturnsAsync(servico);
+
+        ItemOrdemServico itemCriado = null!;
+
+        _ordemServicoRepositoryMock
+            .Setup(r => r.ObterPorIdAsync("1"))
+            .ReturnsAsync(ordemServico);
+
+        _itemRepositoryMock
+            .Setup(r => r.AdicionarAsync(It.IsAny<ItemOrdemServico>()))
+            .Callback<ItemOrdemServico>(i => itemCriado = i)
+            .ReturnsAsync((ItemOrdemServico i) => i);
+
+        _itemRepositoryMock
+            .Setup(r => r.ObterPorOrdemServicoIdAsync(1))
+            .ReturnsAsync([]);
+
+        _ordemServicoRepositoryMock
+            .Setup(r => r.AtualizarAsync(It.IsAny<OrdemServico>()))
+            .ReturnsAsync(ordemServico);
+
+        var sut = CriarSutComServicoOficinaRepository(servicoOficinaRepositoryMock);
+
+        // Act — valorUnitario 0 → deve usar servico.ValorBase
+        await sut.AdicionarAsync(
+            ordemServicoId: 1, estoqueId: null, servicoOficinaId: 5,
+            descricaoServico: null, quantidade: 1, valorUnitario: 0m);
+
+        // Assert
+        Assert.NotNull(itemCriado);
+        Assert.Equal(200m, itemCriado.ValorUnitario);
+        Assert.Equal("Descrição do serviço", itemCriado.DescricaoServico);
+    }
+
+    [Fact]
+    public async Task AdicionarAsync_ComServicoOficinaIdEDescricaoInformada_DevePreservarDescricaoInformada()
+    {
+        // Arrange
+        var ordemServico = CriarOrdemServico();
+        var servico       = CriarServicoOficina(id: 5);
+        var servicoOficinaRepositoryMock = new Mock<IServicoOficinaRepository>();
+        servicoOficinaRepositoryMock
+            .Setup(r => r.ObterPorIdAsync("5"))
+            .ReturnsAsync(servico);
+
+        ItemOrdemServico itemCriado = null!;
+
+        _ordemServicoRepositoryMock
+            .Setup(r => r.ObterPorIdAsync("1"))
+            .ReturnsAsync(ordemServico);
+
+        _itemRepositoryMock
+            .Setup(r => r.AdicionarAsync(It.IsAny<ItemOrdemServico>()))
+            .Callback<ItemOrdemServico>(i => itemCriado = i)
+            .ReturnsAsync((ItemOrdemServico i) => i);
+
+        _itemRepositoryMock
+            .Setup(r => r.ObterPorOrdemServicoIdAsync(1))
+            .ReturnsAsync([]);
+
+        _ordemServicoRepositoryMock
+            .Setup(r => r.AtualizarAsync(It.IsAny<OrdemServico>()))
+            .ReturnsAsync(ordemServico);
+
+        var sut = CriarSutComServicoOficinaRepository(servicoOficinaRepositoryMock);
+
+        // Act
+        await sut.AdicionarAsync(
+            ordemServicoId: 1, estoqueId: null, servicoOficinaId: 5,
+            descricaoServico: "Descrição customizada pelo atendente", quantidade: 1, valorUnitario: 100m);
+
+        // Assert
+        Assert.Equal("Descrição customizada pelo atendente", itemCriado.DescricaoServico);
+    }
+
+    #endregion
+
     // ─── AtualizarAsync ─────────────────────────────────────────────────────────
 
     #region AtualizarAsync

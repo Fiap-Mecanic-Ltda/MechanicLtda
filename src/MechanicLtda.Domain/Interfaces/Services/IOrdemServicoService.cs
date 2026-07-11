@@ -1,4 +1,4 @@
-using MechanicLtda.Domain.Entities;
+﻿using MechanicLtda.Domain.Entities;
 
 namespace MechanicLtda.Domain.Interfaces.Services
 {
@@ -12,6 +12,7 @@ namespace MechanicLtda.Domain.Interfaces.Services
         Task<OrdemServico> FinalizarAsync(int id);
         Task<OrdemServico> EntregarAsync(int id);
         Task<IEnumerable<OrdemServico>> ObterTodosAsync();
+        Task<(int Quantidade, double MediaMinutos)> ObterTempoMedioExecucaoAsync();
         Task<IEnumerable<OrdemServico>> ObterPorClienteIdAsync(string clienteId);
         Task<OrdemServico?> ObterPorIdAsync(string id);
         Task RemoverAsync(string id);

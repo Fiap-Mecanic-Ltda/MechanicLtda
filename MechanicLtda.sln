@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MechanicLtda.Application.Te
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MechanicLtda.API.IntegrationTests", "tests\MechanicLtda.API.IntegrationTests\MechanicLtda.API.IntegrationTests.csproj", "{7C85E635-593E-4D72-9CF9-C753EE53EFB5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MechanicLtda.Web", "src\MechanicLtda.Web\MechanicLtda.Web.csproj", "{7727146C-632B-4661-A829-ED502A25A71C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -115,6 +117,18 @@ Global
 		{7C85E635-593E-4D72-9CF9-C753EE53EFB5}.Release|x64.Build.0 = Release|Any CPU
 		{7C85E635-593E-4D72-9CF9-C753EE53EFB5}.Release|x86.ActiveCfg = Release|Any CPU
 		{7C85E635-593E-4D72-9CF9-C753EE53EFB5}.Release|x86.Build.0 = Release|Any CPU
+		{7727146C-632B-4661-A829-ED502A25A71C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7727146C-632B-4661-A829-ED502A25A71C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7727146C-632B-4661-A829-ED502A25A71C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7727146C-632B-4661-A829-ED502A25A71C}.Debug|x64.Build.0 = Debug|Any CPU
+		{7727146C-632B-4661-A829-ED502A25A71C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7727146C-632B-4661-A829-ED502A25A71C}.Debug|x86.Build.0 = Debug|Any CPU
+		{7727146C-632B-4661-A829-ED502A25A71C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7727146C-632B-4661-A829-ED502A25A71C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7727146C-632B-4661-A829-ED502A25A71C}.Release|x64.ActiveCfg = Release|Any CPU
+		{7727146C-632B-4661-A829-ED502A25A71C}.Release|x64.Build.0 = Release|Any CPU
+		{7727146C-632B-4661-A829-ED502A25A71C}.Release|x86.ActiveCfg = Release|Any CPU
+		{7727146C-632B-4661-A829-ED502A25A71C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -127,5 +141,6 @@ Global
 		{A7FD4246-CA91-499F-8EC8-FBD5CC74F041} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{BE399815-086A-4118-983D-2A4CBEA2BC38} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{7C85E635-593E-4D72-9CF9-C753EE53EFB5} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{7727146C-632B-4661-A829-ED502A25A71C} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal

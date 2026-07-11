@@ -1,0 +1,40 @@
+@model IEnumerable<EstoqueDto>
+@{
+    ViewData["Title"] = "Estoque";
+}
+
+<section class="page-header">
+    <div>
+        <h1>Estoque</h1>
+        <p>Peças e insumos disponíveis para atendimento.</p>
+    </div>
+    <a class="btn" asp-action="Create">Novo item</a>
+</section>
+
+<div class="table-wrap">
+    <table>
+        <thead><tr><th>Item</th><th>Tipo</th><th>Quantidade</th><th>Mínimo</th><th>Atualizado</th><th></th></tr></thead>
+        <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.Nome</td>
+                <td><span class="badge">@item.Tipo</span></td>
+                <td><span class="badge @(item.BaixoEstoque ? "badge-warn" : "badge-ok")">@item.QuantidadeAtual</span></td>
+                <td>@item.QuantidadeMinima</td>
+                <td>@item.DataUltimaAtualizacao.ToString("dd/MM/yyyy")</td>
+                <td class="actions">
+                    <a class="btn btn-small btn-secondary" asp-action="Repor" asp-route-id="@item.Id">Repor</a>
+                    <a class="btn btn-small btn-secondary" asp-action="Edit" asp-route-id="@item.Id">Editar</a>
+                    <form asp-action="Delete" asp-route-id="@item.Id" method="post"><button class="btn btn-small btn-danger" type="submit">Excluir</button></form>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+@if (!Model.Any())
+{
+    <div class="empty">Nenhum item de estoque cadastrado.</div>
+}
+
