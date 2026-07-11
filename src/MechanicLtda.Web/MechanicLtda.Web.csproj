@@ -17,6 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="..\MechanicLtda.Application\MechanicLtda.Application.csproj" />
     <ProjectReference Include="..\MechanicLtda.Infrastructure\MechanicLtda.Infrastructure.csproj" />
+    <ProjectReference Include="..\MechanicLtda.Bootstrap\MechanicLtda.Bootstrap.csproj" />
   </ItemGroup>
 
 </Project>

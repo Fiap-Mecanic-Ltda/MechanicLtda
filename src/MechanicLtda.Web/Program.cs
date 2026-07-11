@@ -1,3 +1,4 @@
+using MechanicLtda.Bootstrap.Extensions;
 using MechanicLtda.Web.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -34,6 +35,9 @@ app.UseAuthorization();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+// Usado pelo healthcheck do Docker Compose.
+app.MapGet("/health", () => Results.Ok()).AllowAnonymous();
 
 app.Run();
 

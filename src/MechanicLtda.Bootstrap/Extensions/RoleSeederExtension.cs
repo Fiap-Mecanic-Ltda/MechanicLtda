@@ -1,13 +1,15 @@
-using MechanicLtda.API.Authorization;
+using MechanicLtda.Bootstrap.Authorization;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace MechanicLtda.API.Extensions
+namespace MechanicLtda.Bootstrap.Extensions
 {
     public static class RoleSeederExtension
     {
         /// <summary>
-        /// Garante que os roles padrão existem no banco antes de a aplicação
-        /// começar a receber requisições.
+        /// Garante que os roles padrÃ£o existem no banco antes de a aplicaÃ§Ã£o
+        /// comeÃ§ar a receber requisiÃ§Ãµes.
         /// </summary>
         public static async Task SeedRolesAsync(this IApplicationBuilder app)
         {

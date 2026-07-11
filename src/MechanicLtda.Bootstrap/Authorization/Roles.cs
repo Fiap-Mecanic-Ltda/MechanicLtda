@@ -1,7 +1,7 @@
-namespace MechanicLtda.API.Authorization
+namespace MechanicLtda.Bootstrap.Authorization
 {
     /// <summary>
-    /// Constantes de roles utilizadas na autorização da API.
+    /// Constantes de roles utilizadas na autorizaÃ§Ã£o, compartilhadas entre todos os hosts (API e Web).
     /// </summary>
     public static class Roles
     {
