@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>8cd58270-0443-4338-a160-4b844deafec6</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.15">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MechanicLtda.Application\MechanicLtda.Application.csproj" />
+    <ProjectReference Include="..\MechanicLtda.Infrastructure\MechanicLtda.Infrastructure.csproj" />
+    <ProjectReference Include="..\MechanicLtda.Bootstrap\MechanicLtda.Bootstrap.csproj" />
+  </ItemGroup>
+
+</Project>

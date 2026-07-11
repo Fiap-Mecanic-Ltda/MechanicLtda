@@ -15,6 +15,7 @@ copilot-chat/
 .copilot-chat/
 design/
 .github/
+graphify-out/
 
 # Secrets and sensitive configuration
 appsettings.*.json

@@ -42,6 +42,10 @@ MechanicLtda/
 - xUnit, Moq, `WebApplicationFactory` e EF Core InMemory nos testes
 - Docker e Docker Compose
 
+### Justificativa do SQL Server
+
+O SQL Server foi escolhido por oferecer um banco relacional robusto para o domínio da oficina, em que ordens de serviço, itens, estoque, clientes, veículos, orçamentos e usuários exigem integridade referencial, transações consistentes e consultas estruturadas. A escolha também se encaixa bem com o Entity Framework Core, ASP.NET Core Identity e migrations, reduzindo atrito na evolução do schema e facilitando execução local ou via Docker Compose com SQL Server 2022.
+
 ## Modelo de Domínio
 
 | Entidade | Descrição |
@@ -50,8 +54,9 @@ MechanicLtda/
 | `Cliente` | Cliente da mecânica, com CPF/CNPJ validado e criptografado no banco |
 | `Veiculo` | Veículo vinculado a um cliente, com validação de placa antiga ou Mercosul |
 | `OrdemServico` | Ordem de serviço vinculada a cliente e veículo, com status, problema e valor estimado |
-| `ItemOrdemServico` | Item de uma ordem de serviço, podendo consumir estoque |
+| `ItemOrdemServico` | Item de uma ordem de serviço, podendo consumir estoque ou referenciar um serviço cadastrado |
 | `Estoque` | Peça ou insumo gerenciado em estoque |
+| `ServicoOficina` | Catálogo de serviços prestados pela oficina, com descrição, valor base e estado ativo/inativo |
 | `Orcamento` | Orçamento gerado e recalculado a partir dos itens da ordem de serviço |
 
 ### Enums principais

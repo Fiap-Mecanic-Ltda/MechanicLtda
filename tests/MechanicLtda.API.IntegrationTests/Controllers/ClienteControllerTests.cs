@@ -24,6 +24,23 @@ public class ClienteControllerTests : IClassFixture<CustomWebApplicationFactory>
             new AuthenticationHeaderValue("Bearer", token);
     }
 
+    // ─── Autorização por role ────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetCliente_ComTokenDeCliente_DeveRetornar403()
+    {
+        // Arrange
+        var token = await AuthHelper.ObterTokenAsync(
+            _client, CustomWebApplicationFactory.ClienteEmail, CustomWebApplicationFactory.ClienteSenha);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        // Act — [Authorize(Roles = Roles.Admin)] não inclui a role Cliente
+        var response = await _client.GetAsync("/api/cliente");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
     private async Task<int> CriarClienteEObterIdAsync(
         string? email = null,
         string cpfCnpj = "52998224725")

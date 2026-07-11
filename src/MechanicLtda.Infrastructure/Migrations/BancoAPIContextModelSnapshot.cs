@@ -101,6 +101,10 @@ namespace MechanicLtda.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("DescricaoServico")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
                     b.Property<int?>("EstoqueId")
                         .HasColumnType("int");
 
@@ -108,6 +112,9 @@ namespace MechanicLtda.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("Quantidade")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ServicoOficinaId")
                         .HasColumnType("int");
 
                     b.Property<decimal>("ValorTotal")
@@ -121,6 +128,8 @@ namespace MechanicLtda.Infrastructure.Migrations
                     b.HasIndex("EstoqueId");
 
                     b.HasIndex("OrdemServicoId");
+
+                    b.HasIndex("ServicoOficinaId");
 
                     b.ToTable("ItensOrdemServico", (string)null);
                 });
@@ -173,6 +182,12 @@ namespace MechanicLtda.Infrastructure.Migrations
                     b.Property<DateTime>("DataCriacao")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("DataFimExecucao")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DataInicioExecucao")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("DataModificacao")
                         .HasColumnType("datetime2");
 
@@ -197,6 +212,41 @@ namespace MechanicLtda.Infrastructure.Migrations
                     b.HasIndex("VeiculoId");
 
                     b.ToTable("OrdensServico", (string)null);
+                });
+
+            modelBuilder.Entity("MechanicLtda.Domain.Entities.ServicoOficina", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("DataAtualizacao")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("DataCadastro")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Descricao")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal>("ValorBase")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ServicosOficina", (string)null);
                 });
 
             modelBuilder.Entity("MechanicLtda.Domain.Entities.Usuario", b =>
@@ -467,9 +517,16 @@ namespace MechanicLtda.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("MechanicLtda.Domain.Entities.ServicoOficina", "ServicoOficina")
+                        .WithMany("ItensOrdemServico")
+                        .HasForeignKey("ServicoOficinaId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Estoque");
 
                     b.Navigation("OrdemServico");
+
+                    b.Navigation("ServicoOficina");
                 });
 
             modelBuilder.Entity("MechanicLtda.Domain.Entities.Orcamento", b =>
@@ -579,6 +636,11 @@ namespace MechanicLtda.Infrastructure.Migrations
                     b.Navigation("ItensOrdemServico");
 
                     b.Navigation("Orcamento");
+                });
+
+            modelBuilder.Entity("MechanicLtda.Domain.Entities.ServicoOficina", b =>
+                {
+                    b.Navigation("ItensOrdemServico");
                 });
 #pragma warning restore 612, 618
         }

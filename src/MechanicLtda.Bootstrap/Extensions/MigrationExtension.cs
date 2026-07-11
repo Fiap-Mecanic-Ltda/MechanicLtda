@@ -1,12 +1,15 @@
 using MechanicLtda.Infrastructure;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
-namespace MechanicLtda.API.Extensions
+namespace MechanicLtda.Bootstrap.Extensions
 {
     public static class MigrationExtension
     {
         /// <summary>
-        /// Aplica migrations pendentes com retry, tolerando atraso na inicialização do SQL Server.
+        /// Aplica migrations pendentes com retry, tolerando atraso na inicializaÃ§Ã£o do SQL Server.
         /// Em ambientes de teste com InMemory, apenas garante que o schema foi criado.
         /// </summary>
         public static async Task MigrateDatabaseAsync(this WebApplication app)
@@ -15,7 +18,7 @@ namespace MechanicLtda.API.Extensions
             var context     = scope.ServiceProvider.GetRequiredService<BancoAPIContext>();
             var logger      = scope.ServiceProvider.GetRequiredService<ILogger<BancoAPIContext>>();
 
-            // InMemory não suporta migrations — apenas garante a criação do schema
+            // InMemory nÃ£o suporta migrations â€” apenas garante a criaÃ§Ã£o do schema
             if (!context.Database.IsRelational())
             {
                 await context.Database.EnsureCreatedAsync();
@@ -37,7 +40,7 @@ namespace MechanicLtda.API.Extensions
                 }
                 catch (Exception ex) when (tentativa < maxTentativas)
                 {
-                    logger.LogWarning("Banco indisponível. Aguardando {Intervalo}ms. Erro: {Mensagem}", intervaloMs, ex.Message);
+                    logger.LogWarning("Banco indisponÃ­vel. Aguardando {Intervalo}ms. Erro: {Mensagem}", intervaloMs, ex.Message);
                     await Task.Delay(intervaloMs);
                 }
             }

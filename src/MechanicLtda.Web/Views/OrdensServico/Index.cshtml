@@ -1,0 +1,54 @@
+@model OrdensServicoIndexViewModel
+@{
+    ViewData["Title"] = "Ordens de servico";
+    var quantidadeOrdens = Model.Ordens.Count();
+}
+
+<section class="page-header">
+    <div>
+        <h1>Ordens de servi&ccedil;o</h1>
+        <p>Acompanhe o atendimento desde a entrada at&eacute; a entrega.</p>
+    </div>
+    <a class="btn" asp-action="Create">Nova ordem</a>
+</section>
+
+<section class="grid grid-2" style="margin-bottom: 18px;">
+    <article class="card metric">
+        <div class="label">Tempo m&eacute;dio de execu&ccedil;&atilde;o</div>
+        <div class="value" style="font-size: 1.6rem;">@(Model.TempoMedioExecucao.QuantidadeOrdensFinalizadas > 0 ? $"{Model.TempoMedioExecucao.TempoMedioHoras:N1}h" : "-")</div>
+        <div class="muted">@Model.TempoMedioExecucao.QuantidadeOrdensFinalizadas OS finalizadas monitoradas</div>
+    </article>
+    <article class="card metric">
+        <div class="label">Ordens listadas</div>
+        <div class="value" style="font-size: 1.6rem;">@quantidadeOrdens</div>
+        <div class="muted">Registros dispon&iacute;veis para acompanhamento</div>
+    </article>
+</section>
+
+<div class="table-wrap">
+    <table>
+        <thead><tr><th>OS</th><th>Status</th><th>Cliente</th><th>Ve&iacute;culo</th><th>Estimado</th><th>Criada em</th><th></th></tr></thead>
+        <tbody>
+        @foreach (var ordem in Model.Ordens)
+        {
+            <tr>
+                <td><strong>#@ordem.Id</strong></td>
+                <td><span class="badge">@ordem.StatusDescricao</span></td>
+                <td>#@ordem.ClienteId</td>
+                <td>#@ordem.VeiculoId</td>
+                <td>@(ordem.ValorTotalEstimado?.ToString("C") ?? "-")</td>
+                <td>@ordem.DataCriacao.ToString("dd/MM/yyyy")</td>
+                <td class="actions">
+                    <a class="btn btn-small btn-secondary" asp-action="Details" asp-route-id="@ordem.Id">Abrir</a>
+                    <a class="btn btn-small btn-secondary" asp-action="Edit" asp-route-id="@ordem.Id">Editar</a>
+                    <form asp-action="Delete" asp-route-id="@ordem.Id" method="post"><button class="btn btn-small btn-danger" type="submit">Excluir</button></form>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+@if (!Model.Ordens.Any())
+{
+    <div class="empty">Nenhuma ordem de servi&ccedil;o cadastrada.</div>
+}

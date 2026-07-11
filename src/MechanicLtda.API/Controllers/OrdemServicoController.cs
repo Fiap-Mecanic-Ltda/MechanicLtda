@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using MechanicLtda.API.Authorization;
+using MechanicLtda.Bootstrap.Authorization;
 using MechanicLtda.API.Controllers.Base;
 using MechanicLtda.API.ViewModels;
 using MechanicLtda.Application.AppServices.Interfaces;
@@ -44,6 +44,21 @@ namespace MechanicLtda.API.Controllers
             }
         }
 
+        /// <summary>Retorna o tempo médio de execução das Ordens de Serviço finalizadas. [Admin]</summary>
+        [HttpGet("tempo-medio-execucao")]
+        [Authorize(Roles = Roles.Admin)]
+        public async Task<IActionResult> ObterTempoMedioExecucao()
+        {
+            try
+            {
+                return CustomResponse(await _ordemServicoAppService.ObterTempoMedioExecucaoAsync());
+            }
+            catch (Exception ex)
+            {
+                GravaException(ex, "Falha ao obter tempo médio de execução", _logger);
+                return CustomResponse();
+            }
+        }
         /// <summary>Retorna uma Ordem de Serviço pelo Id. [Admin]</summary>
         [HttpGet("{id}")]
         [Authorize(Roles = Roles.Admin)]

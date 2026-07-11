@@ -531,6 +531,43 @@ public class OrdemServicoControllerTests : IClassFixture<CustomWebApplicationFac
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    // ─── Autorização por role ────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetOrdemServicoPorCliente_ComTokenDeCliente_DeveRetornar200()
+    {
+        // Arrange — endpoint usa [Authorize(Roles = Roles.AdminOuCliente)], que inclui Cliente
+        await AutenticarAsync();
+        var clienteId = await CriarClienteEObterIdAsync();
+        var veiculoId = await CriarVeiculoEObterIdAsync(clienteId);
+        await CriarOSEObterIdAsync(veiculoId, clienteId);
+
+        var tokenCliente = await AuthHelper.ObterTokenAsync(
+            _client, CustomWebApplicationFactory.ClienteEmail, CustomWebApplicationFactory.ClienteSenha);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenCliente);
+
+        // Act
+        var response = await _client.GetAsync($"/api/ordemservico/cliente/{clienteId}");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetOrdemServico_ComTokenDeCliente_DeveRetornar403()
+    {
+        // Arrange — ObterTodos exige [Authorize(Roles = Roles.Admin)], que não inclui Cliente
+        var token = await AuthHelper.ObterTokenAsync(
+            _client, CustomWebApplicationFactory.ClienteEmail, CustomWebApplicationFactory.ClienteSenha);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        // Act
+        var response = await _client.GetAsync("/api/ordemservico");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
     // ─── helpers de desserialização ─────────────────────────────────────────────
 
     private sealed class IdData

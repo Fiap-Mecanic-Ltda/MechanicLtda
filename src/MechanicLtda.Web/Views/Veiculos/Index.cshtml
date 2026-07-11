@@ -1,0 +1,41 @@
+@model IEnumerable<VeiculoDto>
+@{
+    ViewData["Title"] = "Veículos";
+}
+
+<section class="page-header">
+    <div>
+        <h1>Veículos</h1>
+        <p>Veículos vinculados aos clientes da oficina.</p>
+    </div>
+    <a class="btn" asp-action="Create">Novo veículo</a>
+</section>
+
+<div class="table-wrap">
+    <table>
+        <thead><tr><th>Placa</th><th>Veículo</th><th>Ano</th><th>Cliente</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+        @foreach (var veiculo in Model)
+        {
+            <tr>
+                <td><strong>@veiculo.Placa</strong></td>
+                <td>@veiculo.Marca @veiculo.Modelo</td>
+                <td>@veiculo.Ano</td>
+                <td>#@veiculo.ClienteId</td>
+                <td><span class="badge @(veiculo.Ativo ? "badge-ok" : "badge-muted")">@(veiculo.Ativo ? "Ativo" : "Inativo")</span></td>
+                <td class="actions">
+                    <a class="btn btn-small btn-secondary" asp-action="Edit" asp-route-id="@veiculo.Id">Editar</a>
+                    <form asp-action="Delete" asp-route-id="@veiculo.Id" method="post">
+                        <button class="btn btn-small btn-danger" type="submit">Excluir</button>
+                    </form>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+@if (!Model.Any())
+{
+    <div class="empty">Nenhum veículo cadastrado.</div>
+}
+
