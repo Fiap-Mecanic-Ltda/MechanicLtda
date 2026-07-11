@@ -1,5 +1,4 @@
 using Microsoft.OpenApi.Models;
-using MechanicLtda.API.Filters;
 
 namespace MechanicLtda.API.Extensions
 {
@@ -10,8 +9,6 @@ namespace MechanicLtda.API.Extensions
             services.AddSwaggerGen(options =>
             {
                 options.SwaggerDoc("v1", new OpenApiInfo { Title = "MechanicLtda API", Version = "v1" });
-
-                options.SchemaFilter<EnumSchemaFilter>();
 
                 options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {

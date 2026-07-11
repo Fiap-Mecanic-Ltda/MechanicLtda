@@ -46,30 +46,23 @@ namespace MechanicLtda.Infrastructure.Repositories.Base
 
         public virtual async Task<TEntity?> ObterPorIdAsync(string id)
         {
-            // Obter a chave primária
-            var keyProperty = _context.Model.FindEntityType(typeof(TEntity))?.FindPrimaryKey()?.Properties.FirstOrDefault();
+            // Converte para o tipo correto da PK — FindAsync falha silenciosamente
+            // quando a PK é int e recebe uma string.
+            var keyType = _context.Model
+                .FindEntityType(typeof(TEntity))!
+                .FindPrimaryKey()!
+                .Properties[0]
+                .ClrType;
 
-            if (keyProperty == null)
-                return null;
+            var convertedId = Convert.ChangeType(id, keyType);
+            var entity = await _dbSet.FindAsync(convertedId);
 
-            // Se a chave é int, converter a string para int
-            if (keyProperty.ClrType == typeof(int) && int.TryParse(id, out var intId))
-                return await _dbSet.FindAsync(intId);
+            // Desanexa a entidade para evitar conflito de tracking quando o
+            // chamador precisar salvar um objeto diferente com o mesmo ID.
+            if (entity is not null)
+                _context.Entry(entity).State = EntityState.Detached;
 
-            // Se a chave é string, usar direto
-            if (keyProperty.ClrType == typeof(string))
-                return await _dbSet.FindAsync(id);
-
-            // Para outros tipos, tentar converter
-            try
-            {
-                var convertedId = Convert.ChangeType(id, keyProperty.ClrType);
-                return await _dbSet.FindAsync(convertedId);
-            }
-            catch
-            {
-                return null;
-            }
+            return entity;
         }
 
         public async Task<int> SaveChanges()

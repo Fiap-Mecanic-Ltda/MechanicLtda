@@ -18,12 +18,6 @@ namespace MechanicLtda.API.ViewModels
         public int ClienteId { get; set; }
     }
 
-    public class OrdemServicoCreateResponseViewModel
-    {
-        public int Id { get; set; }
-        public string Mensagem { get; set; }
-    }
-
     public class OrdemServicoUpdateViewModel
     {
         [Required(ErrorMessage = "A descrição do problema é obrigatória.")]

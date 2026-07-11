@@ -30,8 +30,8 @@ namespace MechanicLtda.API.Extensions
                     ValidateAudience         = true,
                     ValidateLifetime         = true,
                     ValidateIssuerSigningKey  = true,
-                    ValidIssuer              = issuer,
-                    ValidAudience            = audience,
+                    ValidIssuer              = jwtSettings["Issuer"],
+                    ValidAudience            = jwtSettings["Audience"],
                     IssuerSigningKey         = new SymmetricSecurityKey(secretKey),
                     ClockSkew                = TimeSpan.Zero
                 };
