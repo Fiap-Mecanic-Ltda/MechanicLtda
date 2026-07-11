@@ -267,6 +267,23 @@ public class EstoqueControllerTests : IClassFixture<CustomWebApplicationFactory>
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    // ─── Autorização por role ────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetEstoque_ComTokenDeCliente_DeveRetornar403()
+    {
+        // Arrange
+        var token = await AuthHelper.ObterTokenAsync(
+            _client, CustomWebApplicationFactory.ClienteEmail, CustomWebApplicationFactory.ClienteSenha);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        // Act — [Authorize(Roles = Roles.Admin)] não inclui a role Cliente
+        var response = await _client.GetAsync("/api/estoque");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
     // ─── helpers de desserialização ─────────────────────────────────────────────
 
     private sealed class EstoqueData
