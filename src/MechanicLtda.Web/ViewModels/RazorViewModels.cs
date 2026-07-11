@@ -107,6 +107,22 @@ namespace MechanicLtda.Web.ViewModels
         public int QuantidadeEntrada { get; set; } = 1;
     }
 
+    public class ServicoOficinaFormViewModel
+    {
+        public int? Id { get; set; }
+
+        [Required(ErrorMessage = "Informe o nome do servico.")]
+        [MaxLength(120)]
+        public string Nome { get; set; } = string.Empty;
+
+        [MaxLength(1000)]
+        public string? Descricao { get; set; }
+
+        [Range(0, 9999999, ErrorMessage = "Informe um valor base valido.")]
+        public decimal ValorBase { get; set; }
+
+        public bool Ativo { get; set; } = true;
+    }
     public class OrdemServicoFormViewModel
     {
         public int? Id { get; set; }
@@ -128,6 +144,11 @@ namespace MechanicLtda.Web.ViewModels
         public IEnumerable<SelectListItem> Veiculos { get; set; } = [];
     }
 
+    public class OrdensServicoIndexViewModel
+    {
+        public IEnumerable<OrdemServicoDto> Ordens { get; set; } = [];
+        public TempoMedioExecucaoDto TempoMedioExecucao { get; set; } = new();
+    }
     public class OrdemServicoDetalheViewModel
     {
         public OrdemServicoDto Ordem { get; set; } = new();
@@ -140,6 +161,10 @@ namespace MechanicLtda.Web.ViewModels
         public int? Id { get; set; }
         public int OrdemServicoId { get; set; }
         public int? EstoqueId { get; set; }
+        public int? ServicoOficinaId { get; set; }
+
+        [MaxLength(1000)]
+        public string? DescricaoServico { get; set; }
 
         [Range(1, int.MaxValue, ErrorMessage = "Informe uma quantidade maior que zero.")]
         public int Quantidade { get; set; } = 1;
@@ -148,6 +173,7 @@ namespace MechanicLtda.Web.ViewModels
         public decimal ValorUnitario { get; set; }
 
         public IEnumerable<SelectListItem> Estoques { get; set; } = [];
+        public IEnumerable<SelectListItem> ServicosOficina { get; set; } = [];
     }
 
     public class OrcamentoFormViewModel

@@ -1,4 +1,4 @@
-using MechanicLtda.Application.AppServices;
+﻿using MechanicLtda.Application.AppServices;
 using MechanicLtda.Application.AppServices.Interfaces;
 using MechanicLtda.Domain.Interfaces.Repositories;
 using MechanicLtda.Domain.Interfaces.Services;
@@ -19,6 +19,7 @@ namespace MechanicLtda.Web.Extensions
             services.AddScoped<IOrdemServicoRepository, OrdemServicoRepository>();
             services.AddScoped<IItemOrdemServicoRepository, ItemOrdemServicoRepository>();
             services.AddScoped<IEstoqueRepository, EstoqueRepository>();
+            services.AddScoped<IServicoOficinaRepository, ServicoOficinaRepository>();
             services.AddScoped<IOrcamentoRepository, OrcamentoRepository>();
 
             services.AddScoped<IUsuarioService, UsuarioService>();
@@ -27,6 +28,7 @@ namespace MechanicLtda.Web.Extensions
             services.AddScoped<IOrdemServicoService, OrdemServicoService>();
             services.AddScoped<IItemOrdemServicoService, ItemOrdemServicoService>();
             services.AddScoped<IEstoqueService, EstoqueService>();
+            services.AddScoped<IServicoOficinaService, ServicoOficinaService>();
             services.AddScoped<IOrcamentoService, OrcamentoService>();
 
             services.AddScoped<IAuthAppService, AuthAppService>();
@@ -36,6 +38,7 @@ namespace MechanicLtda.Web.Extensions
             services.AddScoped<IOrdemServicoAppService, OrdemServicoAppService>();
             services.AddScoped<IItemOrdemServicoAppService, ItemOrdemServicoAppService>();
             services.AddScoped<IEstoqueAppService, EstoqueAppService>();
+            services.AddScoped<IServicoOficinaAppService, ServicoOficinaAppService>();
             services.AddScoped<IOrcamentoAppService, OrcamentoAppService>();
             services.AddScoped<IOrcamentoPdfAppService, OrcamentoPdfAppService>();
 
@@ -43,4 +46,5 @@ namespace MechanicLtda.Web.Extensions
         }
     }
 }
+
 

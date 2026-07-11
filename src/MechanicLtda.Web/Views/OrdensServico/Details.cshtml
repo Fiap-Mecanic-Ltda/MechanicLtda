@@ -43,12 +43,18 @@
         {
             <div class="table-wrap">
                 <table>
-                    <thead><tr><th>Item</th><th>Qtd.</th><th>Unitário</th><th>Total</th><th></th></tr></thead>
+                    <thead><tr><th>Item/servi&ccedil;o</th><th>Qtd.</th><th>Unit&aacute;rio</th><th>Total</th><th></th></tr></thead>
                     <tbody>
                     @foreach (var item in Model.Itens)
                     {
                         <tr>
-                            <td>@(item.EstoqueId.HasValue ? $"#{item.EstoqueId}" : "Serviço manual")</td>
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(item.DescricaoServico))
+                                {
+                                    <strong>@item.DescricaoServico</strong><br />
+                                }
+                                <span class="muted">@(item.ServicoOficinaId.HasValue ? $"Servico #{item.ServicoOficinaId}" : item.EstoqueId.HasValue ? $"Estoque #{item.EstoqueId}" : "Servico manual")</span>
+                            </td>
                             <td>@item.Quantidade</td>
                             <td>@item.ValorUnitario.ToString("C")</td>
                             <td>@item.ValorTotal.ToString("C")</td>

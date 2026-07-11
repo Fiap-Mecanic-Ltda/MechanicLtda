@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using MechanicLtda.Application.DTOs;
 using MechanicLtda.Domain.Entities;
 
@@ -16,14 +16,18 @@ namespace MechanicLtda.Web.Extensions
             CreateMap<ItemOrdemServicoUpdateDto, ItemOrdemServico>();
             CreateMap<EstoqueCreateDto, Estoque>();
             CreateMap<EstoqueUpdateDto, Estoque>();
+            CreateMap<ServicoOficinaCreateDto, ServicoOficina>();
+            CreateMap<ServicoOficinaUpdateDto, ServicoOficina>();
             CreateMap<OrcamentoUpdateDto, Orcamento>();
 
             CreateMap<Usuario, UsuarioDto>();
             CreateMap<Cliente, ClienteDto>();
             CreateMap<Veiculo, VeiculoDto>();
-            CreateMap<OrdemServico, OrdemServicoDto>();
+            CreateMap<OrdemServico, OrdemServicoDto>()
+                .ForMember(dest => dest.TempoExecucaoMinutos, opt => opt.MapFrom(src => src.TempoExecucao.HasValue ? src.TempoExecucao.Value.TotalMinutes : (double?)null));
             CreateMap<ItemOrdemServico, ItemOrdemServicoDto>();
             CreateMap<Orcamento, OrcamentoDto>();
+            CreateMap<ServicoOficina, ServicoOficinaDto>();
         }
     }
 
@@ -36,4 +40,5 @@ namespace MechanicLtda.Web.Extensions
         }
     }
 }
+
 

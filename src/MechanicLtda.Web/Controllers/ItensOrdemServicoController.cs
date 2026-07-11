@@ -10,19 +10,22 @@ namespace MechanicLtda.Web.Controllers
     {
         private readonly IItemOrdemServicoAppService _itemAppService;
         private readonly IEstoqueAppService _estoqueAppService;
+        private readonly IServicoOficinaAppService _servicoAppService;
 
         public ItensOrdemServicoController(
             IItemOrdemServicoAppService itemAppService,
-            IEstoqueAppService estoqueAppService)
+            IEstoqueAppService estoqueAppService,
+            IServicoOficinaAppService servicoAppService)
         {
             _itemAppService = itemAppService;
             _estoqueAppService = estoqueAppService;
+            _servicoAppService = servicoAppService;
         }
 
         public async Task<IActionResult> Create(int ordemServicoId)
         {
             var model = new ItemOrdemServicoFormViewModel { OrdemServicoId = ordemServicoId };
-            await PopulateEstoquesAsync(model);
+            await PopulateSelectionsAsync(model);
             return View(model);
         }
 
@@ -32,13 +35,15 @@ namespace MechanicLtda.Web.Controllers
         {
             if (!ModelState.IsValid)
             {
-                await PopulateEstoquesAsync(model);
+                await PopulateSelectionsAsync(model);
                 return View(model);
             }
 
             var response = await _itemAppService.AdicionarAsync(model.OrdemServicoId, new ItemOrdemServicoCreateDto
             {
                 EstoqueId = model.EstoqueId,
+                ServicoOficinaId = model.ServicoOficinaId,
+                DescricaoServico = model.DescricaoServico,
                 Quantidade = model.Quantidade,
                 ValorUnitario = model.ValorUnitario
             });
@@ -46,11 +51,11 @@ namespace MechanicLtda.Web.Controllers
             if (response.hasErrors)
             {
                 AddErrors(response);
-                await PopulateEstoquesAsync(model);
+                await PopulateSelectionsAsync(model);
                 return View(model);
             }
 
-            FlashSuccess("Item adicionado à ordem de serviço.");
+            FlashSuccess("Item adicionado a ordem de servico.");
             return RedirectToAction("Details", "OrdensServico", new { id = model.OrdemServicoId });
         }
 
@@ -69,11 +74,13 @@ namespace MechanicLtda.Web.Controllers
                 Id = item.Id,
                 OrdemServicoId = item.OrdemServicoId,
                 EstoqueId = item.EstoqueId,
+                ServicoOficinaId = item.ServicoOficinaId,
+                DescricaoServico = item.DescricaoServico,
                 Quantidade = item.Quantidade,
                 ValorUnitario = item.ValorUnitario
             };
 
-            await PopulateEstoquesAsync(model);
+            await PopulateSelectionsAsync(model);
             return View(model);
         }
 
@@ -83,13 +90,15 @@ namespace MechanicLtda.Web.Controllers
         {
             if (!ModelState.IsValid)
             {
-                await PopulateEstoquesAsync(model);
+                await PopulateSelectionsAsync(model);
                 return View(model);
             }
 
             var response = await _itemAppService.AtualizarAsync(id.ToString(), new ItemOrdemServicoUpdateDto
             {
                 EstoqueId = model.EstoqueId,
+                ServicoOficinaId = model.ServicoOficinaId,
+                DescricaoServico = model.DescricaoServico,
                 Quantidade = model.Quantidade,
                 ValorUnitario = model.ValorUnitario
             });
@@ -97,7 +106,7 @@ namespace MechanicLtda.Web.Controllers
             if (response.hasErrors)
             {
                 AddErrors(response);
-                await PopulateEstoquesAsync(model);
+                await PopulateSelectionsAsync(model);
                 return View(model);
             }
 
@@ -113,22 +122,29 @@ namespace MechanicLtda.Web.Controllers
             if (response.hasErrors)
                 FlashErrors(response);
             else
-                FlashSuccess("Item removido da ordem de serviço.");
+                FlashSuccess("Item removido da ordem de servico.");
 
             return RedirectToAction("Details", "OrdensServico", new { id = ordemServicoId });
         }
 
-        private async Task PopulateEstoquesAsync(ItemOrdemServicoFormViewModel model)
+        private async Task PopulateSelectionsAsync(ItemOrdemServicoFormViewModel model)
         {
             var estoques = await _estoqueAppService.ObterTodosAsync();
+            var servicos = await _servicoAppService.ObterAtivosAsync();
             FlashErrors(estoques);
+            FlashErrors(servicos);
+
             model.Estoques = estoques.hasErrors
                 ? Enumerable.Empty<SelectListItem>()
                 : estoques.getResponse
                     .OrderBy(x => x.Nome)
                     .Select(x => new SelectListItem($"{x.Nome} ({x.Tipo})", x.Id.ToString(), x.Id == model.EstoqueId));
+
+            model.ServicosOficina = servicos.hasErrors
+                ? Enumerable.Empty<SelectListItem>()
+                : servicos.getResponse
+                    .OrderBy(x => x.Nome)
+                    .Select(x => new SelectListItem($"{x.Nome} ({x.ValorBase:C})", x.Id.ToString(), x.Id == model.ServicoOficinaId));
         }
     }
 }
-
-

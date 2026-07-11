@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using MechanicLtda.Application.AppServices.Interfaces;
 using MechanicLtda.Application.DTOs;
 using MechanicLtda.Domain.Entities;
@@ -22,11 +22,19 @@ namespace MechanicLtda.Application.AppServices
             var response = new ResponseDto<ItemOrdemServicoDto>();
             try
             {
-                var item = await _itemService.AdicionarAsync(
-                    ordemServicoId,
-                    dto.EstoqueId,
-                    dto.Quantidade,
-                    dto.ValorUnitario);
+                var item = dto.ServicoOficinaId.HasValue || !string.IsNullOrWhiteSpace(dto.DescricaoServico)
+                    ? await _itemService.AdicionarAsync(
+                        ordemServicoId,
+                        dto.EstoqueId,
+                        dto.ServicoOficinaId,
+                        dto.DescricaoServico,
+                        dto.Quantidade,
+                        dto.ValorUnitario)
+                    : await _itemService.AdicionarAsync(
+                        ordemServicoId,
+                        dto.EstoqueId,
+                        dto.Quantidade,
+                        dto.ValorUnitario);
 
                 return response.setResponse(_mapper.Map<ItemOrdemServicoDto>(item));
             }
@@ -77,7 +85,7 @@ namespace MechanicLtda.Application.AppServices
             try
             {
                 var item = await _itemService.ObterPorIdAsync(id)
-                    ?? throw new KeyNotFoundException($"Item com Id '{id}' n�o encontrado.");
+                    ?? throw new KeyNotFoundException($"Item com Id '{id}' não encontrado.");
                 return response.setResponse(_mapper.Map<ItemOrdemServicoDto>(item));
             }
             catch (KeyNotFoundException ex) { return response.addError(ex.Message); }
@@ -85,3 +93,7 @@ namespace MechanicLtda.Application.AppServices
         }
     }
 }
+
+
+
+

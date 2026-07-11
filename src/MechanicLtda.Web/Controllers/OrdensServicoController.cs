@@ -30,9 +30,16 @@ namespace MechanicLtda.Web.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var response = await _ordemServicoAppService.ObterTodosAsync();
-            FlashErrors(response);
-            return View(response.hasErrors ? Enumerable.Empty<OrdemServicoDto>() : response.getResponse);
+            var ordens = await _ordemServicoAppService.ObterTodosAsync();
+            var tempoMedio = await _ordemServicoAppService.ObterTempoMedioExecucaoAsync();
+            FlashErrors(ordens);
+            FlashErrors(tempoMedio);
+
+            return View(new OrdensServicoIndexViewModel
+            {
+                Ordens = ordens.hasErrors ? Enumerable.Empty<OrdemServicoDto>() : ordens.getResponse,
+                TempoMedioExecucao = tempoMedio.hasErrors ? new TempoMedioExecucaoDto() : tempoMedio.getResponse
+            });
         }
 
         public async Task<IActionResult> Details(int id)

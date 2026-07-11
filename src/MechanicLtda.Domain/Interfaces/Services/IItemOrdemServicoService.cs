@@ -1,16 +1,18 @@
-using MechanicLtda.Domain.Entities;
+Ôªøusing MechanicLtda.Domain.Entities;
 
 namespace MechanicLtda.Domain.Interfaces.Services
 {
     public interface IItemOrdemServicoService
     {
         /// <param name="estoqueId">
-        /// Quando informado, o serviÁo realiza a baixa autom·tica no estoque.
+        /// Quando informado, o servi√ßo realiza a baixa autom√°tica no estoque.
         /// </param>
         Task<ItemOrdemServico> AdicionarAsync(int ordemServicoId, int? estoqueId, int quantidade, decimal valorUnitario);
+        Task<ItemOrdemServico> AdicionarAsync(int ordemServicoId, int? estoqueId, int? servicoOficinaId, string? descricaoServico, int quantidade, decimal valorUnitario);
         Task<ItemOrdemServico> AtualizarAsync(ItemOrdemServico item);
         Task RemoverAsync(string id);
         Task<IEnumerable<ItemOrdemServico>> ObterPorOrdemServicoIdAsync(int ordemServicoId);
         Task<ItemOrdemServico?> ObterPorIdAsync(string id);
     }
 }
+
