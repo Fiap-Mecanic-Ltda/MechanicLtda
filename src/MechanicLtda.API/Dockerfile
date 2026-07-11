@@ -47,5 +47,8 @@ RUN dotnet publish "MechanicLtda.API.csproj" -c $BUILD_CONFIGURATION -o /app/pub
 # Esta fase é usada na produção ou quando executada no VS no modo normal
 FROM base AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=publish --chown=$APP_UID:$APP_UID /app/publish .
+# Declarado explicitamente (mesmo já herdado de "base") para que scanners de
+# segurança (ex.: SonarQube S6471) confirmem que a imagem final não roda como root.
+USER $APP_UID
 ENTRYPOINT ["dotnet", "MechanicLtda.API.dll"]
