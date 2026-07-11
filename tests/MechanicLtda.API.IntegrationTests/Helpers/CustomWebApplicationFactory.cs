@@ -19,10 +19,20 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     public const string AdminEmail = "admin@mechanic.com";
     public const string AdminSenha = "Admin@123";
 
-    // Root compartilhado: garante que TODOS os DbContext — independente do
-    // service provider interno que cada um cria — acessem os mesmos dados.
+    public const string ClienteEmail = "cliente@mechanic.com";
+    public const string ClienteSenha = "Cliente@123";
+
+    public const string FuncionarioEmail = "funcionario@mechanic.com";
+    public const string FuncionarioSenha = "Funcionario@123";
+
     private readonly string                _dbName  = $"TestDb_{Guid.NewGuid()}";
     private readonly InMemoryDatabaseRoot  _dbRoot  = new();
+
+    public CustomWebApplicationFactory()
+    {
+        // Garante que a variável de ambiente esteja disponível para GerarTokenAsync
+        Environment.SetEnvironmentVariable("JWT_SECRET_KEY", "ChaveSecretaDeTeste_MechanicLtda_2024!");
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -30,7 +40,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         {
             config.AddInMemoryCollection(new Dictionary<string, string>
             {
-                ["JwtSettings:SecretKey"]        = "ChaveSecretaDeTeste_MechanicLtda_2024!",
                 ["JwtSettings:Issuer"]           = "MechanicLtda",
                 ["JwtSettings:Audience"]         = "MechanicLtdaUsers",
                 ["JwtSettings:ExpiracaoMinutos"] = "60"
@@ -47,10 +56,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
             descriptors.ForEach(d => services.Remove(d));
 
-            // _dbRoot é a mesma instância para todos os DbContext da factory.
-            // EnableServiceProviderCaching(false) evita conflito com o provider
-            // interno do SQL Server; _dbRoot garante que o banco InMemory seja
-            // compartilhado mesmo com providers internos distintos.
             services.AddDbContext<BancoAPIContext>(options =>
                 options
                     .UseInMemoryDatabase(_dbName, _dbRoot)
@@ -67,44 +72,52 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         using var scope = host.Services.CreateScope();
         var sp          = scope.ServiceProvider;
 
-        SeedAdminAsync(
-            sp.GetRequiredService<UserManager<Usuario>>(),
-            sp.GetRequiredService<RoleManager<IdentityRole>>())
+        var userManager = sp.GetRequiredService<UserManager<Usuario>>();
+        var roleManager = sp.GetRequiredService<RoleManager<IdentityRole>>();
+
+        SeedUsuarioAsync(userManager, roleManager, AdminEmail, AdminSenha, "admin", TipoUsuario.Administrador, "Administrador")
+            .GetAwaiter().GetResult();
+        SeedUsuarioAsync(userManager, roleManager, FuncionarioEmail, FuncionarioSenha, "funcionario", TipoUsuario.Funcionario, "Funcionario")
+            .GetAwaiter().GetResult();
+        SeedUsuarioAsync(userManager, roleManager, ClienteEmail, ClienteSenha, "cliente", TipoUsuario.Cliente, "Cliente")
             .GetAwaiter().GetResult();
 
         return host;
     }
 
-    private static async Task SeedAdminAsync(
+    private static async Task SeedUsuarioAsync(
         UserManager<Usuario>      userManager,
-        RoleManager<IdentityRole> roleManager)
+        RoleManager<IdentityRole> roleManager,
+        string                    email,
+        string                    senha,
+        string                    userName,
+        TipoUsuario               tipo,
+        string                    role)
     {
-        const string role = "Administrador";
-
         if (!await roleManager.RoleExistsAsync(role))
             await roleManager.CreateAsync(new IdentityRole(role));
 
-        if (await userManager.FindByEmailAsync(AdminEmail) is not null)
+        if (await userManager.FindByEmailAsync(email) is not null)
             return;
 
-        var admin = new Usuario
+        var usuario = new Usuario
         {
-            UserName    = "admin",
-            Email       = AdminEmail,
+            UserName    = userName,
+            Email       = email,
             Ativo       = true,
-            Tipo        = TipoUsuario.Administrador,
+            Tipo        = tipo,
             DataCriacao = DateTime.UtcNow   // campo [Required] — obrigatório para CreateAsync ter sucesso
         };
 
-        var result = await userManager.CreateAsync(admin, AdminSenha);
+        var result = await userManager.CreateAsync(usuario, senha);
 
         // Lança exceção explícita para não mascarar falha no seed
         if (!result.Succeeded)
         {
             var erros = string.Join("; ", result.Errors.Select(e => e.Description));
-            throw new InvalidOperationException($"Falha ao criar usuário admin no seed de testes: {erros}");
+            throw new InvalidOperationException($"Falha ao criar usuário '{email}' no seed de testes: {erros}");
         }
 
-        await userManager.AddToRoleAsync(admin, role);
+        await userManager.AddToRoleAsync(usuario, role);
     }
 }

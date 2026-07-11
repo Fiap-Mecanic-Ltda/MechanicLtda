@@ -1,0 +1,21 @@
+@model VeiculoFormViewModel
+@{
+    ViewData["Title"] = "Novo veículo";
+}
+
+<section class="page-header">
+    <div><h1>Novo veículo</h1><p>Cadastre um veículo e vincule ao cliente.</p></div>
+</section>
+
+<form class="form" asp-action="Create" method="post">
+    <partial name="_ValidationSummary" />
+    <div class="form-grid">
+        <div class="field"><label asp-for="Placa"></label><input asp-for="Placa" /><span asp-validation-for="Placa"></span></div>
+        <div class="field"><label asp-for="ClienteId">Cliente</label><select asp-for="ClienteId" asp-items="Model.Clientes"><option value="">Selecione</option></select><span asp-validation-for="ClienteId"></span></div>
+        <div class="field"><label asp-for="Marca"></label><input asp-for="Marca" /><span asp-validation-for="Marca"></span></div>
+        <div class="field"><label asp-for="Modelo"></label><input asp-for="Modelo" /><span asp-validation-for="Modelo"></span></div>
+        <div class="field"><label asp-for="Ano"></label><input asp-for="Ano" type="number" /><span asp-validation-for="Ano"></span></div>
+    </div>
+    <div class="form-actions"><button class="btn" type="submit">Salvar</button><a class="btn btn-secondary" asp-action="Index">Cancelar</a></div>
+</form>
+

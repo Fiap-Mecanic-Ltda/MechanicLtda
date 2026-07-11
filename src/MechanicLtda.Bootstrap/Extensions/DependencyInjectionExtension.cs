@@ -4,23 +4,25 @@ using MechanicLtda.Domain.Interfaces.Repositories;
 using MechanicLtda.Domain.Interfaces.Services;
 using MechanicLtda.Domain.Services;
 using MechanicLtda.Infrastructure.Repositories;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace MechanicLtda.API.Extensions
+namespace MechanicLtda.Bootstrap.Extensions
 {
     public static class DependencyInjectionExtension
     {
         public static IServiceCollection AddDependencyInjection(this IServiceCollection services)
         {
-            // Notificador — Scoped para que as notificações vivam por requisição
+            // Notificador â€” Scoped para que as notificaÃ§Ãµes vivam por requisiÃ§Ã£o
             services.AddScoped<INotificadorService, NotificadorService>();
 
-            // Repositórios
+            // RepositÃ³rios
             services.AddScoped<IUsuarioRepository, UsuarioRepository>();
             services.AddScoped<IClienteRepository, ClienteRepository>();
             services.AddScoped<IVeiculoRepository, VeiculoRepository>();
             services.AddScoped<IOrdemServicoRepository, OrdemServicoRepository>();
             services.AddScoped<IItemOrdemServicoRepository, ItemOrdemServicoRepository>();
             services.AddScoped<IEstoqueRepository, EstoqueRepository>();
+            services.AddScoped<IServicoOficinaRepository, ServicoOficinaRepository>();
             services.AddScoped<IOrcamentoRepository, OrcamentoRepository>();
 
             // Domain Services
@@ -30,6 +32,7 @@ namespace MechanicLtda.API.Extensions
             services.AddScoped<IOrdemServicoService, OrdemServicoService>();
             services.AddScoped<IItemOrdemServicoService, ItemOrdemServicoService>();
             services.AddScoped<IEstoqueService, EstoqueService>();
+            services.AddScoped<IServicoOficinaService, ServicoOficinaService>();
             services.AddScoped<IOrcamentoService, OrcamentoService>();
 
             // App Services
@@ -40,7 +43,9 @@ namespace MechanicLtda.API.Extensions
             services.AddScoped<IOrdemServicoAppService, OrdemServicoAppService>();
             services.AddScoped<IItemOrdemServicoAppService, ItemOrdemServicoAppService>();
             services.AddScoped<IEstoqueAppService, EstoqueAppService>();
+            services.AddScoped<IServicoOficinaAppService, ServicoOficinaAppService>();
             services.AddScoped<IOrcamentoAppService, OrcamentoAppService>();
+            services.AddScoped<IOrcamentoPdfAppService, OrcamentoPdfAppService>();
 
             return services;
         }

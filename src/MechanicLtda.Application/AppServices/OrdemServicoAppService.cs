@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using MechanicLtda.Application.AppServices.Interfaces;
 using MechanicLtda.Application.DTOs;
 using MechanicLtda.Domain.Entities;
@@ -52,7 +52,7 @@ namespace MechanicLtda.Application.AppServices
             try
             {
                 if (!int.TryParse(id, out var ordemId))
-                    return response.addError("Id inv�lido.");
+                    return response.addError("Id inválido.");
 
                 var resultado = await _ordemServicoService.IniciarDiagnosticoAsync(ordemId);
                 return response.setResponse(_mapper.Map<OrdemServicoDto>(resultado));
@@ -68,7 +68,7 @@ namespace MechanicLtda.Application.AppServices
             try
             {
                 if (!int.TryParse(id, out var ordemId))
-                    return response.addError("Id inv�lido.");
+                    return response.addError("Id inválido.");
 
                 var resultado = await _ordemServicoService.AguardarAprovacaoAsync(ordemId);
                 return response.setResponse(_mapper.Map<OrdemServicoDto>(resultado));
@@ -84,7 +84,7 @@ namespace MechanicLtda.Application.AppServices
             try
             {
                 if (!int.TryParse(id, out var ordemId))
-                    return response.addError("Id inv�lido.");
+                    return response.addError("Id inválido.");
 
                 var resultado = await _ordemServicoService.IniciarExecucaoAsync(ordemId);
                 return response.setResponse(_mapper.Map<OrdemServicoDto>(resultado));
@@ -100,7 +100,7 @@ namespace MechanicLtda.Application.AppServices
             try
             {
                 if (!int.TryParse(id, out var ordemId))
-                    return response.addError("Id inv�lido.");
+                    return response.addError("Id inválido.");
 
                 var resultado = await _ordemServicoService.FinalizarAsync(ordemId);
                 return response.setResponse(_mapper.Map<OrdemServicoDto>(resultado));
@@ -116,7 +116,7 @@ namespace MechanicLtda.Application.AppServices
             try
             {
                 if (!int.TryParse(id, out var ordemId))
-                    return response.addError("Id inv�lido.");
+                    return response.addError("Id inválido.");
 
                 var resultado = await _ordemServicoService.EntregarAsync(ordemId);
                 return response.setResponse(_mapper.Map<OrdemServicoDto>(resultado));
@@ -137,6 +137,21 @@ namespace MechanicLtda.Application.AppServices
             catch (Exception ex) { return response.addError(ex); }
         }
 
+        public async Task<ResponseDto<TempoMedioExecucaoDto>> ObterTempoMedioExecucaoAsync()
+        {
+            var response = new ResponseDto<TempoMedioExecucaoDto>();
+            try
+            {
+                var (quantidade, mediaMinutos) = await _ordemServicoService.ObterTempoMedioExecucaoAsync();
+                return response.setResponse(new TempoMedioExecucaoDto
+                {
+                    QuantidadeOrdensFinalizadas = quantidade,
+                    TempoMedioMinutos = mediaMinutos,
+                    TempoMedioHoras = mediaMinutos / 60
+                });
+            }
+            catch (Exception ex) { return response.addError(ex); }
+        }
         public async Task<ResponseDto<IEnumerable<OrdemServicoDto>>> ObterPorClienteIdAsync(string clienteId)
         {
             var response = new ResponseDto<IEnumerable<OrdemServicoDto>>();
@@ -154,7 +169,7 @@ namespace MechanicLtda.Application.AppServices
             try
             {
                 var ordemServico = await _ordemServicoService.ObterPorIdAsync(id)
-                    ?? throw new KeyNotFoundException($"Ordem de Servi�o com Id '{id}' n�o encontrada.");
+                    ?? throw new KeyNotFoundException($"Ordem de Serviço com Id '{id}' não encontrada.");
                 return response.setResponse(_mapper.Map<OrdemServicoDto>(ordemServico));
             }
             catch (KeyNotFoundException ex) { return response.addError(ex.Message); }

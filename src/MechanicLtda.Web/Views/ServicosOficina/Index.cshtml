@@ -1,0 +1,37 @@
+@model IEnumerable<ServicoOficinaDto>
+@{
+    ViewData["Title"] = "Servicos";
+}
+
+<section class="page-header">
+    <div>
+        <h1>Servi&ccedil;os</h1>
+        <p>Cat&aacute;logo dos servi&ccedil;os prestados pela oficina.</p>
+    </div>
+    <a class="btn" asp-action="Create">Novo servi&ccedil;o</a>
+</section>
+
+<div class="table-wrap">
+    <table>
+        <thead><tr><th>Servi&ccedil;o</th><th>Valor base</th><th>Status</th><th>Atualizado</th><th></th></tr></thead>
+        <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td><strong>@item.Nome</strong><br /><span class="muted">@(string.IsNullOrWhiteSpace(item.Descricao) ? "Sem descricao" : item.Descricao)</span></td>
+                <td>@item.ValorBase.ToString("C")</td>
+                <td><span class="badge @(item.Ativo ? "badge-ok" : "badge-muted")">@(item.Ativo ? "Ativo" : "Inativo")</span></td>
+                <td>@((item.DataAtualizacao ?? item.DataCadastro).ToString("dd/MM/yyyy"))</td>
+                <td class="actions">
+                    <a class="btn btn-small btn-secondary" asp-action="Edit" asp-route-id="@item.Id">Editar</a>
+                    <form asp-action="Delete" asp-route-id="@item.Id" method="post"><button class="btn btn-small btn-danger" type="submit">Excluir</button></form>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+@if (!Model.Any())
+{
+    <div class="empty">Nenhum servi&ccedil;o cadastrado.</div>
+}

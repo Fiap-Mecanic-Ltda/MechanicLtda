@@ -1,4 +1,4 @@
-using MechanicLtda.Domain.Entities.Base;
+﻿using MechanicLtda.Domain.Entities.Base;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -16,6 +16,14 @@ namespace MechanicLtda.Domain.Entities
 
         [ForeignKey(nameof(EstoqueId))]
         public Estoque? Estoque { get; set; }
+
+        public int? ServicoOficinaId { get; set; }
+
+        [ForeignKey(nameof(ServicoOficinaId))]
+        public ServicoOficina? ServicoOficina { get; set; }
+
+        [MaxLength(1000)]
+        public string? DescricaoServico { get; set; }
 
         [Required]
         public int Quantidade { get; set; }

@@ -6,25 +6,26 @@ namespace MechanicLtda.API.ViewModels
     {
         public int? EstoqueId { get; set; }
 
-        [Required(ErrorMessage = "A quantidade È obrigatÛria.")]
+        public int? ServicoOficinaId { get; set; }
+
+        [MaxLength(1000, ErrorMessage = "A descri√ß√£o do servi√ßo deve ter no m√°ximo 1000 caracteres.")]
+        public string? DescricaoServico { get; set; }
+
+        [Required(ErrorMessage = "A quantidade √© obrigat√≥ria.")]
         [Range(1, int.MaxValue, ErrorMessage = "A quantidade deve ser maior que zero.")]
         public int Quantidade { get; set; }
 
-        [Required(ErrorMessage = "O valor unit·rio È obrigatÛrio.")]
-        [Range(0.01, double.MaxValue, ErrorMessage = "O valor unit·rio deve ser maior que zero.")]
+        [Required(ErrorMessage = "O valor unit√°rio √© obrigat√≥rio.")]
+        [Range(0.01, double.MaxValue, ErrorMessage = "O valor unit√°rio deve ser maior que zero.")]
         public decimal ValorUnitario { get; set; }
     }
 
-    public class ItemOrdemServicoUpdateViewModel
+    /// <summary>
+    /// Id√™ntico a <see cref="ItemOrdemServicoCreateViewModel"/> ‚Äî mantido como tipo pr√≥prio
+    /// (em vez de reaproveitar o Create diretamente) para preservar contratos de API
+    /// independentes entre POST e PUT, caso venham a divergir no futuro.
+    /// </summary>
+    public class ItemOrdemServicoUpdateViewModel : ItemOrdemServicoCreateViewModel
     {
-        public int? EstoqueId { get; set; }
-
-        [Required(ErrorMessage = "A quantidade È obrigatÛria.")]
-        [Range(1, int.MaxValue, ErrorMessage = "A quantidade deve ser maior que zero.")]
-        public int Quantidade { get; set; }
-
-        [Required(ErrorMessage = "O valor unit·rio È obrigatÛrio.")]
-        [Range(0.01, double.MaxValue, ErrorMessage = "O valor unit·rio deve ser maior que zero.")]
-        public decimal ValorUnitario { get; set; }
     }
 }

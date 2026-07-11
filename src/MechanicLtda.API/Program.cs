@@ -1,4 +1,5 @@
 using MechanicLtda.API.Extensions;
+using MechanicLtda.Bootstrap.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,13 +22,13 @@ builder.Services.AddJwtAuthentication(builder.Configuration);
 
 var app = builder.Build();
 
-// 1. Cria o banco e aplica migrations — deve ser o primeiro passo
+// 1. Cria o banco e aplica migrations ï¿½ deve ser o primeiro passo
 await app.MigrateDatabaseAsync();
 
-// 2. Seed de roles — depende do schema existir
+// 2. Seed de roles ï¿½ depende do schema existir
 await app.SeedRolesAsync();
 
-// 3. Seed de dados mocados — depende dos roles existirem
+// 3. Seed de dados mocados ï¿½ depende dos roles existirem
 await app.SeedDataAsync();
 
 if (app.Environment.IsDevelopment())
@@ -47,5 +48,5 @@ app.MapGet("/health", () => Results.Ok()).AllowAnonymous();
 
 app.Run();
 
-// Expõe a classe Program para WebApplicationFactory
+// Expï¿½e a classe Program para WebApplicationFactory
 public partial class Program { }

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Necessário para tipos de hosting/Identity (IApplicationBuilder, WebApplication,
+         IServiceCollection, RoleManager<T>, etc.) usados pelas extensions de composition root
+         compartilhadas entre os hosts MechanicLtda.API e MechanicLtda.Web. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MechanicLtda.Application\MechanicLtda.Application.csproj" />
+    <ProjectReference Include="..\MechanicLtda.Infrastructure\MechanicLtda.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>
