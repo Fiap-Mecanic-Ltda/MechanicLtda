@@ -1,17 +1,19 @@
 ﻿using AutoMapper;
 using MechanicLtda.API.ViewModels;
 using MechanicLtda.Application.DTOs;
-using MechanicLtda.Domain.Entities;
 
 namespace MechanicLtda.API.Extensions
 {
+    /// <summary>
+    /// Mapeamentos exclusivos da API: ViewModel → DTO. Os mapeamentos DTO ↔ Entidade,
+    /// compartilhados com outros hosts, estão em MechanicLtda.Application.Mapping.SharedAutoMapperProfile.
+    /// </summary>
     public class AutoMapperProfile : Profile
     {
-        public AutoMapperProfile() 
+        public AutoMapperProfile()
         {
-            // ViewModel → DTO  (API → Application)
             CreateMap<UsuarioCreateViewModel, UsuarioCreateDto>();
-            CreateMap<UsuarioUpdateViewModel, UsuarioUpdateDto>();   // ← adicionado
+            CreateMap<UsuarioUpdateViewModel, UsuarioUpdateDto>();
             CreateMap<ClienteCreateViewModel, ClienteCreateDto>();
             CreateMap<ClienteUpdateViewModel, ClienteUpdateDto>();
             CreateMap<VeiculoCreateViewModel, VeiculoCreateDto>();
@@ -26,29 +28,6 @@ namespace MechanicLtda.API.Extensions
             CreateMap<ServicoOficinaCreateViewModel, ServicoOficinaCreateDto>();
             CreateMap<ServicoOficinaUpdateViewModel, ServicoOficinaUpdateDto>();
             CreateMap<OrcamentoUpdateViewModel, OrcamentoUpdateDto>();
-
-            // DTO → Entidade  (Application → Domain)
-            CreateMap<UsuarioCreateDto, Usuario>();
-            CreateMap<UsuarioUpdateDto, Usuario>();                  // ← adicionado
-            CreateMap<ClienteUpdateDto, Cliente>();
-            CreateMap<VeiculoUpdateDto, Veiculo>();
-            CreateMap<OrdemServicoUpdateDto, OrdemServico>();
-            CreateMap<ItemOrdemServicoUpdateDto, ItemOrdemServico>();
-            CreateMap<EstoqueCreateDto, Estoque>();
-            CreateMap<EstoqueUpdateDto, Estoque>();
-            CreateMap<ServicoOficinaCreateDto, ServicoOficina>();
-            CreateMap<ServicoOficinaUpdateDto, ServicoOficina>();
-            CreateMap<OrcamentoUpdateDto, Orcamento>();
-
-            // Entidade → DTO  (Domain → Application)
-            CreateMap<Usuario, UsuarioDto>();
-            CreateMap<Cliente, ClienteDto>();
-            CreateMap<Veiculo, VeiculoDto>();
-            CreateMap<OrdemServico, OrdemServicoDto>()
-                .ForMember(dest => dest.TempoExecucaoMinutos, opt => opt.MapFrom(src => src.TempoExecucao.HasValue ? src.TempoExecucao.Value.TotalMinutes : (double?)null));
-            CreateMap<ItemOrdemServico, ItemOrdemServicoDto>();
-            CreateMap<Orcamento, OrcamentoDto>();
-            CreateMap<ServicoOficina, ServicoOficinaDto>();
         }
     }
 }

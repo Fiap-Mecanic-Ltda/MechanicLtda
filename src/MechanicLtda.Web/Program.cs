@@ -1,3 +1,4 @@
+using MechanicLtda.Bootstrap.Extensions;
 using MechanicLtda.Web.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
