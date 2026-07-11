@@ -40,13 +40,10 @@ namespace MechanicLtda.Domain.Services
                 if (!int.TryParse(veiculoId.ToString(), out var veiculoIdInt))
                     throw new ArgumentException($"VeiculoId inválido: {veiculoId}");
 
-                var veiculo = await _veiculoRepository.ObterPorIdAsync(veiculoIdInt.ToString())
-                    ?? throw new KeyNotFoundException($"Ve�culo com Id '{veiculoId}' n�o encontrado.");
                 var veiculo = await _veiculoRepository.ObterPorIdAsync(veiculoId.ToString())
                     ?? throw new KeyNotFoundException($"Veículo com Id '{veiculoId}' não encontrado.");
 
                 if (veiculo.ClienteId != clienteId)
-                    throw new InvalidOperationException("O veículo informado não pertence ao cliente indicado.");
                     throw new InvalidOperationException("O veículo informado não pertence ao cliente indicado.");
 
                 var ordemServico = new OrdemServico
@@ -69,7 +66,6 @@ namespace MechanicLtda.Domain.Services
             catch (Exception ex)
             {
                 Notificar(ex, "Ocorreu um erro no método OrdemServicoService:AdicionarAsync", _logger);
-                Notificar(ex, "Ocorreu um erro no método OrdemServicoService:AdicionarAsync", _logger);
                 throw;
             }
         }
@@ -80,10 +76,8 @@ namespace MechanicLtda.Domain.Services
             {
                 var existente = await _ordemServicoRepository.ObterPorIdAsync(ordemServico.Id.ToString())
                     ?? throw new KeyNotFoundException($"Ordem de Serviço com Id '{ordemServico.Id}' não encontrada.");
-                    ?? throw new KeyNotFoundException($"Ordem de Serviço com Id '{ordemServico.Id}' não encontrada.");
 
                 var veiculo = await _veiculoRepository.ObterPorIdAsync(ordemServico.VeiculoId.ToString())
-                    ?? throw new KeyNotFoundException($"Veículo com Id '{ordemServico.VeiculoId}' não encontrado.");
                     ?? throw new KeyNotFoundException($"Veículo com Id '{ordemServico.VeiculoId}' não encontrado.");
 
                 if (veiculo.ClienteId != ordemServico.ClienteId)
@@ -306,7 +300,7 @@ namespace MechanicLtda.Domain.Services
             }
         }
 
-        public async Task<OrdemServico> AprovarAsync(int id)
+        public async Task<OrdemServico> IniciarExecucaoAsync(int id)
         {
             try
             {
@@ -425,25 +419,6 @@ namespace MechanicLtda.Domain.Services
             catch (Exception ex)
             {
                 Notificar(ex, "Ocorreu um erro no método OrdemServicoService:ObterPorClienteIdAsync", _logger);
-                throw;
-            }
-        }
-
-        public async Task<IEnumerable<OrdemServico>> ObterPorStatusAsync(string statusDescricao)
-        {
-            try
-            {
-                // Obter todas as ordens de serviço
-                var todasAsOrdens = await _ordemServicoRepository.ObterTodosAsync();
-
-                // Filtrar por StatusDescricao usando Display
-                var ordensFiltradas = todasAsOrdens.Where(os => GetStatusDescription(os.Status) == statusDescricao);
-
-                return ordensFiltradas;
-            }
-            catch (Exception ex)
-            {
-                Notificar(ex, "Ocorreu um erro no método OrdemServicoService:ObterPorStatusAsync", _logger);
                 throw;
             }
         }

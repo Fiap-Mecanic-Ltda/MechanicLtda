@@ -5,7 +5,7 @@ namespace MechanicLtda.API.ViewModels
     public class RecusaOrdemServicoViewModel
     {
         [MaxLength(500, ErrorMessage = "O motivo da recusa não pode ultrapassar 500 caracteres.")]
-        public string MotivoRecusa { get; set; }
+        public string? MotivoRecusa { get; set; }
     }
 
     public class AprovacaoOrdemServicoResponseViewModel

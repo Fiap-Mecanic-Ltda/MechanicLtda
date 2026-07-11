@@ -17,7 +17,6 @@ namespace MechanicLtda.Domain.Interfaces.Services
         Task<IEnumerable<OrdemServico>> ObterTodosAsync();
         Task<(int Quantidade, double MediaMinutos)> ObterTempoMedioExecucaoAsync();
         Task<IEnumerable<OrdemServico>> ObterPorClienteIdAsync(string clienteId);
-        Task<IEnumerable<OrdemServico>> ObterPorStatusAsync(string statusDescricao);
         Task<OrdemServico?> ObterPorIdAsync(string id);
         Task RemoverAsync(string id);
     }

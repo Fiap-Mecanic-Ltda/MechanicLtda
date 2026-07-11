@@ -96,7 +96,7 @@ namespace MechanicLtda.Web.Controllers
                 return View(model);
             }
 
-            FlashSuccess("Ordem de serviço aberta com sucesso.");
+            FlashSuccess("Ordem de serviï¿½o aberta com sucesso.");
             return RedirectToAction(nameof(Details), new { id = response.getResponse.Id });
         }
 
@@ -148,22 +148,24 @@ namespace MechanicLtda.Web.Controllers
                 return View(model);
             }
 
-            FlashSuccess("Ordem de serviço atualizada com sucesso.");
+            FlashSuccess("Ordem de serviï¿½o atualizada com sucesso.");
             return RedirectToAction(nameof(Details), new { id });
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> AlterarStatus(int id, string acao)
+        public async Task<IActionResult> AlterarStatus(int id, string acao, string? motivoRecusa = null)
         {
             var response = acao switch
             {
                 "diagnostico" => await _ordemServicoAppService.IniciarDiagnosticoAsync(id.ToString()),
                 "aprovacao" => await _ordemServicoAppService.AguardarAprovacaoAsync(id.ToString()),
+                "aprovar" => await _ordemServicoAppService.AprovarAsync(id.ToString()),
+                "recusar" => await _ordemServicoAppService.RecusarAsync(id.ToString(), motivoRecusa ?? string.Empty),
                 "execucao" => await _ordemServicoAppService.IniciarExecucaoAsync(id.ToString()),
                 "finalizar" => await _ordemServicoAppService.FinalizarAsync(id.ToString()),
                 "entregar" => await _ordemServicoAppService.EntregarAsync(id.ToString()),
-                _ => new ResponseDto<OrdemServicoDto>().addError("Ação de status inválida.")
+                _ => new ResponseDto<OrdemServicoDto>().addError("Aï¿½ï¿½o de status invï¿½lida.")
             };
 
             if (response.hasErrors)
@@ -182,7 +184,7 @@ namespace MechanicLtda.Web.Controllers
             if (response.hasErrors)
                 FlashErrors(response);
             else
-                FlashSuccess("Ordem de serviço removida com sucesso.");
+                FlashSuccess("Ordem de serviï¿½o removida com sucesso.");
 
             return RedirectToAction(nameof(Index));
         }

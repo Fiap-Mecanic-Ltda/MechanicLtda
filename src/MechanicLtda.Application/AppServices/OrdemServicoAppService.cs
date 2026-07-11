@@ -84,7 +84,7 @@ namespace MechanicLtda.Application.AppServices
             try
             {
                 if (!int.TryParse(id, out var ordemId))
-                    return response.addError("Id inv�lido.");
+                    return response.addError("Id inválido.");
 
                 var resultado = await _ordemServicoService.AprovarAsync(ordemId);
                 return response.setResponse(_mapper.Map<OrdemServicoDto>(resultado));
@@ -100,7 +100,7 @@ namespace MechanicLtda.Application.AppServices
             try
             {
                 if (!int.TryParse(id, out var ordemId))
-                    return response.addError("Id inv�lido.");
+                    return response.addError("Id inválido.");
 
                 var resultado = await _ordemServicoService.RecusarAsync(ordemId, motivoRecusa);
                 return response.setResponse(_mapper.Map<OrdemServicoDto>(resultado));
@@ -206,17 +206,6 @@ namespace MechanicLtda.Application.AppServices
             try
             {
                 var ordens = await _ordemServicoService.ObterPorClienteIdAsync(clienteId);
-                return response.setResponse(_mapper.Map<IEnumerable<OrdemServicoDto>>(ordens));
-            }
-            catch (Exception ex) { return response.addError(ex); }
-        }
-
-        public async Task<ResponseDto<IEnumerable<OrdemServicoDto>>> ObterPorStatusAsync(string statusDescricao)
-        {
-            var response = new ResponseDto<IEnumerable<OrdemServicoDto>>();
-            try
-            {
-                var ordens = await _ordemServicoService.ObterPorStatusAsync(statusDescricao);
                 return response.setResponse(_mapper.Map<IEnumerable<OrdemServicoDto>>(ordens));
             }
             catch (Exception ex) { return response.addError(ex); }

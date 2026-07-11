@@ -17,7 +17,6 @@ namespace MechanicLtda.Application.AppServices.Interfaces
         Task<ResponseDto<IEnumerable<OrdemServicoDto>>> ObterTodosAsync();
         Task<ResponseDto<TempoMedioExecucaoDto>> ObterTempoMedioExecucaoAsync();
         Task<ResponseDto<IEnumerable<OrdemServicoDto>>> ObterPorClienteIdAsync(string clienteId);
-        Task<ResponseDto<IEnumerable<OrdemServicoDto>>> ObterPorStatusAsync(string statusDescricao);
         Task<ResponseDto<OrdemServicoDto>> ObterPorIdAsync(string id);
         Task<ResponseDto<bool>> RemoverAsync(string id);
     }
