@@ -36,6 +36,9 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
+// Usado pelo healthcheck do Docker Compose.
+app.MapGet("/health", () => Results.Ok()).AllowAnonymous();
+
 app.Run();
 
 public partial class Program { }

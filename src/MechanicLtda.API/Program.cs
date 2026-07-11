@@ -42,6 +42,10 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
+// Usado pelo healthcheck do Docker Compose para sequenciar a subida do host Web
+// (que espera a API concluir migrations/seed antes de iniciar).
+app.MapGet("/health", () => Results.Ok()).AllowAnonymous();
+
 app.Run();
 
 // Exp�e a classe Program para WebApplicationFactory
