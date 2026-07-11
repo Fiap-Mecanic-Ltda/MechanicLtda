@@ -137,7 +137,7 @@ Isso irá:
 2. Aguardar o SQL Server ficar saudável (healthcheck automático)
 3. Construir e subir o container da **API** (`mechanicltda-api`) na porta `8080`
 
-A API estará disponível em `http://localhost:8080` e o Swagger em `http://localhost:8080/swagger`.
+A API estará disponível em `http://localhost:8080` (Swagger em `http://localhost:8080/swagger`) e o Web em `http://localhost:8090`.
 
 Para parar os serviços:
 

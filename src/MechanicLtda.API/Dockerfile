@@ -2,6 +2,18 @@
 
 # Esta fase é usada durante a execução no VS no modo rápido (Padrão para a configuração de Depuração)
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+USER root
+
+# ✅ Dependências nativas exigidas pelo QuestPDF/SkiaSharp no Linux
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libfontconfig1 \
+    libfreetype6 \
+    fontconfig \
+    fonts-dejavu-core \
+    curl \
+    && fc-cache -f \
+    && rm -rf /var/lib/apt/lists/*
+
 USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
@@ -17,6 +29,7 @@ COPY ["src/MechanicLtda.API/MechanicLtda.API.csproj", "src/MechanicLtda.API/"]
 COPY ["src/MechanicLtda.Application/MechanicLtda.Application.csproj", "src/MechanicLtda.Application/"]
 COPY ["src/MechanicLtda.Domain/MechanicLtda.Domain.csproj", "src/MechanicLtda.Domain/"]
 COPY ["src/MechanicLtda.Infrastructure/MechanicLtda.Infrastructure.csproj", "src/MechanicLtda.Infrastructure/"]
+COPY ["src/MechanicLtda.Bootstrap/MechanicLtda.Bootstrap.csproj", "src/MechanicLtda.Bootstrap/"]
 
 RUN dotnet restore "src/MechanicLtda.API/MechanicLtda.API.csproj"
 
