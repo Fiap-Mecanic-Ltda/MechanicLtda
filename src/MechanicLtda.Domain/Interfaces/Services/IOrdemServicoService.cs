@@ -8,6 +8,9 @@ namespace MechanicLtda.Domain.Interfaces.Services
         Task<OrdemServico> AtualizarAsync(OrdemServico ordemServico);
         Task<OrdemServico> IniciarDiagnosticoAsync(int id);
         Task<OrdemServico> AguardarAprovacaoAsync(int id);
+        Task<OrdemServico> AprovarAsync(int id);
+        Task<OrdemServico> RecusarAsync(int id, string motivoRecusa);
+        Task<OrdemServico> ConfirmarAprovacaoPorTokenAsync(string token, bool aprovado, string? motivoRecusa);
         Task<OrdemServico> IniciarExecucaoAsync(int id);
         Task<OrdemServico> FinalizarAsync(int id);
         Task<OrdemServico> EntregarAsync(int id);

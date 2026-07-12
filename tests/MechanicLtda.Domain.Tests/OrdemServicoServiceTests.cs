@@ -17,6 +17,8 @@ public class OrdemServicoServiceTests
     private readonly Mock<INotificadorService> _notificadorMock;
     private readonly Mock<ILogger<OrdemServicoService>> _loggerMock;
     private readonly Mock<IConfiguration> _configurationMock;
+    private readonly Mock<IOrdemServicoAprovacaoTokenRepository> _ordemServicoAprovacaoTokenRepositoryMock;
+    private readonly Mock<IEmailService> _emailServiceMock;
     private readonly OrdemServicoService _sut;
 
     public OrdemServicoServiceTests()
@@ -26,13 +28,17 @@ public class OrdemServicoServiceTests
         _notificadorMock            = new Mock<INotificadorService>();
         _loggerMock                 = new Mock<ILogger<OrdemServicoService>>();
         _configurationMock          = new Mock<IConfiguration>();
+        _ordemServicoAprovacaoTokenRepositoryMock = new Mock<IOrdemServicoAprovacaoTokenRepository>();
+        _emailServiceMock           = new Mock<IEmailService>();
 
         _sut = new OrdemServicoService(
             _loggerMock.Object,
             _configurationMock.Object,
             _notificadorMock.Object,
             _ordemServicoRepositoryMock.Object,
-            _veiculoRepositoryMock.Object);
+            _veiculoRepositoryMock.Object,
+            _ordemServicoAprovacaoTokenRepositoryMock.Object,
+            _emailServiceMock.Object);
     }
 
     // ─── helpers ────────────────────────────────────────────────────────────────

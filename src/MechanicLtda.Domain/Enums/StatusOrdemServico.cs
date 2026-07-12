@@ -1,12 +1,20 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace MechanicLtda.Domain.Enums
 {
     public enum StatusOrdemServico
     {
-        Recebida           = 1,
-        EmDiagnostico      = 2,
+        [Display(Name = "Recebida")]
+        Recebida = 1,
+        [Display(Name = "Diagnóstico")]
+        EmDiagnostico = 2,
+        [Display(Name = "Aguardando Aprovação")]
         AguardandoAprovacao = 3,
-        EmExecucao         = 4,
-        Finalizada         = 5,
-        Entregue           = 6
+        [Display(Name = "Execução")]
+        EmExecucao = 4,
+        [Display(Name = "Finalizada")]
+        Finalizada = 5,
+        [Display(Name = "Entregue")]
+        Entregue = 6
     }
 }
