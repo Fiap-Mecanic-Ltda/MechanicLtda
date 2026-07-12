@@ -37,7 +37,7 @@ data "aws_iam_policy_document" "ecr_pull" {
       "ecr:GetDownloadUrlForLayer",
       "ecr:BatchCheckLayerAvailability",
     ]
-    resources = [aws_ecr_repository.api.arn]
+    resources = [aws_ecr_repository.api.arn, aws_ecr_repository.web.arn]
   }
 }
 

@@ -3,42 +3,70 @@ set -eux
 exec > >(tee /var/log/user-data.log) 2>&1
 
 dnf update -y
-dnf install -y docker aws-cli
-systemctl enable --now docker
+dnf install -y aws-cli
 
-aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${ecr_repo_url}
+# k3s: Kubernetes leve rodando na própria instância. --service-node-port-range
+# amplo o suficiente para expor os Services da API (8080) e do Web (8090) via
+# NodePort, batendo com o que o security group libera.
+curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --service-node-port-range=8000-9000" sh -
 
-install -d -m 700 /opt/mechanicltda
+export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+until /usr/local/bin/kubectl get nodes >/dev/null 2>&1; do sleep 2; done
+/usr/local/bin/kubectl wait --for=condition=Ready node --all --timeout=180s
 
-get_param() {
-  aws ssm get-parameter --region ${region} --with-decryption --name "$1" --query 'Parameter.Value' --output text
-}
+/usr/local/bin/kubectl create namespace mechanicltda --dry-run=client -o yaml \
+  | /usr/local/bin/kubectl apply -f -
 
-{
-  echo "ConnectionStrings__DefaultConnection=$(get_param ${ssm_path_prefix}/db-connection-string)"
-  echo "JWT_SECRET_KEY=$(get_param ${ssm_path_prefix}/jwt-secret-key)"
-  echo "Encryption__CpfCnpjKey=$(get_param ${ssm_path_prefix}/encryption-key)"
-  echo "EmailSettings__Password=$(get_param ${ssm_path_prefix}/email-password)"
-  echo "AppSettings__BaseUrlAprovacao=$(get_param ${ssm_path_prefix}/app-base-url-aprovacao)"
-} > /opt/mechanicltda/app.env
+# Deploy da aplicação (ConfigMap/Secret/Deployments/Services/HPA) fica 100% a
+# cargo da pipeline de CI/CD (.github/workflows/deploy.yml via SSM Run
+# Command) — evita duas fontes de verdade para os manifestos.
 
-chmod 600 /opt/mechanicltda/app.env
-chown root:root /opt/mechanicltda/app.env
+# ── Refresh periódico das credenciais do ECR ────────────────────────────────
+# k3s (containerd) não integra nativamente com IAM/ECR como o EKS, e o token
+# de auth do ECR expira em 12h. Um timer local recria o Secret
+# docker-registry "ecr-creds" a cada 6h usando a IAM role da própria
+# instância; a pipeline também atualiza esse Secret a cada deploy.
+cat <<'SCRIPT' > /opt/refresh-ecr-creds.sh
+#!/bin/bash
+set -eu
+export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 
-# A imagem pode ainda não ter sido publicada no ECR quando a instância sobe;
-# tenta por até 10 minutos antes de desistir.
-for i in $(seq 1 60); do
-  if docker pull ${ecr_repo_url}:${image_tag}; then
-    break
-  fi
-  sleep 10
-done
+REGION="${region}"
+REGISTRY="${ecr_registry_host}"
+PASSWORD="$(aws ecr get-login-password --region "$REGION")"
 
-docker run -d \
-  --name mechanicltda-api \
-  --restart unless-stopped \
-  -p 8080:8080 \
-  --env-file /opt/mechanicltda/app.env \
-  -e ASPNETCORE_ENVIRONMENT=Production \
-  -e ASPNETCORE_URLS=http://+:8080 \
-  ${ecr_repo_url}:${image_tag}
+/usr/local/bin/kubectl create secret docker-registry ecr-creds \
+  --namespace mechanicltda \
+  --docker-server="$REGISTRY" \
+  --docker-username=AWS \
+  --docker-password="$PASSWORD" \
+  --dry-run=client -o yaml | /usr/local/bin/kubectl apply -f -
+SCRIPT
+chmod 700 /opt/refresh-ecr-creds.sh
+
+cat <<'UNIT' > /etc/systemd/system/refresh-ecr-creds.service
+[Unit]
+Description=Atualiza o Secret docker-registry do ECR para o k3s
+After=k3s.service
+Requires=k3s.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/refresh-ecr-creds.sh
+UNIT
+
+cat <<'TIMER' > /etc/systemd/system/refresh-ecr-creds.timer
+[Unit]
+Description=Roda refresh-ecr-creds.service a cada 6 horas
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=6h
+
+[Install]
+WantedBy=timers.target
+TIMER
+
+systemctl daemon-reload
+systemctl enable --now refresh-ecr-creds.timer
+systemctl start refresh-ecr-creds.service

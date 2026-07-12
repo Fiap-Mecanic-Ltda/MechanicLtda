@@ -37,21 +37,13 @@ resource "aws_instance" "app" {
     encrypted   = true
   }
 
+  # user_data só instala o k3s e o timer de refresh das credenciais do ECR —
+  # o deploy da aplicação (ConfigMap/Secret/Deployments) é feito pela pipeline
+  # de CI/CD via SSM Run Command, não no boot da instância.
   user_data = templatefile("${path.module}/templates/user_data.sh.tpl", {
-    region          = var.aws_region
-    ecr_repo_url    = aws_ecr_repository.api.repository_url
-    image_tag       = var.container_image_tag
-    ssm_path_prefix = local.ssm_path_prefix
+    region            = var.aws_region
+    ecr_registry_host = split("/", aws_ecr_repository.api.repository_url)[0]
   })
-
-  depends_on = [
-    aws_db_instance.main,
-    aws_ssm_parameter.db_connection_string,
-    aws_ssm_parameter.jwt_secret_key,
-    aws_ssm_parameter.encryption_key,
-    aws_ssm_parameter.email_password,
-    aws_ssm_parameter.app_base_url_aprovacao,
-  ]
 
   tags = {
     Name = "${var.project_name}-${var.environment}-api"

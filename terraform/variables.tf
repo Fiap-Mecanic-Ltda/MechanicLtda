@@ -13,6 +13,12 @@ variable "environment" {
   default = "prod"
 }
 
+variable "github_repository" {
+  type        = string
+  description = "Repositório GitHub (owner/repo) autorizado a assumir a role de CI/CD via OIDC."
+  default     = "Fiap-Mecanic-Ltda/MechanicLtda"
+}
+
 # Rede
 
 variable "vpc_cidr" {
@@ -96,9 +102,9 @@ variable "ecr_repository_name" {
   default = "mechanicltda-api"
 }
 
-variable "container_image_tag" {
+variable "ecr_repository_web_name" {
   type    = string
-  default = "latest"
+  default = "mechanicltda-web"
 }
 
 # Segredos da aplicação

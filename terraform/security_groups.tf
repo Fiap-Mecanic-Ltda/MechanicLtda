@@ -4,9 +4,17 @@ resource "aws_security_group" "ec2" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    description = "API HTTP"
+    description = "API HTTP (NodePort k3s)"
     from_port   = 8080
     to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = [var.api_allowed_cidr]
+  }
+
+  ingress {
+    description = "Web HTTP (NodePort k3s)"
+    from_port   = 8090
+    to_port     = 8090
     protocol    = "tcp"
     cidr_blocks = [var.api_allowed_cidr]
   }
