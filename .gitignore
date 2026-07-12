@@ -29,3 +29,13 @@ secrets/
 /coverage-report
 .env
 /env .env
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/crash.log*
+terraform/*.tfvars
+!terraform/terraform.tfvars.example
+terraform/tfplan
+terraform/*.tfplan
