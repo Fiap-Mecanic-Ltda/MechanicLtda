@@ -32,9 +32,9 @@ jobs:
       - name: Extrai o default de aws_region do variables.tf
         id: region
         run: |
-          VALUE=$(awk '/variable "aws_region"/,/^}/' terraform/variables.tf | grep default | sed -E 's/.*default[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/')
+          VALUE=$(awk '/variable "aws_region"/,/^}/' infra/variables.tf | grep default | sed -E 's/.*default[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/')
           if [ -z "$VALUE" ]; then
-            echo "::error::Não encontrei o default de aws_region em terraform/variables.tf"
+            echo "::error::Não encontrei o default de aws_region em infra/variables.tf"
             exit 1
           fi
           echo "value=$VALUE" >> "$GITHUB_OUTPUT"
