@@ -511,6 +511,73 @@ public class OrdemServicoServiceTests
         await Assert.ThrowsAsync<Exception>(() => _sut.ObterTodosAsync());
     }
 
+    [Fact]
+    public async Task ObterTodosAsync_DeveOrdenarPorPrioridadeDeStatus_ExecucaoPrimeiro()
+    {
+        // Arrange — ordem de inserção propositalmente embaralhada
+        var recebida = CriarOrdemServico(id: 1, status: StatusOrdemServico.Recebida);
+        var diagnostico = CriarOrdemServico(id: 2, status: StatusOrdemServico.EmDiagnostico);
+        var aguardandoAprovacao = CriarOrdemServico(id: 3, status: StatusOrdemServico.AguardandoAprovacao);
+        var emExecucao = CriarOrdemServico(id: 4, status: StatusOrdemServico.EmExecucao);
+
+        _ordemServicoRepositoryMock
+            .Setup(r => r.ObterTodosAsync())
+            .ReturnsAsync([recebida, diagnostico, aguardandoAprovacao, emExecucao]);
+
+        // Act
+        var resultado = (await _sut.ObterTodosAsync()).ToList();
+
+        // Assert — Em Execução > Aguardando Aprovação > Diagnóstico > Recebida
+        Assert.Equal(4, resultado.Count);
+        Assert.Equal(StatusOrdemServico.EmExecucao, resultado[0].Status);
+        Assert.Equal(StatusOrdemServico.AguardandoAprovacao, resultado[1].Status);
+        Assert.Equal(StatusOrdemServico.EmDiagnostico, resultado[2].Status);
+        Assert.Equal(StatusOrdemServico.Recebida, resultado[3].Status);
+    }
+
+    [Fact]
+    public async Task ObterTodosAsync_DentroDoMesmoStatus_DeveOrdenarMaisAntigasPrimeiro()
+    {
+        // Arrange
+        var maisRecente = CriarOrdemServico(id: 1, status: StatusOrdemServico.Recebida);
+        maisRecente.DataCriacao = new DateTime(2026, 6, 1);
+
+        var maisAntiga = CriarOrdemServico(id: 2, status: StatusOrdemServico.Recebida);
+        maisAntiga.DataCriacao = new DateTime(2026, 1, 1);
+
+        _ordemServicoRepositoryMock
+            .Setup(r => r.ObterTodosAsync())
+            .ReturnsAsync([maisRecente, maisAntiga]);
+
+        // Act
+        var resultado = (await _sut.ObterTodosAsync()).ToList();
+
+        // Assert
+        Assert.Equal(2, resultado.Count);
+        Assert.Equal(maisAntiga.Id, resultado[0].Id);
+        Assert.Equal(maisRecente.Id, resultado[1].Id);
+    }
+
+    [Fact]
+    public async Task ObterTodosAsync_DeveExcluirLogicamenteFinalizadasEEntregues()
+    {
+        // Arrange
+        var recebida = CriarOrdemServico(id: 1, status: StatusOrdemServico.Recebida);
+        var finalizada = CriarOrdemServico(id: 2, status: StatusOrdemServico.Finalizada);
+        var entregue = CriarOrdemServico(id: 3, status: StatusOrdemServico.Entregue);
+
+        _ordemServicoRepositoryMock
+            .Setup(r => r.ObterTodosAsync())
+            .ReturnsAsync([recebida, finalizada, entregue]);
+
+        // Act
+        var resultado = (await _sut.ObterTodosAsync()).ToList();
+
+        // Assert — apenas a OS "Recebida" deve aparecer na listagem
+        Assert.Single(resultado);
+        Assert.Equal(recebida.Id, resultado[0].Id);
+    }
+
     #endregion
 
     // ─── ObterPorClienteIdAsync ─────────────────────────────────────────────────

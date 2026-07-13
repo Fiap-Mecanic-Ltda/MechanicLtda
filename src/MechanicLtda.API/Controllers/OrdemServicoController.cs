@@ -28,7 +28,13 @@ namespace MechanicLtda.API.Controllers
 
         // ─── Endpoints administrativos (Administrador + Funcionario) ─────────────
 
-        /// <summary>Lista todas as Ordens de Serviço. [Admin]</summary>
+        /// <summary>
+        /// Lista as Ordens de Serviço em andamento (Recebida, Diagnóstico, Aguardando
+        /// Aprovação, Execução), ordenadas por prioridade de status (Execução primeiro)
+        /// e, dentro do mesmo status, das mais antigas para as mais recentes. OS
+        /// Finalizadas/Entregues não aparecem aqui (exclusão lógica — seguem acessíveis
+        /// via consulta por Id). [Admin]
+        /// </summary>
         [HttpGet]
         [Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> ObterTodos()

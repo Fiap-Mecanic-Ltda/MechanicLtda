@@ -382,11 +382,30 @@ namespace MechanicLtda.Domain.Services
             }
         }
 
+        // Ordem de prioridade da listagem geral: OS mais "urgentes" (em andamento)
+        // primeiro. Não é a ordem numérica do enum (Recebida=1 .. Entregue=6).
+        private static readonly Dictionary<StatusOrdemServico, int> _prioridadeListagem = new()
+        {
+            [StatusOrdemServico.EmExecucao]         = 1,
+            [StatusOrdemServico.AguardandoAprovacao] = 2,
+            [StatusOrdemServico.EmDiagnostico]      = 3,
+            [StatusOrdemServico.Recebida]           = 4,
+        };
+
         public async Task<IEnumerable<OrdemServico>> ObterTodosAsync()
         {
             try
             {
-                return await _ordemServicoRepository.ObterTodosAsync();
+                var todas = await _ordemServicoRepository.ObterTodosAsync();
+
+                // Exclusão lógica: OS finalizadas/entregues não aparecem na listagem
+                // geral (continuam no banco e acessíveis via ObterPorIdAsync).
+                return todas
+                    .Where(os => os.Status != StatusOrdemServico.Finalizada
+                              && os.Status != StatusOrdemServico.Entregue)
+                    .OrderBy(os => _prioridadeListagem.GetValueOrDefault(os.Status, int.MaxValue))
+                    .ThenBy(os => os.DataCriacao)
+                    .ToList();
             }
             catch (Exception ex)
             {
