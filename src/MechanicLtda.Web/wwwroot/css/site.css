@@ -132,6 +132,8 @@ textarea { min-height: 130px; resize: vertical; }
 .stack { display: grid; gap: 18px; }
 .muted { color: var(--muted); }
 
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
 @media (max-width: 860px) {
     .topbar { align-items: flex-start; flex-direction: column; }
     .grid-4, .grid-2, .form-grid { grid-template-columns: 1fr; }

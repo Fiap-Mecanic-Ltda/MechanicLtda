@@ -5,6 +5,9 @@ namespace MechanicLtda.API.Validations
 {
     public class CpfCnpjAttribute : ValidationAttribute
     {
+        private static readonly Regex NaoDigitoRegex =
+            new(@"[^\d]", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
+
         public CpfCnpjAttribute()
             : base("O campo {0} deve conter um CPF ou CNPJ valido.") { }
 
@@ -13,7 +16,7 @@ namespace MechanicLtda.API.Validations
             if (value is null)
                 return ValidationResult.Success;
 
-            var documento = Regex.Replace(value.ToString()!, @"[^\d]", "");
+            var documento = NaoDigitoRegex.Replace(value.ToString()!, "");
 
             var valido = documento.Length switch
             {

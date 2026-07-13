@@ -8,6 +8,11 @@ resource "aws_db_instance" "main" {
   allocated_storage = var.db_allocated_storage
   storage_type      = "gp3"
 
+  # Criptografia em repouso via chave gerenciada padrão da AWS (aws/rds) -
+  # suportada pela instance class atual (db.t3.micro). Sem kms_key_id
+  # explícito porque não há requisito de rotação/BYOK além do padrão da AWS.
+  storage_encrypted = true
+
   username = var.db_master_username
   password = var.db_master_password
 

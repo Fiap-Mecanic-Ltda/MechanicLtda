@@ -21,7 +21,7 @@ namespace MechanicLtda.API.Controllers
             _mapper              = mapper;
         }
 
-        /// <summary>Obtém um orçamento pelo seu Id.</summary>
+        /// <summary>Obtï¿½m um orï¿½amento pelo seu Id.</summary>
         [HttpGet("{id:int}")]
         public async Task<IActionResult> ObterPorId(int id)
         {
@@ -29,7 +29,7 @@ namespace MechanicLtda.API.Controllers
             return response.hasErrors ? BadRequest(response) : Ok(response);
         }
 
-        /// <summary>Obtém o orçamento vinculado a uma Ordem de Serviço.</summary>
+        /// <summary>Obtï¿½m o orï¿½amento vinculado a uma Ordem de Serviï¿½o.</summary>
         [HttpGet("ordem-servico/{ordemServicoId:int}")]
         public async Task<IActionResult> ObterPorOrdemServico(int ordemServicoId)
         {
@@ -37,16 +37,19 @@ namespace MechanicLtda.API.Controllers
             return response.hasErrors ? NotFound(response) : Ok(response);
         }
 
-        /// <summary>Realiza ajuste manual de valores no orçamento.</summary>
+        /// <summary>Realiza ajuste manual de valores no orï¿½amento.</summary>
         [HttpPut("{id:int}")]
         public async Task<IActionResult> AtualizarManual(int id, [FromBody] OrcamentoUpdateViewModel viewModel)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
             var dto      = _mapper.Map<OrcamentoUpdateDto>(viewModel);
             var response = await _orcamentoAppService.AtualizarManualAsync(id.ToString(), dto);
             return response.hasErrors ? BadRequest(response) : Ok(response);
         }
 
-        /// <summary>Remove o orçamento (geralmente ao cancelar a OS).</summary>
+        /// <summary>Remove o orï¿½amento (geralmente ao cancelar a OS).</summary>
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Remover(int id)
         {
@@ -54,7 +57,7 @@ namespace MechanicLtda.API.Controllers
             return response.hasErrors ? BadRequest(response) : Ok(response);
         }
 
-        /// <summary>Exporta o orçamento como relatório em PDF.</summary>
+        /// <summary>Exporta o orï¿½amento como relatï¿½rio em PDF.</summary>
         [HttpGet("{id:int}/pdf")]
         public async Task<IActionResult> ExportarPdf(int id)
         {

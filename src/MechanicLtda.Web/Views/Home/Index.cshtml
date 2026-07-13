@@ -6,7 +6,7 @@
 <section class="page-header">
     <div>
         <h1>Painel da oficina</h1>
-        <p>Vis„o r·pida de clientes, veÌculos, ordens e estoque.</p>
+        <p>Vis√£o r√°pida de clientes, ve√≠culos, ordens e estoque.</p>
     </div>
     <a class="btn" asp-controller="OrdensServico" asp-action="Create">Nova ordem</a>
 </section>
@@ -17,7 +17,7 @@
         <div class="value">@Model.TotalClientes</div>
     </article>
     <article class="card metric">
-        <div class="label">VeÌculos</div>
+        <div class="label">Ve√≠culos</div>
         <div class="value">@Model.TotalVeiculos</div>
     </article>
     <article class="card metric">
@@ -59,16 +59,16 @@
     </article>
 
     <article class="panel">
-        <h2>Estoque crÌtico</h2>
+        <h2>Estoque cr√≠tico</h2>
         @if (!Model.EstoquesCriticos.Any())
         {
-            <div class="empty">Nenhum item abaixo do mÌnimo.</div>
+            <div class="empty">Nenhum item abaixo do m√≠nimo.</div>
         }
         else
         {
             <div class="table-wrap">
                 <table>
-                    <thead><tr><th>Item</th><th>Qtd.</th><th>MÌn.</th><th></th></tr></thead>
+                    <thead><tr><th>Item</th><th>Qtd.</th><th>M√≠n.</th><th></th></tr></thead>
                     <tbody>
                     @foreach (var item in Model.EstoquesCriticos)
                     {

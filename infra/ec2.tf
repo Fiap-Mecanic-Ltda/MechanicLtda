@@ -33,6 +33,14 @@ resource "aws_instance" "app" {
   iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
   key_name               = var.ec2_key_pair_name
 
+  # IP público necessário por design: não há NAT Gateway (custo) nem Load Balancer
+  # nesta arquitetura de instância única, então é o próprio IP público que dá à EC2
+  # saída para a internet (pull de imagem do ECR, agente SSM) e também é o que
+  # expõe a API/Web publicamente na porta 8080/8090 (Swagger, consumo externo das
+  # APIs e demo em vídeo são requisitos do desafio). A superfície exposta é
+  # limitada pelo security group (aws_security_group.ec2, em security_groups.tf),
+  # que restringe as portas liberadas via var.api_allowed_cidr — não é um
+  # "0.0.0.0/0 em tudo" por acidente.
   associate_public_ip_address = true
 
   root_block_device {
