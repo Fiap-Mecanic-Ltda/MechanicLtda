@@ -25,20 +25,24 @@ jobs:
     name: Lê variáveis padrão do Terraform
     runs-on: ubuntu-latest
     outputs:
-      aws_region: ${{ steps.region.outputs.value }}
+      aws_region: ${{ steps.vars.outputs.aws_region }}
+      project_name: ${{ steps.vars.outputs.project_name }}
+      environment: ${{ steps.vars.outputs.environment }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Extrai o default de aws_region do variables.tf
-        id: region
+      - name: Extrai defaults do variables.tf
+        id: vars
         run: |
-          VALUE=$(awk '/variable "aws_region"/,/^}/' infra/variables.tf | grep default | sed -E 's/.*default[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/')
-          if [ -z "$VALUE" ]; then
-            echo "::error::Não encontrei o default de aws_region em infra/variables.tf"
-            exit 1
-          fi
-          echo "value=$VALUE" >> "$GITHUB_OUTPUT"
+          for name in aws_region project_name environment; do
+            value=$(awk "/variable \"$name\"/,/^}/" infra/variables.tf | grep default | sed -E 's/.*default[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/')
+            if [ -z "$value" ]; then
+              echo "::error::Não encontrei o default de $name em infra/variables.tf"
+              exit 1
+            fi
+            echo "$name=$value" >> "$GITHUB_OUTPUT"
+          done
 
   # ── Terraform: provisiona a infraestrutura da AWS (infra/) ───────────────
   # Usa a chave estática do terraform-deployer (já configurada como secret),
@@ -135,6 +139,36 @@ jobs:
       - name: Terraform apply
         run: terraform apply -input=false -auto-approve
 
+  # Confirma se a role de OIDC (criada pelo terraform-apply) já existe antes
+  # de deixar docker-build-push/deploy tentarem autenticar via OIDC. Usa a
+  # mesma chave estática do terraform-deployer (não depende da própria role
+  # que está checando). Sem isso, um push antes do primeiro apply falharia
+  # com erro de credencial em vez de pular os jobs de forma clara.
+  check-infra-ready:
+    name: Verifica se a role de OIDC já foi provisionada
+    needs: read-tf-vars
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - name: Configura credenciais AWS (chave estática do terraform-deployer)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ needs.read-tf-vars.outputs.aws_region }}
+
+      - name: Checa a role do GitHub Actions
+        id: check
+        run: |
+          ROLE_NAME="${{ needs.read-tf-vars.outputs.project_name }}-${{ needs.read-tf-vars.outputs.environment }}-github-actions"
+          if aws iam get-role --role-name "$ROLE_NAME" >/dev/null 2>&1; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Role '$ROLE_NAME' ainda não existe — rode o workflow manualmente (workflow_dispatch) para provisionar a infra primeiro. Pulando docker-build-push/deploy."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
   # ── 1. Build da aplicação + 2. Testes automatizados ──────────────────────
   build-and-test:
     runs-on: ubuntu-latest
@@ -158,8 +192,8 @@ jobs:
 
   # ── 3. Build e push da imagem Docker (API e Web) para o ECR ──────────────
   docker-build-push:
-    needs: [build-and-test, read-tf-vars]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [build-and-test, read-tf-vars, check-infra-ready]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.check-infra-ready.outputs.ready == 'true'
     runs-on: ubuntu-latest
     outputs:
       image_tag: ${{ github.sha }}
