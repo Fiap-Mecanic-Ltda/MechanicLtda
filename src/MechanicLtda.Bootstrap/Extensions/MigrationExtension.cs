@@ -27,7 +27,7 @@ namespace MechanicLtda.Bootstrap.Extensions
             }
 
             const int maxTentativas = 10;
-            const int intervaloMs   = 3000;
+            const int intervaloMs   = 10000;
 
             for (int tentativa = 1; tentativa <= maxTentativas; tentativa++)
             {
