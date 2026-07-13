@@ -2,9 +2,13 @@ data "aws_ami" "al2023" {
   most_recent = true
   owners      = ["amazon"]
 
+  # "al2023-ami-*-x86_64" também casa com a variante "minimal", que não vem
+  # com o SSM Agent nem o EC2 Instance Connect pré-instalados (confirmado:
+  # essa variante foi selecionada e nenhum dos dois funcionava na instância).
+  # "al2023-ami-2*-x86_64" pega só a variante padrão (nome começa com o ano).
   filter {
     name   = "name"
-    values = ["al2023-ami-*-x86_64"]
+    values = ["al2023-ami-2*-x86_64"]
   }
 
   filter {

@@ -122,3 +122,21 @@ resource "aws_iam_group_policy" "ssm_session" {
   group  = aws_iam_group.ssm_users.name
   policy = data.aws_iam_policy_document.ssm_session_access.json
 }
+
+# Permite ao terraform-deployer usar EC2 Instance Connect para debug direto
+# via SSH, sem depender do key pair original (perdido) nem do SSM (que
+# ainda nao registrou a instancia - motivo desta propria investigacao).
+data "aws_iam_policy_document" "ec2_instance_connect" {
+  statement {
+    sid       = "SendSshPublicKey"
+    effect    = "Allow"
+    actions   = ["ec2-instance-connect:SendSSHPublicKey"]
+    resources = [aws_instance.app.arn]
+  }
+}
+
+resource "aws_iam_user_policy" "ec2_instance_connect" {
+  name   = "${var.project_name}-instance-connect-debug"
+  user   = "terraform-deployer"
+  policy = data.aws_iam_policy_document.ec2_instance_connect.json
+}
