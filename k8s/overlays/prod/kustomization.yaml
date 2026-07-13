@@ -52,3 +52,19 @@ patches:
         path: /spec/template/spec/imagePullSecrets
         value:
           - name: ecr-creds
+  # Remove o Secret placeholder do base (a pipeline recria "mechanicltda-secrets"
+  # em runtime com os valores reais do SSM Parameter Store - ver deploy no
+  # main.yml). Aplicar as duas declarações juntas num mesmo kubectl apply
+  # corrompia o patch calculado pro recurso seguinte no stream (erro real:
+  # "unknown field spec" ao atualizar o secret ecr-creds, com campos vazados
+  # de um HorizontalPodAutoscaler).
+  - target:
+      kind: Secret
+      name: mechanicltda-secrets
+    patch: |-
+      $patch: delete
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: mechanicltda-secrets
+        namespace: mechanicltda
