@@ -8,7 +8,21 @@ dnf install -y aws-cli
 # k3s: Kubernetes leve rodando na própria instância. --service-node-port-range
 # amplo o suficiente para expor os Services da API (8080) e do Web (8090) via
 # NodePort, batendo com o que o security group libera.
-curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --service-node-port-range=8000-9000" sh -
+# Retry: o instalador (get.k3s.io/update.k3s.io, atrás de CDN) já falhou aqui
+# antes com erro de SSL transitório; com "set -e" ativo, uma falha aqui
+# abortava o script inteiro e nada mais rodava.
+for i in $(seq 1 10); do
+  if curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --service-node-port-range=8000-9000" sh -; then
+    break
+  fi
+  echo "Falha ao instalar k3s (tentativa $i/10), tentando novamente em 15s..."
+  sleep 15
+done
+
+if ! command -v /usr/local/bin/kubectl >/dev/null 2>&1; then
+  echo "ERRO: k3s nao foi instalado apos 10 tentativas" >&2
+  exit 1
+fi
 
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 until /usr/local/bin/kubectl get nodes >/dev/null 2>&1; do sleep 2; done

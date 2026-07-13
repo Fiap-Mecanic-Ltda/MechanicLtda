@@ -101,6 +101,16 @@ data "aws_iam_policy_document" "github_actions_ssm_deploy" {
     ]
     resources = ["*"]
   }
+
+  # Permite a pipeline descobrir o Instance ID atual pela tag Name, em vez de
+  # depender de um secret fixo - o ID muda toda vez que a instância é
+  # substituída (ex: mudança em user_data força recriação).
+  statement {
+    sid       = "DescribeInstances"
+    effect    = "Allow"
+    actions   = ["ec2:DescribeInstances"]
+    resources = ["*"]
+  }
 }
 
 resource "aws_iam_role_policy" "github_actions_ssm_deploy" {

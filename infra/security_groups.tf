@@ -19,6 +19,17 @@ resource "aws_security_group" "ec2" {
     cidr_blocks = [var.api_allowed_cidr]
   }
 
+  # TEMPORÁRIO: SSH liberado só para investigar por que o amazon-ssm-agent
+  # não está registrando (user_data falhou baixando o k3s por erro de TLS).
+  # Remover depois de diagnosticar.
+  ingress {
+    description = "SSH temporario para debug (remover depois)"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["177.140.244.92/32"]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
