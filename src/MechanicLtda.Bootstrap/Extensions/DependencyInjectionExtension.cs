@@ -4,6 +4,7 @@ using MechanicLtda.Domain.Interfaces.Repositories;
 using MechanicLtda.Domain.Interfaces.Services;
 using MechanicLtda.Domain.Services;
 using MechanicLtda.Infrastructure.Repositories;
+using MechanicLtda.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MechanicLtda.Bootstrap.Extensions
@@ -24,6 +25,10 @@ namespace MechanicLtda.Bootstrap.Extensions
             services.AddScoped<IEstoqueRepository, EstoqueRepository>();
             services.AddScoped<IServicoOficinaRepository, ServicoOficinaRepository>();
             services.AddScoped<IOrcamentoRepository, OrcamentoRepository>();
+            services.AddScoped<IOrdemServicoAprovacaoTokenRepository, OrdemServicoAprovacaoTokenRepository>();
+
+            // Serviços de Infraestrutura
+            services.AddScoped<IEmailService, EmailService>();
 
             // Domain Services
             services.AddScoped<IUsuarioService, UsuarioService>();

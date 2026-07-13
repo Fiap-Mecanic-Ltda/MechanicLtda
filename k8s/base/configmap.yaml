@@ -1,5 +1,5 @@
 # Configuração não sensível, compartilhada pelos hosts API e Web.
-# Segredos (senhas, chaves) NÃO vão aqui — ver 02-secret.yaml.
+# Segredos (senhas, chaves) NÃO vão aqui — ver secret.yaml.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -12,5 +12,3 @@ data:
   JwtSettings__Issuer: "MechanicLtda.API"
   JwtSettings__Audience: "MechanicLtda.Clients"
   JwtSettings__ExpiracaoMinutos: "60"
-  SQLSERVER_HOST: "mechanicltda-sqlserver"
-  SQLSERVER_DB: "MechanicLtdaDb"

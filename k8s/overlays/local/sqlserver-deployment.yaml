@@ -1,7 +1,7 @@
 # SQL Server é stateful e de instância única — não é candidato a HPA.
 # Usamos Deployment (replicas: 1, strategy: Recreate) em vez de StatefulSet para
-# manter o escopo simples; para produção, prefira um banco gerenciado (Azure SQL,
-# RDS) ou um StatefulSet dedicado.
+# manter o escopo simples. Só existe neste overlay de dev local: em produção
+# (overlays/prod) o banco é um RDS gerenciado, provisionado via Terraform.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
