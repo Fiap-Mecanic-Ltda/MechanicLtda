@@ -30,11 +30,16 @@ data "aws_iam_policy_document" "github_actions_assume_role" {
       values   = ["sts.amazonaws.com"]
     }
 
-    # Restringe a role a workflows rodando na branch main deste repositório.
+    # Restringe a role a workflows deste repositório rodando na branch main
+    # (push/workflow_dispatch) OU em jobs que referenciam o Environment
+    # "production" (o GitHub troca o formato do sub claim nesse caso).
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repository}:ref:refs/heads/main"]
+      values = [
+        "repo:${var.github_repository}:ref:refs/heads/main",
+        "repo:${var.github_repository}:environment:production",
+      ]
     }
   }
 }
