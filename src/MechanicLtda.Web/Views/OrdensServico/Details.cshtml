@@ -29,7 +29,8 @@
         <form asp-action="AlterarStatus" asp-route-id="@Model.Ordem.Id" method="post"><input type="hidden" name="acao" value="aprovar" /><button class="btn btn-small btn-secondary" type="submit">Aprovar</button></form>
         <form asp-action="AlterarStatus" asp-route-id="@Model.Ordem.Id" method="post" style="display:flex; gap:6px; align-items:center;">
             <input type="hidden" name="acao" value="recusar" />
-            <input type="text" name="motivoRecusa" placeholder="Motivo da recusa (opcional)" maxlength="500" />
+            <label for="motivoRecusa" class="sr-only">Motivo da recusa</label>
+            <input type="text" id="motivoRecusa" name="motivoRecusa" placeholder="Motivo da recusa (opcional)" maxlength="500" />
             <button class="btn btn-small btn-danger" type="submit">Recusar</button>
         </form>
         <form asp-action="AlterarStatus" asp-route-id="@Model.Ordem.Id" method="post"><input type="hidden" name="acao" value="execucao" /><button class="btn btn-small btn-secondary" type="submit">Execução</button></form>
