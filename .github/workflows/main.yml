@@ -213,6 +213,16 @@ jobs:
           if [ $MOD -ne 0 ]; then PAYLOAD="${PAYLOAD}$(printf '=%.0s' $(seq 1 $((4-MOD))))"; fi
           echo "$PAYLOAD" | tr '_-' '/+' | base64 -d | jq '{sub, aud, repository, ref, workflow_ref, event_name}'
 
+      # TEMPORÁRIO: confere só o TAMANHO do secret AWS_ROLE_ARN (sem expor o
+      # valor) - o ARN correto tem 63 caracteres. Ajuda a pegar espaço/quebra
+      # de linha/aspas coladas sem querer ao salvar o secret no GitHub.
+      - name: Debug OIDC - tamanho do secret AWS_ROLE_ARN
+        env:
+          ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+        run: |
+          echo "Tamanho esperado: 63"
+          echo -n "$ROLE_ARN" | wc -c
+
       - name: Configura credenciais AWS (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
