@@ -85,21 +85,10 @@ resource "aws_iam_role_policy_attachment" "ssm_core" {
 }
 
 # Acesso via SSM Session Manager (sem SSH/porta 22 aberta).
-# Requer o IAM Identity Center já habilitado manualmente no console.
-
-data "aws_ssoadmin_instances" "this" {}
-
-resource "aws_identitystore_group" "ssm_users" {
-  identity_store_id = data.aws_ssoadmin_instances.this.identity_store_ids[0]
-  display_name      = "${var.project_name}-${var.environment}-ssm-users"
-  description       = "Usuarios com acesso via SSM Session Manager a instancia da API"
-}
-
-resource "aws_ssoadmin_permission_set" "ssm_session" {
-  name             = "${var.project_name}-${var.environment}-ssm-session"
-  instance_arn     = data.aws_ssoadmin_instances.this.arns[0]
-  session_duration = "PT4H"
-}
+# IAM clássico, não Identity Center: Permission Sets/Account Assignments só
+# são suportados em Organization instances do Identity Center, não na Account
+# instance usada aqui (confirmado por erro real da API: "This operation is
+# not supported for account instances of IAM Identity Center").
 
 data "aws_iam_policy_document" "ssm_session_access" {
   statement {
@@ -124,70 +113,12 @@ data "aws_iam_policy_document" "ssm_session_access" {
   }
 }
 
-resource "aws_ssoadmin_permission_set_inline_policy" "ssm_session" {
-  instance_arn       = data.aws_ssoadmin_instances.this.arns[0]
-  permission_set_arn = aws_ssoadmin_permission_set.ssm_session.arn
-  inline_policy      = data.aws_iam_policy_document.ssm_session_access.json
+resource "aws_iam_group" "ssm_users" {
+  name = "${var.project_name}-${var.environment}-ssm-users"
 }
 
-resource "aws_ssoadmin_account_assignment" "ssm_session" {
-  instance_arn       = data.aws_ssoadmin_instances.this.arns[0]
-  permission_set_arn = aws_ssoadmin_permission_set.ssm_session.arn
-
-  principal_id   = aws_identitystore_group.ssm_users.group_id
-  principal_type = "GROUP"
-
-  target_id   = data.aws_caller_identity.current.account_id
-  target_type = "AWS_ACCOUNT"
-}
-
-# Permite ao usuario que roda o Terraform (terraform-deployer) gerenciar
-# os recursos de Identity Center acima.
-
-data "aws_iam_policy_document" "sso_admin_deploy" {
-  statement {
-    sid    = "SsoAdminManage"
-    effect = "Allow"
-    actions = [
-      "sso:ListInstances",
-      "sso:CreatePermissionSet",
-      "sso:DescribePermissionSet",
-      "sso:UpdatePermissionSet",
-      "sso:DeletePermissionSet",
-      "sso:ListPermissionSets",
-      "sso:PutInlinePolicyToPermissionSet",
-      "sso:GetInlinePolicyForPermissionSet",
-      "sso:DeleteInlinePolicyFromPermissionSet",
-      "sso:ProvisionPermissionSet",
-      "sso:DescribePermissionSetProvisioningStatus",
-      "sso:CreateAccountAssignment",
-      "sso:DeleteAccountAssignment",
-      "sso:DescribeAccountAssignmentCreationStatus",
-      "sso:DescribeAccountAssignmentDeletionStatus",
-      "sso:ListAccountAssignments",
-      "sso:TagResource",
-      "sso:UntagResource",
-      "sso:ListTagsForResource",
-    ]
-    resources = ["*"]
-  }
-
-  statement {
-    sid    = "IdentityStoreManageGroup"
-    effect = "Allow"
-    actions = [
-      "identitystore:CreateGroup",
-      "identitystore:DeleteGroup",
-      "identitystore:DescribeGroup",
-      "identitystore:ListGroups",
-      "identitystore:UpdateGroup",
-    ]
-    resources = ["*"]
-  }
-}
-
-resource "aws_iam_user_policy" "sso_admin_deploy" {
-  name   = "${var.project_name}-sso-admin"
-  user   = "terraform-deployer"
-  policy = data.aws_iam_policy_document.sso_admin_deploy.json
+resource "aws_iam_group_policy" "ssm_session" {
+  name   = "${var.project_name}-${var.environment}-ssm-session"
+  group  = aws_iam_group.ssm_users.name
+  policy = data.aws_iam_policy_document.ssm_session_access.json
 }
