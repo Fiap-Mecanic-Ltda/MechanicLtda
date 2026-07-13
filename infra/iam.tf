@@ -74,6 +74,23 @@ resource "aws_iam_role_policy" "ssm_read" {
   policy = data.aws_iam_policy_document.ssm_read.json
 }
 
+# Le o manifesto de deploy que o CI sobe no S3 (evita embutir o payload
+# inline no comando do SSM, que travava com o manifesto+Secret > ~10KB).
+data "aws_iam_policy_document" "deploy_manifest_read" {
+  statement {
+    sid       = "DeployManifestGet"
+    effect    = "Allow"
+    actions   = ["s3:GetObject"]
+    resources = ["arn:aws:s3:::mechanicltda-terraform-state-430606112709/deploy/*"]
+  }
+}
+
+resource "aws_iam_role_policy" "deploy_manifest_read" {
+  name   = "${var.project_name}-${var.environment}-deploy-manifest-read"
+  role   = aws_iam_role.ec2_instance_role.id
+  policy = data.aws_iam_policy_document.deploy_manifest_read.json
+}
+
 resource "aws_iam_instance_profile" "ec2_profile" {
   name = "${var.project_name}-${var.environment}-ec2-profile"
   role = aws_iam_role.ec2_instance_role.name

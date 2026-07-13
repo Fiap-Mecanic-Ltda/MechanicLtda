@@ -320,12 +320,19 @@ jobs:
 
       - name: Envia os manifestos para a instância via SSM e aplica
         run: |
-          MANIFEST_B64=$(cat /tmp/app-manifests.yaml /tmp/secret-manifest.yaml | base64 -w0)
+          # O manifesto + Secret (com dados sensíveis) vai pro S3 em vez de
+          # embutido inline no comando do SSM: o payload em base64 (~11KB)
+          # estourava os limites práticos do SSM Run Command - o comando
+          # era aceito (ganhava CommandId) mas travava "InProgress" pra
+          # sempre, sem output nenhum.
+          MANIFEST_KEY="deploy/manifest-${{ github.sha }}.yaml"
+          cat /tmp/app-manifests.yaml /tmp/secret-manifest.yaml > /tmp/final-manifest.yaml
+          aws s3 cp /tmp/final-manifest.yaml "s3://mechanicltda-terraform-state-430606112709/${MANIFEST_KEY}"
 
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
-            --parameters "{\"commands\":[\"export KUBECONFIG=/etc/rancher/k3s/k3s.yaml\",\"echo $MANIFEST_B64 | base64 -d | /usr/local/bin/kubectl apply -f -\"]}" \
+            --parameters "{\"commands\":[\"export KUBECONFIG=/etc/rancher/k3s/k3s.yaml\",\"aws s3 cp s3://mechanicltda-terraform-state-430606112709/${MANIFEST_KEY} - | /usr/local/bin/kubectl apply -f -\"]}" \
             --query "Command.CommandId" --output text)
 
           echo "command_id=$COMMAND_ID" >> "$GITHUB_ENV"
@@ -338,6 +345,9 @@ jobs:
             --instance-id "$INSTANCE_ID" > /tmp/invocation.json
 
           cat /tmp/invocation.json
+
+          aws s3 rm "s3://mechanicltda-terraform-state-430606112709/${MANIFEST_KEY}" || true
+
           STATUS=$(python3 -c "import json;print(json.load(open('/tmp/invocation.json'))['Status'])")
           if [ "$STATUS" != "Success" ]; then
             echo "::error::Falha ao aplicar os manifestos via SSM (status: $STATUS)"

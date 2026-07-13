@@ -173,3 +173,22 @@ resource "aws_iam_role_policy" "github_actions_tfstate_read" {
   role   = aws_iam_role.github_actions.id
   policy = data.aws_iam_policy_document.github_actions_tfstate_read.json
 }
+
+# O manifesto renderizado + Secret (com dados sensíveis) passam a ir pro S3
+# em vez de embutidos inline no comando do SSM: o payload em base64 (~11KB)
+# estourava os limites práticos do SSM Run Command - o comando era aceito
+# (ganhava um CommandId) mas travava "InProgress" pra sempre, sem output.
+data "aws_iam_policy_document" "github_actions_deploy_manifest_write" {
+  statement {
+    sid       = "DeployManifestPut"
+    effect    = "Allow"
+    actions   = ["s3:PutObject", "s3:DeleteObject"]
+    resources = ["arn:aws:s3:::mechanicltda-terraform-state-430606112709/deploy/*"]
+  }
+}
+
+resource "aws_iam_role_policy" "github_actions_deploy_manifest_write" {
+  name   = "${var.project_name}-${var.environment}-github-actions-deploy-manifest-write"
+  role   = aws_iam_role.github_actions.id
+  policy = data.aws_iam_policy_document.github_actions_deploy_manifest_write.json
+}
