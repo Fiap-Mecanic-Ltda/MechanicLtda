@@ -1,22 +1,49 @@
 # MechanicLtda
 
-API REST desenvolvida em **.NET 9** para gerenciamento de uma mecânica, seguindo princípios de DDD e separação em camadas.
+Sistema de gestão para uma oficina mecânica (ordens de serviço, veículos, clientes, estoque e
+orçamentos), desenvolvido em **.NET 9** seguindo princípios de DDD, Clean Architecture e
+Clean Code.
+
+## Sobre esta fase (Tech Challenge — Fase 2)
+
+A Fase 1 entregou a API de gestão da oficina. Esta fase evolui essa base para suportar alta
+disponibilidade e volume de pico, sem alterar as regras de negócio já existentes:
+
+- **Escalabilidade e resiliência**: containerização com Docker, orquestração em Kubernetes com
+  Horizontal Pod Autoscaler (HPA) por CPU/memória.
+- **Infraestrutura como código**: todo o ambiente (rede, banco, containers, registry, IAM) é
+  provisionado via Terraform, sem passos manuais no console da AWS.
+- **Automação do provisionamento e do deploy**: pipeline de CI/CD (GitHub Actions) cobrindo
+  build, testes, build/push da imagem Docker e deploy no cluster Kubernetes a cada push na
+  `main`.
+- **Novas funcionalidades na Ordem de Serviço**: aprovação/recusa de orçamento por link de
+  e-mail, notificação automática de mudança de status por e-mail, e listagem com ordenação por
+  prioridade de status e exclusão lógica das OS já concluídas.
 
 ## Arquitetura
 
-O projeto segue o padrão de **Arquitetura em Camadas (Layered / Clean Architecture)**:
+### Componentes da aplicação
+
+O projeto segue o padrão de **Arquitetura em Camadas (Layered / Clean Architecture)**, com dois
+hosts de apresentação (API REST e um front-end Web MVC) compartilhando as mesmas camadas de
+domínio e aplicação:
 
 ```text
 MechanicLtda/
 ├── src/
-│   ├── MechanicLtda.API            # Controllers, Extensions, ViewModels, autenticação e autorização
+│   ├── MechanicLtda.API            # Host REST: Controllers, ViewModels, Swagger, JWT
+│   ├── MechanicLtda.Web             # Host MVC: Controllers, Views Razor, autenticação por cookie
+│   ├── MechanicLtda.Bootstrap      # Composition root compartilhado por API e Web (DI, DB, migrations, seed)
 │   ├── MechanicLtda.Application    # AppServices, DTOs, autenticação e geração de PDF
 │   ├── MechanicLtda.Domain         # Entidades, enums, interfaces e serviços de domínio
-│   └── MechanicLtda.Infrastructure # Repositórios, DbContext, Fluent API, migrations e criptografia
-└── tests/
-    ├── MechanicLtda.API.IntegrationTests
-    ├── MechanicLtda.Application.Tests
-    └── MechanicLtda.Domain.Tests
+│   └── MechanicLtda.Infrastructure # Repositórios, DbContext, Fluent API, migrations, e-mail e criptografia
+├── tests/
+│   ├── MechanicLtda.API.IntegrationTests
+│   ├── MechanicLtda.Application.Tests
+│   └── MechanicLtda.Domain.Tests
+├── k8s/                             # Manifestos Kubernetes (base + overlays local/prod) — ver k8s/README.md
+├── infra/                           # Infraestrutura como código (Terraform)
+└── .github/workflows/               # Pipeline de CI/CD (GitHub Actions)
 ```
 
 ### Responsabilidades
@@ -24,23 +51,64 @@ MechanicLtda/
 | Projeto | Responsabilidade |
 |---|---|
 | `API` | Exposição dos endpoints HTTP, validações, Swagger, autenticação JWT e autorização por roles |
+| `Web` | Interface administrativa via Razor Views, autenticação por cookie |
+| `Bootstrap` | Composition root: injeção de dependências, conexão com banco, migrations e seed — compartilhado por `API` e `Web` para não duplicar esse código entre os dois hosts |
 | `Application` | Orquestração dos casos de uso, DTOs, AutoMapper, login, troca de senha e exportação de PDF |
 | `Domain` | Regras de negócio, entidades, enums, contratos de repositórios e serviços de domínio |
-| `Infrastructure` | EF Core, SQL Server, Identity, migrations, repositórios e criptografia de CPF/CNPJ |
+| `Infrastructure` | EF Core, SQL Server, Identity, migrations, repositórios, envio de e-mail (MailKit) e criptografia de CPF/CNPJ |
+
+### Infraestrutura provisionada
+
+| Componente | Tecnologia | Onde |
+|---|---|---|
+| Orquestração de containers | Kubernetes (**k3s**, rodando numa EC2) | `k8s/` |
+| Banco de dados | SQL Server, gerenciado (**RDS**) em produção / container em dev local | `infra/rds.tf` |
+| Registro de imagens | **ECR** (um repositório para API, outro para Web) | `infra/ecr.tf` |
+| Segredos da aplicação | **SSM Parameter Store** (`SecureString`) | `infra/ssm.tf` |
+| Autenticação da pipeline | **OIDC** do GitHub Actions → IAM Role (sem access keys estáticas) | `infra/github_oidc.tf` |
+| Rede | VPC dedicada, subnet pública (EC2) + subnets privadas (RDS) | `infra/network.tf` |
+
+Ver `infra/` (Terraform) e `k8s/README.md` (Kubernetes) para o detalhamento completo de cada
+recurso e decisões de design.
+
+### Fluxo de deploy (CI/CD)
+
+```text
+git push (main)
+   │
+   ▼
+GitHub Actions (.github/workflows/deploy.yml)
+   │
+   ├─ 1. Build da aplicação (dotnet build)
+   ├─ 2. Testes automatizados (dotnet test)
+   ├─ 3. Build e push das imagens Docker (API + Web) → ECR
+   └─ 4. Deploy no cluster Kubernetes (k3s na EC2), via SSM Run Command:
+         ├─ aplica os manifestos (Namespace, ConfigMap, Deployments, Services, HPA)
+         ├─ monta o Secret do Kubernetes a partir do SSM Parameter Store
+         └─ aguarda o rollout terminar sem derrubar o serviço em produção
+```
+
+A API do Kubernetes (porta 6443) nunca é exposta publicamente — a pipeline autentica na AWS via
+OIDC e usa `aws ssm send-command` para rodar `kubectl apply` diretamente na instância, o mesmo
+mecanismo usado para qualquer acesso administrativo ao servidor (sem SSH).
 
 ## Tecnologias
 
 - [.NET 9](https://dotnet.microsoft.com/)
-- ASP.NET Core Web API
+- ASP.NET Core Web API + ASP.NET Core MVC (host Web administrativo)
 - Entity Framework Core com SQL Server
 - ASP.NET Core Identity (`IdentityDbContext<Usuario>`)
-- JWT Bearer (`Microsoft.AspNetCore.Authentication.JwtBearer`)
+- JWT Bearer (API) / autenticação por cookie (Web)
 - Autorização por roles: `Administrador`, `Funcionario` e `Cliente`
 - AutoMapper
 - Swagger / OpenAPI com suporte a Bearer Token
 - QuestPDF para exportação de orçamentos em PDF
+- MailKit/SMTP para notificação e aprovação de Ordens de Serviço por e-mail
 - xUnit, Moq, `WebApplicationFactory` e EF Core InMemory nos testes
-- Docker e Docker Compose
+- **Docker** e **Docker Compose** (desenvolvimento local)
+- **Kubernetes** (k3s) com Kustomize (`base` + `overlays`) e Horizontal Pod Autoscaler
+- **Terraform** (Infraestrutura como Código) — EC2, RDS, ECR, SSM Parameter Store, IAM/OIDC
+- **GitHub Actions** (CI/CD): build, testes, build/push de imagem e deploy no cluster
 
 ### Justificativa do SQL Server
 
@@ -172,6 +240,58 @@ Para remover também o volume de dados do SQL Server:
 docker compose down -v
 ```
 
+## Provisionamento da Infraestrutura (Terraform)
+
+Todo o ambiente de produção (rede, EC2 com Kubernetes, banco de dados, registro de imagens,
+segredos e permissões de CI/CD) é provisionado via Terraform, em `infra/`.
+
+```bash
+cd infra
+cp terraform.tfvars.example terraform.tfvars   # preencher com valores reais (nunca commitar)
+terraform init
+terraform plan     # revisa o que será criado antes de aplicar
+terraform apply
+```
+
+Principais recursos criados (ver `infra/*.tf` para o detalhamento completo):
+
+| Arquivo | Recurso |
+|---|---|
+| `network.tf` | VPC, subnets públicas/privadas, route tables |
+| `ec2.tf` | Instância EC2 que roda o cluster Kubernetes (k3s) |
+| `rds.tf` | SQL Server gerenciado (RDS) |
+| `ecr.tf` | Repositórios de imagem Docker (API e Web) |
+| `ssm.tf` | Segredos da aplicação no SSM Parameter Store |
+| `security_groups.tf` | Regras de firewall (portas expostas: `8080` API, `8090` Web) |
+| `github_oidc.tf` | OIDC + IAM Role que a pipeline de CI/CD assume |
+
+Após o `apply`, use os outputs (`terraform output`) para cadastrar os secrets necessários no
+GitHub — ver a seção "Secrets/variáveis necessários" em `k8s/README.md`.
+
+Para desmontar o ambiente: `terraform destroy` (dentro de `infra/`).
+
+## Deploy em Kubernetes
+
+Os manifestos ficam em `k8s/`, organizados com Kustomize em `base/` (recursos comuns) +
+`overlays/local/` (desenvolvimento em kind/minikube, com um pod de SQL Server próprio) +
+`overlays/prod/` (o cluster real, que usa o RDS provisionado pelo Terraform em vez de um pod
+de banco). Cobre Deployments, Services, ConfigMaps, Secrets e HPA (autoscaling por CPU/memória)
+para os hosts API e Web.
+
+Resumo para rodar localmente (kind/minikube):
+
+```bash
+kind load docker-image mechanicltda-api:latest mechanicltda-web:latest
+kubectl apply -k k8s/overlays/local
+kubectl get pods,svc,hpa -n mechanicltda
+```
+
+Em produção, o deploy **não é manual** — a pipeline de CI/CD (`.github/workflows/deploy.yml`)
+builda as imagens, publica no ECR e aplica `k8s/overlays/prod` a cada push na `main`, via SSM
+Run Command (sem expor a API do Kubernetes publicamente).
+
+Guia completo (segredos, pré-requisitos do cluster, decisões de design): **`k8s/README.md`**.
+
 ## Autenticação e Autorização
 
 A API utiliza **JWT Bearer Token**.
@@ -233,17 +353,44 @@ Todos os endpoints exigem autenticação, exceto `POST /api/auth/login`.
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| `GET` | `/api/ordemservico` | Administrador, Funcionario | Lista todas as ordens de serviço |
-| `GET` | `/api/ordemservico/{id}` | Administrador, Funcionario | Retorna uma ordem de serviço pelo Id |
+| `GET` | `/api/ordemservico` | Administrador, Funcionario | Lista as OS em andamento, ordenadas por prioridade de status (Execução primeiro) e, dentro do mesmo status, mais antigas primeiro. Finalizadas/Entregues não aparecem aqui (exclusão lógica) |
+| `GET` | `/api/ordemservico/{id}` | Administrador, Funcionario | Retorna uma ordem de serviço pelo Id (inclui Finalizadas/Entregues) |
 | `GET` | `/api/ordemservico/cliente/{clienteId}` | Administrador, Funcionario, Cliente | Lista ordens de serviço por cliente |
 | `POST` | `/api/ordemservico` | Administrador, Funcionario | Cria uma ordem de serviço com status inicial `Recebida` |
 | `PUT` | `/api/ordemservico/{id}` | Administrador, Funcionario | Atualiza uma ordem de serviço |
 | `PATCH` | `/api/ordemservico/{id}/iniciar-diagnostico` | Administrador, Funcionario | Move a OS para `EmDiagnostico` |
-| `PATCH` | `/api/ordemservico/{id}/aguardar-aprovacao` | Administrador, Funcionario | Move a OS para `AguardandoAprovacao` |
+| `PATCH` | `/api/ordemservico/{id}/aguardar-aprovacao` | Administrador, Funcionario | Move a OS para `AguardandoAprovacao` — dispara e-mail de notificação e o link de aprovação/recusa para o cliente |
+| `PATCH` | `/api/ordemservico/{id}/aprovar` | Administrador, Funcionario | Aprova a OS (`AguardandoAprovacao` → `EmExecucao`) |
+| `PATCH` | `/api/ordemservico/{id}/recusar` | Administrador, Funcionario | Recusa a OS (`AguardandoAprovacao` → `EmDiagnostico`), com motivo opcional |
 | `PATCH` | `/api/ordemservico/{id}/iniciar-execucao` | Administrador, Funcionario | Move a OS para `EmExecucao` |
 | `PATCH` | `/api/ordemservico/{id}/finalizar` | Administrador, Funcionario | Move a OS para `Finalizada` |
 | `PATCH` | `/api/ordemservico/{id}/entregar` | Administrador, Funcionario | Move a OS para `Entregue` |
 | `DELETE` | `/api/ordemservico/{id}` | Administrador, Funcionario | Remove uma ordem de serviço |
+
+Toda transição de status dispara um e-mail de notificação ao cliente (quando ele tem e-mail
+cadastrado). Ao entrar em `AguardandoAprovacao`, o e-mail inclui links de aprovação/recusa que
+não exigem login — ver seção seguinte.
+
+### Aprovação de Orçamento via E-mail
+
+Endpoint público (sem autenticação), acessado pelo link enviado por e-mail ao cliente quando a
+OS entra em `AguardandoAprovacao`. O token expira e só pode ser usado uma vez.
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `GET` | `/api/AprovacaoOrdemServico/{token}/aprovar` | Público (token) | Aprova a OS associada ao token |
+| `GET` | `/api/AprovacaoOrdemServico/{token}/recusar` | Público (token) | Recusa a OS associada ao token |
+
+### Serviços da Oficina
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `GET` | `/api/servicos-oficina` | Administrador, Funcionario | Lista todos os serviços cadastrados |
+| `GET` | `/api/servicos-oficina/ativos` | Administrador, Funcionario | Lista apenas os serviços ativos |
+| `GET` | `/api/servicos-oficina/{id}` | Administrador, Funcionario | Retorna um serviço pelo Id |
+| `POST` | `/api/servicos-oficina` | Administrador, Funcionario | Cadastra um novo serviço |
+| `PUT` | `/api/servicos-oficina/{id}` | Administrador, Funcionario | Atualiza um serviço |
+| `DELETE` | `/api/servicos-oficina/{id}` | Administrador, Funcionario | Remove um serviço |
 
 ### Itens de Ordem de Serviço
 
@@ -336,11 +483,17 @@ O relatório HTML será gerado em `coverage-report/`.
 ## Estrutura de Dependências
 
 ```text
-API → Application → Domain
-API → Infrastructure → Domain
+API  → Bootstrap → Application → Domain
+Web  → Bootstrap → Application → Domain
+API  → Bootstrap → Infrastructure → Domain
+Web  → Bootstrap → Infrastructure → Domain
 ```
 
 A camada `Domain` é o núcleo da aplicação e não depende dos demais projetos da solução.
+`Application` e `Infrastructure` dependem só de `Domain` — não uma da outra. `Bootstrap` é o
+composition root compartilhado pelos dois hosts de apresentação (`API` e `Web`), evitando
+duplicar a configuração de injeção de dependências, conexão com banco, migrations e seed entre
+eles.
 
 ## Dados Iniciais (Seed)
 
@@ -392,3 +545,20 @@ Use essas credenciais para realizar o primeiro login via `POST /api/auth/login`.
 | Ricardo Souza | Volkswagen Polo | Substituição de correia dentada. | Aguardando Aprovação | R$ 680,00 |
 
 Os itens das ordens de serviço e os orçamentos correspondentes também são gerados automaticamente no seed.
+
+## Documentação da API
+
+A collection completa dos endpoints é o próprio **Swagger/OpenAPI**, exposto pela API em
+ambiente de desenvolvimento:
+
+- Local: `http://localhost:5062/swagger`
+- Docker Compose: `http://localhost:8080/swagger`
+- Produção: `http://<ip-publico-da-instancia>:8080/swagger`
+
+> Preencher aqui o link de uma collection Postman exportada, caso seja disponibilizada como
+> alternativa ao Swagger.
+
+## Vídeo Demonstrativo
+
+> Link para o vídeo (YouTube/Vimeo, até 15 minutos) demonstrando deploy da aplicação, execução
+> do CI/CD, consumo das APIs e escalabilidade automática: **`<preencher>`**.
