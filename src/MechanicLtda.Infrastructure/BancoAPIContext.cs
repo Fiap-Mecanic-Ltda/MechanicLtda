@@ -22,6 +22,7 @@ namespace MechanicLtda.Infrastructure
         public DbSet<Cliente> Clientes { get; set; }
         public DbSet<Veiculo> Veiculos { get; set; }
         public DbSet<OrdemServico> OrdensServico { get; set; }
+        public DbSet<OrdemServicoAprovacaoToken> OrdemServicoAprovacaoTokens { get; set; }
         public DbSet<ItemOrdemServico> ItensOrdemServico { get; set; }
         public DbSet<Estoque> Estoques { get; set; }
         public DbSet<ServicoOficina> ServicosOficina { get; set; }

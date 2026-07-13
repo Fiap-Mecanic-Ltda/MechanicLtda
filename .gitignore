@@ -9,12 +9,12 @@
 v17/
 filecontentindex/
 *.csproj.user   
+.github/
 
 # AI e Design
 copilot-chat/
 .copilot-chat/
 design/
-.github/
 graphify-out/
 
 # Secrets and sensitive configuration
@@ -29,3 +29,13 @@ secrets/
 /coverage-report
 .env
 /env .env
+
+# Terraform
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.*
+infra/crash.log*
+infra/*.tfvars
+!infra/terraform.tfvars.example
+infra/tfplan
+infra/*.tfplan

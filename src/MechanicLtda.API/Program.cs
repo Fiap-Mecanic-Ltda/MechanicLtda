@@ -19,6 +19,7 @@ builder.Services.AddDatabase(builder.Configuration);
 builder.Services.AddDependencyInjection();
 builder.Services.AddAutoMapperProfiles();
 builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.AddEmailService(builder.Configuration);
 
 var app = builder.Build();
 

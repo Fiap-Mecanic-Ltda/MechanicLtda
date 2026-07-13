@@ -28,7 +28,13 @@ namespace MechanicLtda.API.Controllers
 
         // ─── Endpoints administrativos (Administrador + Funcionario) ─────────────
 
-        /// <summary>Lista todas as Ordens de Serviço. [Admin]</summary>
+        /// <summary>
+        /// Lista as Ordens de Serviço em andamento (Recebida, Diagnóstico, Aguardando
+        /// Aprovação, Execução), ordenadas por prioridade de status (Execução primeiro)
+        /// e, dentro do mesmo status, das mais antigas para as mais recentes. OS
+        /// Finalizadas/Entregues não aparecem aqui (exclusão lógica — seguem acessíveis
+        /// via consulta por Id). [Admin]
+        /// </summary>
         [HttpGet]
         [Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> ObterTodos()
@@ -162,6 +168,41 @@ namespace MechanicLtda.API.Controllers
             catch (Exception ex)
             {
                 GravaException(ex, "Falha ao mover ordem de serviço para Aguardando Aprovação", _logger);
+                return CustomResponse();
+            }
+        }
+
+        /// <summary>Aprova a Ordem de Serviço, movendo para 'Em Execução'. Requer status atual: Aguardando Aprovação. [Admin]</summary>
+        [HttpPatch("{id}/aprovar")]
+        [Authorize(Roles = Roles.Admin)]
+        public async Task<IActionResult> Aprovar(string id)
+        {
+            try
+            {
+                return CustomResponse(await _ordemServicoAppService.AprovarAsync(id));
+            }
+            catch (Exception ex)
+            {
+                GravaException(ex, "Falha ao aprovar ordem de serviço", _logger);
+                return CustomResponse();
+            }
+        }
+
+        /// <summary>Recusa a Ordem de Serviço, voltando para 'Em Diagnóstico'. Requer status atual: Aguardando Aprovação. [Admin]</summary>
+        [HttpPatch("{id}/recusar")]
+        [Authorize(Roles = Roles.Admin)]
+        public async Task<IActionResult> Recusar(string id, [FromBody] RecusaOrdemServicoViewModel model)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return CustomResponse(ModelState);
+
+                return CustomResponse(await _ordemServicoAppService.RecusarAsync(id, model.MotivoRecusa ?? string.Empty));
+            }
+            catch (Exception ex)
+            {
+                GravaException(ex, "Falha ao recusar ordem de serviço", _logger);
                 return CustomResponse();
             }
         }
