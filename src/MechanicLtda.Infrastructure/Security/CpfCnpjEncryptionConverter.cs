@@ -30,20 +30,35 @@ namespace MechanicLtda.Infrastructure.Security
 
         private static string Decrypt(string cipherTextBase64, string key)
         {
-            var fullCipher = Convert.FromBase64String(cipherTextBase64);
+            try
+            {
+                var fullCipher = Convert.FromBase64String(cipherTextBase64);
+                if (fullCipher.Length < 16)
+                    return cipherTextBase64;
 
-            using var aes = Aes.Create();
-            aes.Key = DeriveKey(key);
+                using var aes = Aes.Create();
+                aes.Key = DeriveKey(key);
 
-            var iv = new byte[16];
-            var cipherBytes = new byte[fullCipher.Length - 16];
-            Buffer.BlockCopy(fullCipher, 0, iv, 0, 16);
-            Buffer.BlockCopy(fullCipher, 16, cipherBytes, 0, cipherBytes.Length);
-            aes.IV = iv;
+                var iv = new byte[16];
+                var cipherBytes = new byte[fullCipher.Length - 16];
+                Buffer.BlockCopy(fullCipher, 0, iv, 0, 16);
+                Buffer.BlockCopy(fullCipher, 16, cipherBytes, 0, cipherBytes.Length);
+                aes.IV = iv;
 
-            using var decryptor = aes.CreateDecryptor();
-            var plainBytes = decryptor.TransformFinalBlock(cipherBytes, 0, cipherBytes.Length);
-            return Encoding.UTF8.GetString(plainBytes);
+                using var decryptor = aes.CreateDecryptor();
+                var plainBytes = decryptor.TransformFinalBlock(cipherBytes, 0, cipherBytes.Length);
+                return Encoding.UTF8.GetString(plainBytes);
+            }
+            catch (Exception ex) when (ex is CryptographicException or FormatException)
+            {
+                // Dado gravado antes da criptografia entrar em vigor (ou corrompido por
+                // truncamento da coluna, que era nvarchar(14) antes da migration
+                // EncryptCpfCnpjCliente) não é um ciphertext válido para esta chave.
+                // Sem esse fallback, uma única linha legada derruba toda a listagem
+                // com "Padding is invalid and cannot be removed." em vez de exibir o
+                // valor como veio do banco.
+                return cipherTextBase64;
+            }
         }
 
         private static byte[] DeriveKey(string key)

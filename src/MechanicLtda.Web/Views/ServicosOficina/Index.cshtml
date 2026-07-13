@@ -1,24 +1,24 @@
 @model IEnumerable<ServicoOficinaDto>
 @{
-    ViewData["Title"] = "Servicos";
+    ViewData["Title"] = "Serviços";
 }
 
 <section class="page-header">
     <div>
-        <h1>Servi&ccedil;os</h1>
-        <p>Cat&aacute;logo dos servi&ccedil;os prestados pela oficina.</p>
+        <h1>Serviços</h1>
+        <p>Catálogo dos serviços prestados pela oficina.</p>
     </div>
-    <a class="btn" asp-action="Create">Novo servi&ccedil;o</a>
+    <a class="btn" asp-action="Create">Novo serviço</a>
 </section>
 
 <div class="table-wrap">
     <table>
-        <thead><tr><th>Servi&ccedil;o</th><th>Valor base</th><th>Status</th><th>Atualizado</th><th></th></tr></thead>
+        <thead><tr><th>Serviço</th><th>Valor base</th><th>Status</th><th>Atualizado</th><th></th></tr></thead>
         <tbody>
         @foreach (var item in Model)
         {
             <tr>
-                <td><strong>@item.Nome</strong><br /><span class="muted">@(string.IsNullOrWhiteSpace(item.Descricao) ? "Sem descricao" : item.Descricao)</span></td>
+                <td><strong>@item.Nome</strong><br /><span class="muted">@(string.IsNullOrWhiteSpace(item.Descricao) ? "Sem descrição" : item.Descricao)</span></td>
                 <td>@item.ValorBase.ToString("C")</td>
                 <td><span class="badge @(item.Ativo ? "badge-ok" : "badge-muted")">@(item.Ativo ? "Ativo" : "Inativo")</span></td>
                 <td>@((item.DataAtualizacao ?? item.DataCadastro).ToString("dd/MM/yyyy"))</td>
@@ -33,5 +33,5 @@
 </div>
 @if (!Model.Any())
 {
-    <div class="empty">Nenhum servi&ccedil;o cadastrado.</div>
+    <div class="empty">Nenhum serviço cadastrado.</div>
 }
