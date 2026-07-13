@@ -32,11 +32,8 @@ await app.SeedRolesAsync();
 // 3. Seed de dados mocados � depende dos roles existirem
 await app.SeedDataAsync();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 app.UseAuthentication();

@@ -55,7 +55,7 @@ namespace MechanicLtda.Web.Controllers
                 return View(model);
             }
 
-            FlashSuccess("Orçamento atualizado com sucesso.");
+            FlashSuccess("OrÃ§amento atualizado com sucesso.");
             return RedirectToAction("Details", "OrdensServico", new { id = model.OrdemServicoId });
         }
 

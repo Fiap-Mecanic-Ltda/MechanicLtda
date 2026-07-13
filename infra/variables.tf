@@ -43,7 +43,7 @@ variable "db_subnet_b_cidr" {
 
 variable "api_allowed_cidr" {
   type        = string
-  description = "CIDR com acesso à API na porta 8080."
+  description = "CIDR com acesso à API (porta 8080) e ao Web (porta 8090). Default público (0.0.0.0/0) é intencional: a aplicação é consumida externamente (Swagger, demo). Restrinja em variables.tfvars para um CIDR menor se o ambiente não precisar de acesso público irrestrito."
   default     = "0.0.0.0/0"
 }
 

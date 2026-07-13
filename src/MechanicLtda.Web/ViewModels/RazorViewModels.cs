@@ -19,7 +19,7 @@ namespace MechanicLtda.Web.ViewModels
     public class LoginRazorViewModel
     {
         [Required(ErrorMessage = "Informe o e-mail.")]
-        [EmailAddress(ErrorMessage = "Informe um e-mail válido.")]
+        [EmailAddress(ErrorMessage = "Informe um e-mail vÃ¡lido.")]
         public string Email { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Informe a senha.")]
@@ -37,7 +37,7 @@ namespace MechanicLtda.Web.ViewModels
         public string Nome { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Informe o e-mail.")]
-        [EmailAddress(ErrorMessage = "Informe um e-mail válido.")]
+        [EmailAddress(ErrorMessage = "Informe um e-mail vÃ¡lido.")]
         [MaxLength(255)]
         public string Email { get; set; } = string.Empty;
 
@@ -67,7 +67,7 @@ namespace MechanicLtda.Web.ViewModels
         [MaxLength(50)]
         public string Modelo { get; set; } = string.Empty;
 
-        [Range(1900, 2100, ErrorMessage = "Informe um ano válido.")]
+        [Range(1900, 2100, ErrorMessage = "Informe um ano vÃ¡lido.")]
         public int Ano { get; set; } = DateTime.Now.Year;
 
         public bool Ativo { get; set; } = true;
@@ -89,10 +89,10 @@ namespace MechanicLtda.Web.ViewModels
         [Required(ErrorMessage = "Selecione o tipo.")]
         public TipoEstoque Tipo { get; set; } = TipoEstoque.Peca;
 
-        [Range(0, int.MaxValue, ErrorMessage = "A quantidade atual não pode ser negativa.")]
+        [Range(0, int.MaxValue, ErrorMessage = "A quantidade atual nÃ£o pode ser negativa.")]
         public int QuantidadeAtual { get; set; }
 
-        [Range(0, int.MaxValue, ErrorMessage = "A quantidade mínima não pode ser negativa.")]
+        [Range(0, int.MaxValue, ErrorMessage = "A quantidade mÃ­nima nÃ£o pode ser negativa.")]
         public int QuantidadeMinima { get; set; }
 
         public IEnumerable<SelectListItem> Tipos { get; set; } = [];
@@ -131,10 +131,10 @@ namespace MechanicLtda.Web.ViewModels
         [MaxLength(1000)]
         public string DescricaoProblema { get; set; } = string.Empty;
 
-        [Range(0, 9999999, ErrorMessage = "Informe um valor estimado válido.")]
+        [Range(0, 9999999, ErrorMessage = "Informe um valor estimado vÃ¡lido.")]
         public decimal? ValorTotalEstimado { get; set; }
 
-        [Range(1, int.MaxValue, ErrorMessage = "Selecione um veículo.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Selecione um veÃ­culo.")]
         public int VeiculoId { get; set; }
 
         [Range(1, int.MaxValue, ErrorMessage = "Selecione um cliente.")]
@@ -169,7 +169,7 @@ namespace MechanicLtda.Web.ViewModels
         [Range(1, int.MaxValue, ErrorMessage = "Informe uma quantidade maior que zero.")]
         public int Quantidade { get; set; } = 1;
 
-        [Range(0.01, 9999999, ErrorMessage = "Informe um valor unitário válido.")]
+        [Range(0.01, 9999999, ErrorMessage = "Informe um valor unitÃ¡rio vÃ¡lido.")]
         public decimal ValorUnitario { get; set; }
 
         public IEnumerable<SelectListItem> Estoques { get; set; } = [];
@@ -181,7 +181,7 @@ namespace MechanicLtda.Web.ViewModels
         public int Id { get; set; }
         public int OrdemServicoId { get; set; }
 
-        [Range(0, 9999999, ErrorMessage = "Informe o valor de peças.")]
+        [Range(0, 9999999, ErrorMessage = "Informe o valor de peÃ§as.")]
         public decimal ValorTotalPecas { get; set; }
 
         [Range(0, 9999999, ErrorMessage = "Informe o valor de insumos.")]
