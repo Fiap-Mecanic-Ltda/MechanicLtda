@@ -11,7 +11,7 @@ resources:
 # antes do apply (ver .github/workflows/deploy.yml).
 
 patches:
-  # NodePort fixo — o security group da EC2 (terraform/security_groups.tf) libera
+  # NodePort fixo — o security group da EC2 (infra/security_groups.tf) libera
   # exatamente as portas 8080 (api) e 8090 (web); o k3s é instalado com
   # `--service-node-port-range=8000-9000` para aceitar esses valores.
   - target:

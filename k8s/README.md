@@ -6,7 +6,7 @@ Kubernetes, organizados como base + overlays (Kustomize) para cobrir dois cenár
 - **`overlays/local`** — desenvolvimento em `kind`/`minikube`, com um pod `sqlserver` próprio
   (mesmo papel do `docker-compose.yml`).
 - **`overlays/prod`** — o cluster real deste projeto: **k3s rodando na EC2** provisionada pelo
-  Terraform (`terraform/`), sem pod de banco — usa o **RDS SQL Server** já gerenciado pela AWS.
+  Terraform (`infra/`), sem pod de banco — usa o **RDS SQL Server** já gerenciado pela AWS.
 
 ## Estrutura
 
@@ -78,18 +78,39 @@ enviado em base64 dentro do próprio comando SSM.
 
 ### O que o Terraform já provisiona para isso
 
-- `terraform/templates/user_data.sh.tpl` instala o k3s no boot (`--service-node-port-range=8000-9000`,
+- `infra/templates/user_data.sh.tpl` instala o k3s no boot (`--service-node-port-range=8000-9000`,
   pra aceitar os NodePorts 8080/8090 do overlay `prod`) e um systemd timer que renova as
   credenciais do ECR a cada 6h (containerd do k3s não tem integração nativa com IAM, ao
   contrário do EKS — o token do ECR expira em 12h).
-- `terraform/ecr.tf` — repositórios `mechanicltda-api` e `mechanicltda-web`.
-- `terraform/security_groups.tf` — libera `8080` (API) e `8090` (Web) no security group da EC2.
-- `terraform/github_oidc.tf` — OIDC provider do GitHub Actions + role `github_actions`
-  (permissões: push no ECR, `ssm:SendCommand`/`GetCommandInvocation` restritas à instância).
-- `terraform/ssm.tf` — os segredos reais (`db_master_password`, `jwt_secret_key`,
+- `infra/ecr.tf` — repositórios `mechanicltda-api` e `mechanicltda-web` (nomes vêm de
+  `var.ecr_repository_name`/`var.ecr_repository_web_name`, `infra/variables.tf`).
+- `infra/security_groups.tf` — libera `8080` (API) e `8090` (Web) no security group da EC2.
+- `infra/github_oidc.tf` — OIDC provider do GitHub Actions + role `github_actions`
+  (permissões: push no ECR, `ssm:SendCommand`/`GetCommandInvocation` restritas à instância,
+  `ssm:GetParameter` para ler os segredos da aplicação, e leitura do state remoto em S3 —
+  usada pela pipeline para resolver `ec2_instance_id`, `ssm_path_prefix` e as URLs do ECR via
+  `terraform output` em vez de hardcoded no workflow).
+- `infra/ssm.tf` — os segredos reais (`db_master_password`, `jwt_secret_key`,
   `encryption_cpf_cnpj_key`, `email_password`, connection string pra o RDS) ficam no **SSM
-  Parameter Store** (`SecureString`), alimentados a partir do `terraform.tfvars` (nunca
-  commitado). A pipeline lê de lá pra montar o Secret do Kubernetes a cada deploy.
+  Parameter Store** (`SecureString`), sob o prefixo `/var.project_name/var.environment`
+  (`local.ssm_path_prefix`, exposto como output `ssm_path_prefix`), alimentados a partir do
+  `terraform.tfvars` (nunca commitado). A pipeline lê de lá pra montar o Secret do Kubernetes
+  a cada deploy.
+
+### A pipeline lê `infra/variables.tf` via `terraform output` — não hardcoda nada
+
+`.github/workflows/deploy.yml` roda `terraform init` (read-only, contra o state remoto em S3)
+e `terraform output` em dois pontos, em vez de duplicar valores manualmente no YAML:
+
+| Output do Terraform | Usado para |
+|---|---|
+| `ecr_repository_url` / `ecr_repository_web_url` | Tag/push das imagens Docker e referência nos manifestos |
+| `ec2_instance_id` | Alvo do `aws ssm send-command` |
+| `ssm_path_prefix` | Prefixo (`/project_name/environment`) usado pra buscar os parâmetros do SSM |
+
+Se você mudar `project_name`, `environment` ou os nomes dos repositórios ECR em
+`infra/variables.tf`/`terraform.tfvars`, a pipeline acompanha automaticamente no próximo
+`terraform apply` + deploy — nada para atualizar no workflow.
 
 ### Secrets/variáveis necessários no repositório GitHub
 
@@ -97,17 +118,17 @@ enviado em base64 dentro do próprio comando SSM.
 
 | Nome | Tipo | Uso |
 |---|---|---|
-| `AWS_ROLE_ARN` | Secret | Output `github_actions_role_arn` do Terraform |
-| `EC2_INSTANCE_ID` | Secret | Output `ec2_instance_id` do Terraform |
+| `AWS_ROLE_ARN` | Secret | Output `github_actions_role_arn` do Terraform — único valor que precisa ser copiado manualmente (a pipeline usa ele pra autenticar e só depois consegue ler os demais outputs) |
 | `AWS_REGION` | Variable | Região da EC2/ECR/SSM (`us-east-1`) |
 
-Não existe mais `KUBE_CONFIG`, `SA_PASSWORD`, `JWT_SECRET_KEY` nem `ENCRYPTION_KEY` como
-secret do GitHub — esses valores vivem só no SSM (geridos pelo Terraform).
+Não existe `KUBE_CONFIG`, `EC2_INSTANCE_ID`, `SA_PASSWORD`, `JWT_SECRET_KEY` nem
+`ENCRYPTION_KEY` como secret do GitHub — `EC2_INSTANCE_ID` agora vem do `terraform output`, e
+os demais vivem só no SSM (geridos pelo Terraform).
 
 ### Primeira subida
 
-1. `terraform apply` (cria EC2 + k3s + RDS + ECR + IAM/OIDC).
-2. Cadastrar `AWS_ROLE_ARN`, `EC2_INSTANCE_ID`, `AWS_REGION` no GitHub (outputs do passo 1).
+1. `terraform apply` (cria EC2 + k3s + RDS + ECR + IAM/OIDC), dentro de `infra/`.
+2. Cadastrar `AWS_ROLE_ARN` (output `github_actions_role_arn`) e `AWS_REGION` no GitHub.
 3. Push na `main` — a pipeline builda, publica no ECR e aplica os manifestos via SSM.
 
 ## Decisões e limitações conhecidas

@@ -103,3 +103,58 @@ resource "aws_iam_role_policy" "github_actions_ssm_deploy" {
   role   = aws_iam_role.github_actions.id
   policy = data.aws_iam_policy_document.github_actions_ssm_deploy.json
 }
+
+# Lê os parâmetros da aplicação (ssm.tf) pra montar o Secret do Kubernetes a
+# cada deploy — mesmo escopo já concedido à role da EC2 em iam.tf.
+data "aws_iam_policy_document" "github_actions_ssm_read_app_params" {
+  statement {
+    sid    = "SsmReadAppParams"
+    effect = "Allow"
+    actions = [
+      "ssm:GetParameter",
+      "ssm:GetParameters",
+    ]
+    resources = [
+      "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/${var.project_name}/${var.environment}/*",
+    ]
+  }
+
+  statement {
+    sid       = "SsmKmsDecrypt"
+    effect    = "Allow"
+    actions   = ["kms:Decrypt"]
+    resources = [data.aws_kms_alias.ssm.target_key_arn]
+  }
+}
+
+resource "aws_iam_role_policy" "github_actions_ssm_read_app_params" {
+  name   = "${var.project_name}-${var.environment}-github-actions-ssm-read"
+  role   = aws_iam_role.github_actions.id
+  policy = data.aws_iam_policy_document.github_actions_ssm_read_app_params.json
+}
+
+# Leitura do state remoto (S3) — necessária pra `terraform output` na pipeline
+# resolver ec2_instance_id, ssm_path_prefix e as URLs do ECR a partir do que
+# foi de fato provisionado (em vez de hardcodar esses valores no workflow).
+# Somente leitura: `terraform output` não grava nem trava o state.
+data "aws_iam_policy_document" "github_actions_tfstate_read" {
+  statement {
+    sid       = "TfStateGetObject"
+    effect    = "Allow"
+    actions   = ["s3:GetObject"]
+    resources = ["arn:aws:s3:::mechanicltda-terraform-state-430606112709/prod/terraform.tfstate"]
+  }
+
+  statement {
+    sid       = "TfStateListBucket"
+    effect    = "Allow"
+    actions   = ["s3:ListBucket"]
+    resources = ["arn:aws:s3:::mechanicltda-terraform-state-430606112709"]
+  }
+}
+
+resource "aws_iam_role_policy" "github_actions_tfstate_read" {
+  name   = "${var.project_name}-${var.environment}-github-actions-tfstate-read"
+  role   = aws_iam_role.github_actions.id
+  policy = data.aws_iam_policy_document.github_actions_tfstate_read.json
+}
