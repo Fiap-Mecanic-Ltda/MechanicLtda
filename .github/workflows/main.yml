@@ -311,6 +311,13 @@ jobs:
             --from-literal=AppSettings__BaseUrlAprovacao="$(get_param $PREFIX/app-base-url-aprovacao)" \
             --dry-run=client -o yaml > /tmp/secret-manifest.yaml
 
+          # "---" é obrigatório entre documentos concatenados manualmente -
+          # sem ele, "kubectl apply -f -" processa só o último documento do
+          # stream e ignora os anteriores em silêncio (sem erro nenhum, foi
+          # por isso que "mechanicltda-secrets" nunca era atualizado de
+          # verdade: só "ecr-creds", que vinha depois, era aplicado).
+          echo "---" >> /tmp/secret-manifest.yaml
+
           kubectl create secret docker-registry ecr-creds \
             --namespace mechanicltda \
             --docker-server="${ECR_REGISTRY}" \
