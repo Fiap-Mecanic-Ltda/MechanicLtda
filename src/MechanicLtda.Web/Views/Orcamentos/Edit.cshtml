@@ -1,10 +1,10 @@
 @model OrcamentoFormViewModel
 @{
-    ViewData["Title"] = "Editar orçamento";
+    ViewData["Title"] = "Editar orÃ§amento";
 }
 
 <section class="page-header">
-    <div><h1>Editar orçamento</h1><p>Ordem de serviço #@Model.OrdemServicoId</p></div>
+    <div><h1>Editar orÃ§amento</h1><p>Ordem de serviÃ§o #@Model.OrdemServicoId</p></div>
 </section>
 
 <form class="form" asp-action="Edit" asp-route-id="@Model.Id" method="post">
@@ -12,7 +12,7 @@
     <input asp-for="Id" type="hidden" />
     <input asp-for="OrdemServicoId" type="hidden" />
     <div class="form-grid">
-        <div class="field"><label asp-for="ValorTotalPecas">Valor total de peças</label><input asp-for="ValorTotalPecas" type="number" step="0.01" /><span asp-validation-for="ValorTotalPecas"></span></div>
+        <div class="field"><label asp-for="ValorTotalPecas">Valor total de peÃ§as</label><input asp-for="ValorTotalPecas" type="number" step="0.01" /><span asp-validation-for="ValorTotalPecas"></span></div>
         <div class="field"><label asp-for="ValorTotalInsumos">Valor total de insumos</label><input asp-for="ValorTotalInsumos" type="number" step="0.01" /><span asp-validation-for="ValorTotalInsumos"></span></div>
         <div class="field"><label asp-for="Validade"></label><input asp-for="Validade" type="date" /><span asp-validation-for="Validade"></span></div>
         <div class="field"><label asp-for="ValorTotalGeral">Valor total atual</label><input asp-for="ValorTotalGeral" disabled /></div>

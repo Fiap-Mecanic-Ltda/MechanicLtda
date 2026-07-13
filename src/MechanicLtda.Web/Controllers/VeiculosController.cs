@@ -57,7 +57,7 @@ namespace MechanicLtda.Web.Controllers
                 return View(model);
             }
 
-            FlashSuccess("Veículo cadastrado com sucesso.");
+            FlashSuccess("VeÃ­culo cadastrado com sucesso.");
             return RedirectToAction(nameof(Index));
         }
 
@@ -113,7 +113,7 @@ namespace MechanicLtda.Web.Controllers
                 return View(model);
             }
 
-            FlashSuccess("Veículo atualizado com sucesso.");
+            FlashSuccess("VeÃ­culo atualizado com sucesso.");
             return RedirectToAction(nameof(Index));
         }
 
@@ -125,7 +125,7 @@ namespace MechanicLtda.Web.Controllers
             if (response.hasErrors)
                 FlashErrors(response);
             else
-                FlashSuccess("Veículo removido com sucesso.");
+                FlashSuccess("VeÃ­culo removido com sucesso.");
 
             return RedirectToAction(nameof(Index));
         }

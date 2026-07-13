@@ -4,16 +4,16 @@
 }
 
 <section class="page-header">
-    <div><h1>Editar ordem #@Model.Id</h1><p>Atualize a descrição e os vínculos da ordem.</p></div>
+    <div><h1>Editar ordem #@Model.Id</h1><p>Atualize a descriÃ§Ã£o e os vÃ­nculos da ordem.</p></div>
 </section>
 
 <form class="form" asp-action="Edit" asp-route-id="@Model.Id" method="post">
     <partial name="_ValidationSummary" />
     <div class="form-grid">
         <div class="field"><label asp-for="ClienteId">Cliente</label><select asp-for="ClienteId" asp-items="Model.Clientes"><option value="">Selecione</option></select><span asp-validation-for="ClienteId"></span></div>
-        <div class="field"><label asp-for="VeiculoId">Veículo</label><select asp-for="VeiculoId" asp-items="Model.Veiculos"><option value="">Selecione</option></select><span asp-validation-for="VeiculoId"></span></div>
+        <div class="field"><label asp-for="VeiculoId">VeÃ­culo</label><select asp-for="VeiculoId" asp-items="Model.Veiculos"><option value="">Selecione</option></select><span asp-validation-for="VeiculoId"></span></div>
         <div class="field"><label asp-for="ValorTotalEstimado">Valor estimado</label><input asp-for="ValorTotalEstimado" type="number" step="0.01" /><span asp-validation-for="ValorTotalEstimado"></span></div>
-        <div class="field field-full"><label asp-for="DescricaoProblema">Descrição do problema</label><textarea asp-for="DescricaoProblema"></textarea><span asp-validation-for="DescricaoProblema"></span></div>
+        <div class="field field-full"><label asp-for="DescricaoProblema">DescriÃ§Ã£o do problema</label><textarea asp-for="DescricaoProblema"></textarea><span asp-validation-for="DescricaoProblema"></span></div>
     </div>
     <div class="form-actions"><button class="btn" type="submit">Salvar</button><a class="btn btn-secondary" asp-action="Details" asp-route-id="@Model.Id">Cancelar</a></div>
 </form>

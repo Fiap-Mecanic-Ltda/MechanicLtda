@@ -17,22 +17,22 @@
 <section class="grid grid-4">
     <article class="card metric"><div class="label">Status</div><div class="value" style="font-size: 1.25rem;">@Model.Ordem.StatusDescricao</div></article>
     <article class="card metric"><div class="label">Cliente</div><div class="value" style="font-size: 1.25rem;">#@Model.Ordem.ClienteId</div></article>
-    <article class="card metric"><div class="label">Ve�culo</div><div class="value" style="font-size: 1.25rem;">#@Model.Ordem.VeiculoId</div></article>
+    <article class="card metric"><div class="label">Veículo</div><div class="value" style="font-size: 1.25rem;">#@Model.Ordem.VeiculoId</div></article>
     <article class="card metric"><div class="label">Estimado</div><div class="value" style="font-size: 1.25rem;">@(Model.Ordem.ValorTotalEstimado?.ToString("C") ?? "-")</div></article>
 </section>
 
 <section class="panel" style="margin-top: 18px;">
     <h2>Fluxo da ordem</h2>
     <div class="actions">
-        <form asp-action="AlterarStatus" asp-route-id="@Model.Ordem.Id" method="post"><input type="hidden" name="acao" value="diagnostico" /><button class="btn btn-small btn-secondary" type="submit">Diagn�stico</button></form>
-        <form asp-action="AlterarStatus" asp-route-id="@Model.Ordem.Id" method="post"><input type="hidden" name="acao" value="aprovacao" /><button class="btn btn-small btn-secondary" type="submit">Aguardar aprova��o</button></form>
+        <form asp-action="AlterarStatus" asp-route-id="@Model.Ordem.Id" method="post"><input type="hidden" name="acao" value="diagnostico" /><button class="btn btn-small btn-secondary" type="submit">Diagnóstico</button></form>
+        <form asp-action="AlterarStatus" asp-route-id="@Model.Ordem.Id" method="post"><input type="hidden" name="acao" value="aprovacao" /><button class="btn btn-small btn-secondary" type="submit">Aguardar aprovação</button></form>
         <form asp-action="AlterarStatus" asp-route-id="@Model.Ordem.Id" method="post"><input type="hidden" name="acao" value="aprovar" /><button class="btn btn-small btn-secondary" type="submit">Aprovar</button></form>
         <form asp-action="AlterarStatus" asp-route-id="@Model.Ordem.Id" method="post" style="display:flex; gap:6px; align-items:center;">
             <input type="hidden" name="acao" value="recusar" />
             <input type="text" name="motivoRecusa" placeholder="Motivo da recusa (opcional)" maxlength="500" />
             <button class="btn btn-small btn-danger" type="submit">Recusar</button>
         </form>
-        <form asp-action="AlterarStatus" asp-route-id="@Model.Ordem.Id" method="post"><input type="hidden" name="acao" value="execucao" /><button class="btn btn-small btn-secondary" type="submit">Execu��o</button></form>
+        <form asp-action="AlterarStatus" asp-route-id="@Model.Ordem.Id" method="post"><input type="hidden" name="acao" value="execucao" /><button class="btn btn-small btn-secondary" type="submit">Execução</button></form>
         <form asp-action="AlterarStatus" asp-route-id="@Model.Ordem.Id" method="post"><input type="hidden" name="acao" value="finalizar" /><button class="btn btn-small btn-secondary" type="submit">Finalizar</button></form>
         <form asp-action="AlterarStatus" asp-route-id="@Model.Ordem.Id" method="post"><input type="hidden" name="acao" value="entregar" /><button class="btn btn-small btn-secondary" type="submit">Entregar</button></form>
     </div>
@@ -43,13 +43,13 @@
         <h2>Itens da ordem</h2>
         @if (!Model.Itens.Any())
         {
-            <div class="empty">Nenhum item lan�ado.</div>
+            <div class="empty">Nenhum item lançado.</div>
         }
         else
         {
             <div class="table-wrap">
                 <table>
-                    <thead><tr><th>Item/servi&ccedil;o</th><th>Qtd.</th><th>Unit&aacute;rio</th><th>Total</th><th></th></tr></thead>
+                    <thead><tr><th>Item/serviço</th><th>Qtd.</th><th>Unitário</th><th>Total</th><th></th></tr></thead>
                     <tbody>
                     @foreach (var item in Model.Itens)
                     {
@@ -59,7 +59,7 @@
                                 {
                                     <strong>@item.DescricaoServico</strong><br />
                                 }
-                                <span class="muted">@(item.ServicoOficinaId.HasValue ? $"Servico #{item.ServicoOficinaId}" : item.EstoqueId.HasValue ? $"Estoque #{item.EstoqueId}" : "Servico manual")</span>
+                                <span class="muted">@(item.ServicoOficinaId.HasValue ? $"Serviço #{item.ServicoOficinaId}" : item.EstoqueId.HasValue ? $"Estoque #{item.EstoqueId}" : "Serviço manual")</span>
                             </td>
                             <td>@item.Quantidade</td>
                             <td>@item.ValorUnitario.ToString("C")</td>
@@ -80,15 +80,15 @@
     </article>
 
     <article class="panel">
-        <h2>Or�amento</h2>
+        <h2>Orçamento</h2>
         @if (Model.Orcamento is null)
         {
-            <div class="empty">Nenhum or�amento gerado para esta ordem.</div>
+            <div class="empty">Nenhum orçamento gerado para esta ordem.</div>
         }
         else
         {
             <div class="stack">
-                <div><span class="muted">Pe�as</span><br /><strong>@Model.Orcamento.ValorTotalPecas.ToString("C")</strong></div>
+                <div><span class="muted">Peças</span><br /><strong>@Model.Orcamento.ValorTotalPecas.ToString("C")</strong></div>
                 <div><span class="muted">Insumos</span><br /><strong>@Model.Orcamento.ValorTotalInsumos.ToString("C")</strong></div>
                 <div><span class="muted">Total</span><br /><strong>@Model.Orcamento.ValorTotalGeral.ToString("C")</strong></div>
                 <div class="actions">

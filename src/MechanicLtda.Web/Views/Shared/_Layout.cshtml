@@ -13,9 +13,9 @@
             @if (User.Identity?.IsAuthenticated == true)
             {
                 <a asp-controller="Clientes" asp-action="Index">Clientes</a>
-                <a asp-controller="Veiculos" asp-action="Index">Ve�culos</a>
+                <a asp-controller="Veiculos" asp-action="Index">Veículos</a>
                 <a asp-controller="OrdensServico" asp-action="Index">Ordens</a>
-                <a asp-controller="ServicosOficina" asp-action="Index">Servi&ccedil;os</a>
+                <a asp-controller="ServicosOficina" asp-action="Index">Serviços</a>
                 <a asp-controller="Estoques" asp-action="Index">Estoque</a>
                 <form class="logout-form" asp-controller="Conta" asp-action="Logout" method="post">
                     <button type="submit">Sair</button>

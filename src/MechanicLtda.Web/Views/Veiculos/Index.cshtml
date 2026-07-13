@@ -1,19 +1,19 @@
 @model IEnumerable<VeiculoDto>
 @{
-    ViewData["Title"] = "Veículos";
+    ViewData["Title"] = "VeÃ­culos";
 }
 
 <section class="page-header">
     <div>
-        <h1>Veículos</h1>
-        <p>Veículos vinculados aos clientes da oficina.</p>
+        <h1>VeÃ­culos</h1>
+        <p>VeÃ­culos vinculados aos clientes da oficina.</p>
     </div>
-    <a class="btn" asp-action="Create">Novo veículo</a>
+    <a class="btn" asp-action="Create">Novo veÃ­culo</a>
 </section>
 
 <div class="table-wrap">
     <table>
-        <thead><tr><th>Placa</th><th>Veículo</th><th>Ano</th><th>Cliente</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>Placa</th><th>VeÃ­culo</th><th>Ano</th><th>Cliente</th><th>Status</th><th></th></tr></thead>
         <tbody>
         @foreach (var veiculo in Model)
         {
@@ -36,6 +36,6 @@
 </div>
 @if (!Model.Any())
 {
-    <div class="empty">Nenhum veículo cadastrado.</div>
+    <div class="empty">Nenhum veÃ­culo cadastrado.</div>
 }
 
