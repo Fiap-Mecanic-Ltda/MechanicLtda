@@ -52,7 +52,7 @@ variable "api_allowed_cidr" {
 variable "ec2_instance_type" {
   type        = string
   description = "Tipo da instância EC2 que roda a API."
-  default     = "t3.micro"
+  default     = "t3.small"
 }
 
 variable "ec2_key_pair_name" {
