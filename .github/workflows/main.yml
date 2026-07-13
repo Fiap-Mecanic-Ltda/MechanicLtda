@@ -1,0 +1,203 @@
+name: Esteira de CI/CD - MechanicLtda
+
+# Testes rodam em qualquer push/PR; build de imagem e deploy só acontecem
+# em push na main (mesma regra de ouro da esteira de referência).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  DOTNET_VERSION: "9.0.x"
+
+permissions:
+  contents: read
+  # Necessário para o OIDC do GitHub assumir a role da AWS (sem access keys
+  # estáticas como secret do repositório).
+  id-token: write
+
+jobs:
+  # ── 1. Build da aplicação + 2. Testes automatizados ──────────────────────
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore MechanicLtda.sln
+
+      - name: Build
+        run: dotnet build MechanicLtda.sln --configuration Release --no-restore
+
+      - name: Testes automatizados
+        run: dotnet test MechanicLtda.sln --configuration Release --no-build --verbosity normal
+
+  # ── 3. Build e push da imagem Docker (API e Web) para o ECR ──────────────
+  docker-build-push:
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ github.sha }}
+      ecr_registry: ${{ steps.login-ecr.outputs.registry }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configura credenciais AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Login no ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build e push da imagem da API
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/MechanicLtda.API/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/mechanicltda-api:${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/mechanicltda-api:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build e push da imagem do Web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/MechanicLtda.Web/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/mechanicltda-web:${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/mechanicltda-web:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── 4/5/6. Deploy no k3s da EC2 via SSM Run Command ───────────────────────
+  # Não há kubeconfig exposto publicamente: a pipeline nunca fala diretamente
+  # com a API do k3s (porta 6443 fechada no security group). Em vez disso,
+  # manda o manifesto renderizado para dentro da instância via SSM e roda
+  # `kubectl apply` localmente lá, reaproveitando o mesmo IAM/SSM usado para
+  # acesso administrativo (sem SSH).
+  deploy:
+    needs: docker-build-push
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_TAG: ${{ needs.docker-build-push.outputs.image_tag }}
+      ECR_REGISTRY: ${{ needs.docker-build-push.outputs.ecr_registry }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configura credenciais AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
+      # 4/6. Renderiza os manifestos de produção (Namespace, ConfigMap, API,
+      # Web, Services NodePort, HPA) já com as imagens recém publicadas.
+      - name: Renderiza os manifestos (kustomize) com as imagens publicadas
+        run: |
+          cp -r k8s/overlays/prod /tmp/prod-render
+          cat >> /tmp/prod-render/kustomization.yaml <<EOF
+          images:
+            - name: mechanicltda-api
+              newName: ${ECR_REGISTRY}/mechanicltda-api
+              newTag: ${IMAGE_TAG}
+            - name: mechanicltda-web
+              newName: ${ECR_REGISTRY}/mechanicltda-web
+              newTag: ${IMAGE_TAG}
+          EOF
+          kubectl kustomize /tmp/prod-render > /tmp/app-manifests.yaml
+
+      # 5. Segredos reais nunca ficam no YAML versionado — busca no SSM
+      # Parameter Store (alimentado pelo Terraform a partir de terraform.tfvars)
+      # e monta o Secret em runtime, igual à seção 8.4 da esteira de referência.
+      - name: Monta o Secret a partir do SSM Parameter Store
+        run: |
+          PREFIX="/mechanicltda/prod"
+          get_param() { aws ssm get-parameter --name "$1" --with-decryption --query 'Parameter.Value' --output text; }
+
+          kubectl create secret generic mechanicltda-secrets \
+            --namespace mechanicltda \
+            --from-literal=ConnectionStrings__DefaultConnection="$(get_param $PREFIX/db-connection-string)" \
+            --from-literal=JWT_SECRET_KEY="$(get_param $PREFIX/jwt-secret-key)" \
+            --from-literal=ENCRYPTION_KEY="$(get_param $PREFIX/encryption-key)" \
+            --from-literal=EmailSettings__Password="$(get_param $PREFIX/email-password)" \
+            --from-literal=AppSettings__BaseUrlAprovacao="$(get_param $PREFIX/app-base-url-aprovacao)" \
+            --dry-run=client -o yaml > /tmp/secret-manifest.yaml
+
+          kubectl create secret docker-registry ecr-creds \
+            --namespace mechanicltda \
+            --docker-server="${ECR_REGISTRY}" \
+            --docker-username=AWS \
+            --docker-password="$(aws ecr get-login-password --region ${{ vars.AWS_REGION }})" \
+            --dry-run=client -o yaml >> /tmp/secret-manifest.yaml
+
+      - name: Envia os manifestos para a instância via SSM e aplica
+        run: |
+          MANIFEST_B64=$(cat /tmp/app-manifests.yaml /tmp/secret-manifest.yaml | base64 -w0)
+
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "{\"commands\":[\"export KUBECONFIG=/etc/rancher/k3s/k3s.yaml\",\"echo $MANIFEST_B64 | base64 -d | /usr/local/bin/kubectl apply -f -\"]}" \
+            --query "Command.CommandId" --output text)
+
+          echo "command_id=$COMMAND_ID" >> "$GITHUB_ENV"
+
+          # Aguarda o comando terminar antes de checar o resultado.
+          aws ssm wait command-executed --command-id "$COMMAND_ID" --instance-id "${{ secrets.EC2_INSTANCE_ID }}" || true
+
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ secrets.EC2_INSTANCE_ID }}" > /tmp/invocation.json
+
+          cat /tmp/invocation.json
+          STATUS=$(python3 -c "import json;print(json.load(open('/tmp/invocation.json'))['Status'])")
+          if [ "$STATUS" != "Success" ]; then
+            echo "::error::Falha ao aplicar os manifestos via SSM (status: $STATUS)"
+            exit 1
+          fi
+
+      # Aguarda o rollout terminar sem derrubar o serviço (mesmo princípio do
+      # readinessProbe citado na esteira de referência).
+      - name: Aguarda o rollout via SSM
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters '{"commands":["export KUBECONFIG=/etc/rancher/k3s/k3s.yaml","/usr/local/bin/kubectl rollout status deployment/mechanicltda-api -n mechanicltda --timeout=300s","/usr/local/bin/kubectl rollout status deployment/mechanicltda-web -n mechanicltda --timeout=300s"]}' \
+            --query "Command.CommandId" --output text)
+
+          aws ssm wait command-executed --command-id "$COMMAND_ID" --instance-id "${{ secrets.EC2_INSTANCE_ID }}" || true
+
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ secrets.EC2_INSTANCE_ID }}" > /tmp/rollout.json
+
+          cat /tmp/rollout.json
+          STATUS=$(python3 -c "import json;print(json.load(open('/tmp/rollout.json'))['Status'])")
+          if [ "$STATUS" != "Success" ]; then
+            echo "::error::Rollout não completou a tempo (status: $STATUS)"
+            exit 1
+          fi
