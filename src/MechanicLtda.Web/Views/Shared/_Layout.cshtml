@@ -25,9 +25,20 @@
             {
                 <a asp-controller="Conta" asp-action="Login">Login</a>
             }
-            <a href="/swagger">API</a>
+            <a id="swagger-link" href="#" target="_blank" rel="noopener">API</a>
         </nav>
     </header>
+
+    <script>
+        // Web e API rodam em containers/pods separados, cada um na sua própria
+        // porta do mesmo host (8090 Web / 8080 API - ver docker-compose.yml e
+        // k8s/overlays/prod/kustomization.yaml). Um href="/swagger" fixo
+        // resolveria contra a origem do próprio Web (porta 8090, sem Swagger),
+        // não da API - por isso o link é montado em runtime a partir do
+        // hostname atual, trocando só a porta.
+        document.getElementById('swagger-link').href =
+            window.location.protocol + '//' + window.location.hostname + ':8080/swagger';
+    </script>
 
     <main class="shell">
         @if (TempData["Success"] is string success)
