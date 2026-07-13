@@ -18,6 +18,27 @@ permissions:
   id-token: write
 
 jobs:
+  # Lê o default de aws_region direto do Terraform, para não duplicar esse
+  # valor como Repository Variable no GitHub (fonte única de verdade).
+  read-tf-vars:
+    name: Lê variáveis padrão do Terraform
+    runs-on: ubuntu-latest
+    outputs:
+      aws_region: ${{ steps.region.outputs.value }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extrai o default de aws_region do variables.tf
+        id: region
+        run: |
+          VALUE=$(awk '/variable "aws_region"/,/^}/' terraform/variables.tf | grep default | sed -E 's/.*default[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/')
+          if [ -z "$VALUE" ]; then
+            echo "::error::Não encontrei o default de aws_region em terraform/variables.tf"
+            exit 1
+          fi
+          echo "value=$VALUE" >> "$GITHUB_OUTPUT"
+
   # ── 1. Build da aplicação + 2. Testes automatizados ──────────────────────
   build-and-test:
     runs-on: ubuntu-latest
@@ -41,7 +62,7 @@ jobs:
 
   # ── 3. Build e push da imagem Docker (API e Web) para o ECR ──────────────
   docker-build-push:
-    needs: build-and-test
+    needs: [build-and-test, read-tf-vars]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     outputs:
@@ -55,7 +76,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
+          aws-region: ${{ needs.read-tf-vars.outputs.aws_region }}
 
       - name: Login no ECR
         id: login-ecr
@@ -95,11 +116,12 @@ jobs:
   # `kubectl apply` localmente lá, reaproveitando o mesmo IAM/SSM usado para
   # acesso administrativo (sem SSH).
   deploy:
-    needs: docker-build-push
+    needs: [docker-build-push, read-tf-vars]
     runs-on: ubuntu-latest
     env:
       IMAGE_TAG: ${{ needs.docker-build-push.outputs.image_tag }}
       ECR_REGISTRY: ${{ needs.docker-build-push.outputs.ecr_registry }}
+      AWS_REGION: ${{ needs.read-tf-vars.outputs.aws_region }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -108,7 +130,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup kubectl
         uses: azure/setup-kubectl@v4
@@ -150,7 +172,7 @@ jobs:
             --namespace mechanicltda \
             --docker-server="${ECR_REGISTRY}" \
             --docker-username=AWS \
-            --docker-password="$(aws ecr get-login-password --region ${{ vars.AWS_REGION }})" \
+            --docker-password="$(aws ecr get-login-password --region "$AWS_REGION")" \
             --dry-run=client -o yaml >> /tmp/secret-manifest.yaml
 
       - name: Envia os manifestos para a instância via SSM e aplica
