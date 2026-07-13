@@ -290,8 +290,8 @@ jobs:
       # Web, Services NodePort, HPA) já com as imagens recém publicadas.
       - name: Renderiza os manifestos (kustomize) com as imagens publicadas
         run: |
-          cp -r k8s/overlays/prod /tmp/prod-render
-          cat >> /tmp/prod-render/kustomization.yaml <<EOF
+          cp -r k8s /tmp/prod-render
+          cat >> /tmp/prod-render/overlays/prod/kustomization.yaml <<EOF
           images:
             - name: mechanicltda-api
               newName: ${ECR_REGISTRY}/mechanicltda-api
@@ -300,7 +300,7 @@ jobs:
               newName: ${ECR_REGISTRY}/mechanicltda-web
               newTag: ${IMAGE_TAG}
           EOF
-          kubectl kustomize /tmp/prod-render > /tmp/app-manifests.yaml
+          kubectl kustomize /tmp/prod-render/overlays/prod > /tmp/app-manifests.yaml
 
       # 5. Segredos reais nunca ficam no YAML versionado — busca no SSM
       # Parameter Store (alimentado pelo Terraform a partir de terraform.tfvars)
