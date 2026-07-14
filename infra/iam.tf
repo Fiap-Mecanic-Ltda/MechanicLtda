@@ -96,6 +96,71 @@ resource "aws_iam_instance_profile" "ec2_profile" {
   role = aws_iam_role.ec2_instance_role.name
 }
 
+# Permite ao server publicar o join-token do k3s no SSM para os workers do
+# ASG lerem no boot. Escopado só a esse parâmetro, não ao prefixo inteiro.
+data "aws_iam_policy_document" "ssm_write_node_token" {
+  statement {
+    sid       = "SsmPutNodeToken"
+    effect    = "Allow"
+    actions   = ["ssm:PutParameter"]
+    resources = ["arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter${local.ssm_path_prefix}/k3s-node-token"]
+  }
+
+  # Escrever um SecureString exige encrypt, não só decrypt — a policy de
+  # leitura acima (ssm_read) não cobre isso.
+  statement {
+    sid       = "SsmKmsEncryptForNodeToken"
+    effect    = "Allow"
+    actions   = ["kms:Encrypt", "kms:GenerateDataKey"]
+    resources = [data.aws_kms_alias.ssm.target_key_arn]
+  }
+}
+
+resource "aws_iam_role_policy" "ssm_write_node_token" {
+  name   = "${var.project_name}-${var.environment}-ssm-write-node-token"
+  role   = aws_iam_role.ec2_instance_role.id
+  policy = data.aws_iam_policy_document.ssm_write_node_token.json
+}
+
+# ── Workers k3s (ASG) ────────────────────────────────────────────────────
+
+resource "aws_iam_role" "worker_instance_role" {
+  name               = "${var.project_name}-${var.environment}-worker-role"
+  assume_role_policy = data.aws_iam_policy_document.ec2_assume_role.json
+}
+
+data "aws_iam_policy_document" "worker_ssm_read_token" {
+  statement {
+    sid       = "SsmReadNodeToken"
+    effect    = "Allow"
+    actions   = ["ssm:GetParameter"]
+    resources = ["arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter${local.ssm_path_prefix}/k3s-node-token"]
+  }
+
+  statement {
+    sid       = "SsmKmsDecrypt"
+    effect    = "Allow"
+    actions   = ["kms:Decrypt"]
+    resources = [data.aws_kms_alias.ssm.target_key_arn]
+  }
+}
+
+resource "aws_iam_role_policy" "worker_ssm_read_token" {
+  name   = "${var.project_name}-${var.environment}-worker-ssm-read-token"
+  role   = aws_iam_role.worker_instance_role.id
+  policy = data.aws_iam_policy_document.worker_ssm_read_token.json
+}
+
+resource "aws_iam_role_policy_attachment" "worker_ssm_core" {
+  role       = aws_iam_role.worker_instance_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_instance_profile" "worker_profile" {
+  name = "${var.project_name}-${var.environment}-worker-profile"
+  role = aws_iam_role.worker_instance_role.name
+}
+
 resource "aws_iam_role_policy_attachment" "ssm_core" {
   role       = aws_iam_role.ec2_instance_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"

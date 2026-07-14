@@ -29,7 +29,7 @@ resource "aws_instance" "app" {
   ami                    = data.aws_ami.al2023.id
   instance_type          = var.ec2_instance_type
   subnet_id              = aws_subnet.public.id
-  vpc_security_group_ids = [aws_security_group.ec2.id]
+  vpc_security_group_ids = [aws_security_group.ec2.id, aws_security_group.k3s_mesh.id]
   iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
   key_name               = var.ec2_key_pair_name
 
@@ -55,6 +55,7 @@ resource "aws_instance" "app" {
   user_data = templatefile("${path.module}/templates/user_data.sh.tpl", {
     region            = var.aws_region
     ecr_registry_host = split("/", aws_ecr_repository.api.repository_url)[0]
+    token_param_name  = "${local.ssm_path_prefix}/k3s-node-token"
   })
 
   tags = {

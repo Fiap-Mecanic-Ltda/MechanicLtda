@@ -24,6 +24,16 @@ if ! command -v /usr/local/bin/kubectl >/dev/null 2>&1; then
   exit 1
 fi
 
+# Publica o join-token do k3s no SSM para os workers do ASG lerem no boot.
+until [ -s /var/lib/rancher/k3s/server/node-token ]; do sleep 2; done
+
+aws ssm put-parameter \
+  --region "${region}" \
+  --name "${token_param_name}" \
+  --type SecureString \
+  --value "$(cat /var/lib/rancher/k3s/server/node-token)" \
+  --overwrite
+
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 until /usr/local/bin/kubectl get nodes >/dev/null 2>&1; do sleep 2; done
 /usr/local/bin/kubectl wait --for=condition=Ready node --all --timeout=180s

@@ -60,6 +60,35 @@ variable "ec2_key_pair_name" {
   description = "Key pair EC2 usado no acesso SSH."
 }
 
+# Workers k3s (ASG)
+
+variable "worker_instance_type" {
+  type        = string
+  description = "Tipo da instância EC2 dos workers k3s do ASG."
+  default     = "t3.small"
+}
+
+variable "worker_min_size" {
+  type    = number
+  default = 1
+}
+
+variable "worker_max_size" {
+  type    = number
+  default = 3
+}
+
+variable "worker_desired_capacity" {
+  type    = number
+  default = 1
+}
+
+variable "worker_asg_target_cpu" {
+  type        = number
+  description = "CPU média alvo (%) do ASG para o target tracking scaling."
+  default     = 60
+}
+
 # RDS
 
 variable "db_instance_class" {
