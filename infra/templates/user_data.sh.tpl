@@ -31,6 +31,35 @@ until /usr/local/bin/kubectl get nodes >/dev/null 2>&1; do sleep 2; done
 /usr/local/bin/kubectl create namespace mechanicltda --dry-run=client -o yaml \
   | /usr/local/bin/kubectl apply -f -
 
+# ── metrics-server ───────────────────────────────────────────────────────
+# Exigido pelo HPA (k8s/base/api-hpa.yaml e web-hpa.yaml) para expor CPU/
+# memória dos pods — k3s não vem com ele instalado por padrão. Sem isso o
+# HPA fica preso em "TARGETS: <unknown>/70%" e nunca escala.
+# Retry pelo mesmo motivo do install do k3s acima: já vimos falha de SSL
+# transitória baixando de trás de CDN, e "set -e" abortaria o script inteiro.
+for i in $(seq 1 10); do
+  if /usr/local/bin/kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml; then
+    break
+  fi
+  echo "Falha ao aplicar o metrics-server (tentativa $i/10), tentando novamente em 15s..."
+  sleep 15
+done
+
+# --kubelet-insecure-tls: o certificado do kubelet do k3s é self-signed
+# (instância única, sem CA corporativa) — sem essa flag o metrics-server
+# falha ao coletar métricas com "x509: certificate signed by unknown
+# authority" e as métricas nunca aparecem.
+# Falhas aqui não abortam o script (|| true): o HPA é um "extra" sobre a
+# aplicação em si — API/Web funcionam sem métricas, então uma falha nesta
+# etapa não pode derrubar o resto do boot (timer de refresh do ECR abaixo,
+# sem o qual o pull de imagem quebra de verdade).
+/usr/local/bin/kubectl patch deployment metrics-server -n kube-system --type=json \
+  -p '[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]' \
+  || echo "AVISO: falha ao aplicar --kubelet-insecure-tls no metrics-server"
+
+/usr/local/bin/kubectl wait --for=condition=Available deployment/metrics-server -n kube-system --timeout=120s \
+  || echo "AVISO: metrics-server nao ficou pronto a tempo - HPA nao vai escalar ate isso ser resolvido manualmente"
+
 # Deploy da aplicação (ConfigMap/Secret/Deployments/Services/HPA) fica 100% a
 # cargo da pipeline de CI/CD (.github/workflows/deploy.yml via SSM Run
 # Command) — evita duas fontes de verdade para os manifestos.

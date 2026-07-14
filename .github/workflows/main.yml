@@ -23,6 +23,7 @@ jobs:
   # valor como Repository Variable no GitHub (fonte única de verdade).
   read-tf-vars:
     name: Lê variáveis padrão do Terraform
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     outputs:
       aws_region: ${{ steps.vars.outputs.aws_region }}
@@ -50,6 +51,7 @@ jobs:
   # o CI ainda não tem como assumi-la na primeira execução (bootstrap).
   terraform-changes:
     name: Detecta mudanças no Terraform
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     outputs:
       changed: ${{ steps.filter.outputs.infra }}

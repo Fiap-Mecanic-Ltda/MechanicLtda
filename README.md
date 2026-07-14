@@ -276,7 +276,9 @@ Os manifestos ficam em `k8s/`, organizados com Kustomize em `base/` (recursos co
 `overlays/local/` (desenvolvimento em kind/minikube, com um pod de SQL Server próprio) +
 `overlays/prod/` (o cluster real, que usa o RDS provisionado pelo Terraform em vez de um pod
 de banco). Cobre Deployments, Services, ConfigMaps, Secrets e HPA (autoscaling por CPU/memória)
-para os hosts API e Web.
+para os hosts API e Web. Em produção, o `metrics-server` (pré-requisito do HPA) é instalado
+automaticamente pelo `user_data` da EC2 (`infra/templates/user_data.sh.tpl`) junto com o k3s;
+em `kind`/`minikube` local, precisa ser instalado manualmente (ver `k8s/README.md`).
 
 Resumo para rodar localmente (kind/minikube):
 
