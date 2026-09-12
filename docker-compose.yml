@@ -32,9 +32,11 @@ services:
       - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=MechanicLtdaDb;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;
       - JwtSettings__SecretKey=${JWT_SECRET_KEY}
       - JwtSettings__Issuer=MechanicLtda.API
+      - JwtSettings__IssuerCpf=MechanicLtda.Auth.Cpf
       - JwtSettings__Audience=MechanicLtda.Clients
       - JwtSettings__ExpiracaoMinutos=60
       - Encryption__CpfCnpjKey=${ENCRYPTION_KEY}
+      - Encryption__CpfCnpjHashKey=${CPF_HASH_KEY}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - EmailSettings__Password=${EMAIL_PASSWORD}
     depends_on:
@@ -59,9 +61,11 @@ services:
       - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=MechanicLtdaDb;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;
       - JwtSettings__SecretKey=${JWT_SECRET_KEY}
       - JwtSettings__Issuer=MechanicLtda.API
+      - JwtSettings__IssuerCpf=MechanicLtda.Auth.Cpf
       - JwtSettings__Audience=MechanicLtda.Clients
       - JwtSettings__ExpiracaoMinutos=60
       - Encryption__CpfCnpjKey=${ENCRYPTION_KEY}
+      - Encryption__CpfCnpjHashKey=${CPF_HASH_KEY}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - EmailSettings__Password=${EMAIL_PASSWORD}
     depends_on:

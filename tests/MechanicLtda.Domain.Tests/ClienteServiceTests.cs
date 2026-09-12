@@ -15,6 +15,7 @@ public class ClienteServiceTests
     private readonly Mock<INotificadorService> _notificadorMock;
     private readonly Mock<ILogger<ClienteService>> _loggerMock;
     private readonly Mock<IConfiguration> _configurationMock;
+    private readonly Mock<IDocumentoHashService> _documentoHashMock;
     private readonly ClienteService _sut;
 
     public ClienteServiceTests()
@@ -23,12 +24,17 @@ public class ClienteServiceTests
         _notificadorMock = new Mock<INotificadorService>();
         _loggerMock = new Mock<ILogger<ClienteService>>();
         _configurationMock = new Mock<IConfiguration>();
+        _documentoHashMock = new Mock<IDocumentoHashService>();
+
+        _documentoHashMock.Setup(h => h.EstaConfigurado).Returns(true);
+        _documentoHashMock.Setup(h => h.GerarHash(It.IsAny<string>())).Returns("hash-de-teste");
 
         _sut = new ClienteService(
             _loggerMock.Object,
             _configurationMock.Object,
             _notificadorMock.Object,
-            _repositoryMock.Object);
+            _repositoryMock.Object,
+            _documentoHashMock.Object);
     }
 
     #region AdicionarAsync

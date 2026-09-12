@@ -534,9 +534,12 @@ public class OrdemServicoControllerTests : IClassFixture<CustomWebApplicationFac
     // ─── Autorização por role ────────────────────────────────────────────────────
 
     [Fact]
-    public async Task GetOrdemServicoPorCliente_ComTokenDeCliente_DeveRetornar200()
+    public async Task GetOrdemServicoPorCliente_ComTokenDeClienteSemVinculo_DeveRetornar403()
     {
-        // Arrange — endpoint usa [Authorize(Roles = Roles.AdminOuCliente)], que inclui Cliente
+        // Arrange — a role Cliente passa pelo [Authorize(Roles = Roles.AdminOuCliente)], mas o
+        // token emitido pelo login por e-mail/senha não carrega o claim clienteId, então não há
+        // como provar a posse do recurso. O caminho do cliente é o token da Function serverless
+        // de autenticação por CPF (ver OrdemServicoPosseTests).
         await AutenticarAsync();
         var clienteId = await CriarClienteEObterIdAsync();
         var veiculoId = await CriarVeiculoEObterIdAsync(clienteId);
@@ -550,7 +553,7 @@ public class OrdemServicoControllerTests : IClassFixture<CustomWebApplicationFac
         var response = await _client.GetAsync($"/api/ordemservico/cliente/{clienteId}");
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]

@@ -48,11 +48,16 @@ namespace MechanicLtda.Bootstrap.Extensions
             }
 
             // ── Clientes ─────────────────────────────────────────────────────
+            // Os CPFs precisam passar no cálculo dos dígitos verificadores: a autenticação
+            // por CPF (Function serverless) valida o documento antes de consultar a base, e
+            // CPF inválido nem chega ao banco. O último cliente entra inativo de propósito,
+            // para demonstrar a recusa por status.
             var clientes = new List<Cliente>
             {
-                new() { Nome = "Carlos Oliveira",  Email = "carlos@email.com",  Telefone = "11999990001", CpfCnpj = "123.456.789-01", Ativo = true, DataCriacao = DateTime.UtcNow },
-                new() { Nome = "Fernanda Lima",    Email = "fernanda@email.com", Telefone = "11999990002", CpfCnpj = "234.567.890-12", Ativo = true, DataCriacao = DateTime.UtcNow },
-                new() { Nome = "Ricardo Souza",    Email = "ricardo@email.com",  Telefone = "11999990003", CpfCnpj = "345.678.901-23", Ativo = true, DataCriacao = DateTime.UtcNow }
+                new() { Nome = "Carlos Oliveira",  Email = "carlos@email.com",  Telefone = "11999990001", CpfCnpj = "123.456.789-09", Ativo = true,  DataCriacao = DateTime.UtcNow },
+                new() { Nome = "Fernanda Lima",    Email = "fernanda@email.com", Telefone = "11999990002", CpfCnpj = "529.982.247-25", Ativo = true,  DataCriacao = DateTime.UtcNow },
+                new() { Nome = "Ricardo Souza",    Email = "ricardo@email.com",  Telefone = "11999990003", CpfCnpj = "111.444.777-35", Ativo = true,  DataCriacao = DateTime.UtcNow },
+                new() { Nome = "Marina Duarte",    Email = "marina@email.com",   Telefone = "11999990004", CpfCnpj = "987.654.321-00", Ativo = false, DataCriacao = DateTime.UtcNow }
             };
 
             context.Clientes.AddRange(clientes);
