@@ -12,17 +12,27 @@ nem `k8s/`), então as fases se distribuem assim:
 | Fase | Repositório | Situação |
 |---|---|---|
 | 0 · Decisões e contratos | **MechanicLtda** (`docs/rfc`, `docs/adr`) | RFC-001 e ADR-001 a 004 escritos |
-| 1 · Backend privado (sub-redes, ALB, SGs) | [InfraKubernete](https://github.com/Fiap-Mecanic-Ltda/InfraKubernete) | a fazer |
-| 2 · API Gateway HTTP API | [InfraKubernete](https://github.com/Fiap-Mecanic-Ltda/InfraKubernete) | a fazer |
-| 3 · Lambdas `auth-cpf` e `jwt-authorizer` | [Lambda](https://github.com/Fiap-Mecanic-Ltda/Lambda) | a fazer |
+| 1 · Backend privado (sub-redes, ALB, SGs) | [InfraKubernete](https://github.com/Fiap-Mecanic-Ltda/InfraKubernete) | implementada em `feature/api-gateway-cluster` |
+| 2 · API Gateway (rotas da aplicação, VPC Link, throttling, access log) | [Lambda](https://github.com/Fiap-Mecanic-Ltda/Lambda) | implementada em `feature/auth-cpf-e-rotas-protegidas` |
+| 3 · Autenticação por CPF e Lambda authorizer | [Lambda](https://github.com/Fiap-Mecanic-Ltda/Lambda) | implementada em `feature/auth-cpf-e-rotas-protegidas` |
 | 4 · Ajustes na aplicação | **MechanicLtda** (este repositório) | implementada em `feature/auth-cpf-api-gateway` |
-| 5 · Observabilidade do gateway | [InfraKubernete](https://github.com/Fiap-Mecanic-Ltda/InfraKubernete) | a fazer |
+| 5 · Observabilidade do gateway (alarmes e painel) | [InfraKubernete](https://github.com/Fiap-Mecanic-Ltda/InfraKubernete) | a fazer |
 | 6 · CI/CD e ambientes | todos os repositórios | a fazer |
 | 7 · Documentação e vídeo | **MechanicLtda** | parcial (RFC/ADR prontos) |
 
-Os caminhos `infra/*.tf` citados nas Fases 1, 2 e 5 referem-se ao repositório **InfraKubernete**.
+Duas correções em relação ao plano original, feitas na implementação:
+
+- **O API Gateway vive no repositório da Lambda**, e não no InfraKubernete. Ele já existia lá
+  (publicando `POST /auth/login`), então as rotas da aplicação, o VPC Link e o authorizer foram
+  adicionados no mesmo HTTP API — uma URL só. O InfraKubernete provê o ALB interno, as
+  sub-redes de aplicação e os outputs que a Lambda consome por `terraform_remote_state`.
+- A Lambda que existia autenticava **e-mail e senha** contra as tabelas do Identity, o que não
+  atende ao requisito da fase; a autenticação por CPF foi adicionada como segunda rota da mesma
+  função, preservando a primeira.
+
 A regra de entrada na porta 1433 para o security group da Lambda pertence ao repositório
-**InfraSGBD**.
+**InfraSGBD** — na prática ela já é criada pelo próprio stack da Lambda, para não haver
+dependência circular entre os stacks.
 
 ---
 
@@ -153,10 +163,14 @@ Content-Type: application/json
 
 | Status | Quando | Corpo |
 |---|---|---|
-| `200` | CPF válido, cliente existe e está ativo | `{ "token": "...", "tokenType": "Bearer", "expiresIn": 1800, "cliente": { "id": 2, "nome": "Fernanda Lima" } }` |
-| `400` | Dígitos verificadores inválidos | `{ "erro": "CPF inválido." }` |
-| `401` | Cliente inexistente **ou** inativo (mensagem única, para não revelar qual) | `{ "erro": "Não foi possível autenticar com o CPF informado." }` |
-| `429` | Throttling do gateway | resposta padrão do API Gateway |
+| `200` | CPF válido, cliente existe e está ativo | `{ "token": "...", "expiracao": "2026-09-12T18:30:00Z", "cliente": { "id": 2, "nome": "Fernanda Lima" } }` |
+| `400` | Dígitos verificadores inválidos | `{ "mensagem": "CPF invalido." }` |
+| `401` | Cliente inexistente **ou** inativo (mensagem única, para não revelar qual) | `{ "mensagem": "Nao foi possivel autenticar com o CPF informado." }` |
+| `429` | Throttling do gateway (5 req/s na rota) | resposta padrão do API Gateway |
+| `503` | `CPF_HASH_KEY` ausente no ambiente | `{ "mensagem": "Autenticacao por CPF indisponivel." }` |
+
+> Formato alinhado ao `POST /auth/login` que já existia no repositório da Lambda: mesmo envelope
+> (`token` + `expiracao`) e mesmo campo de erro (`mensagem`).
 
 **Claims do JWT emitido pela Lambda** (HS256, mesma chave da API)
 
