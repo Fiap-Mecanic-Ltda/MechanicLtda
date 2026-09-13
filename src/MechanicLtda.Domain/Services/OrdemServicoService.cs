@@ -15,6 +15,7 @@ namespace MechanicLtda.Domain.Services
         private readonly IVeiculoRepository _veiculoRepository;
         private readonly IOrdemServicoAprovacaoTokenRepository _ordemServicoAprovacaoTokenRepository;
         private readonly IEmailService _emailService;
+        private readonly IMonitoramentoService _monitoramentoService;
         private readonly ILogger<OrdemServicoService> _logger;
 
         public OrdemServicoService(ILogger<OrdemServicoService> logger,
@@ -23,12 +24,14 @@ namespace MechanicLtda.Domain.Services
                                    IOrdemServicoRepository ordemServicoRepository,
                                    IVeiculoRepository veiculoRepository,
                                    IOrdemServicoAprovacaoTokenRepository ordemServicoAprovacaoTokenRepository,
-                                   IEmailService emailService) : base(notificadorService, configuration)
+                                   IEmailService emailService,
+                                   IMonitoramentoService monitoramentoService) : base(notificadorService, configuration)
         {
             _ordemServicoRepository = ordemServicoRepository;
             _veiculoRepository = veiculoRepository;
             _ordemServicoAprovacaoTokenRepository = ordemServicoAprovacaoTokenRepository;
             _emailService = emailService;
+            _monitoramentoService = monitoramentoService;
             _logger = logger;
         }
 
@@ -52,19 +55,23 @@ namespace MechanicLtda.Domain.Services
                     ValorTotalEstimado = valorTotalEstimado,
                     VeiculoId          = veiculoId,
                     ClienteId          = clienteId,
-                    Status             = StatusOrdemServico.Recebida,
-                    DataCriacao        = DateTime.Now
+                    Status              = StatusOrdemServico.Recebida,
+                    DataCriacao         = DateTime.Now,
+                    DataAlteracaoStatus = DateTime.UtcNow
                 };
 
                 var novaOrdem = await _ordemServicoRepository.AdicionarAsync(ordemServico);
 
                 var resultado = await _ordemServicoRepository.ObterPorIdAsync(novaOrdem.Id.ToString()) ?? novaOrdem;
+                _monitoramentoService.RegistrarOrdemServicoCriada(resultado);
+
                 await EnviarEmailNotificacaoStatusAsync(resultado);
 
                 return resultado;
             }
             catch (Exception ex)
             {
+                _monitoramentoService.RegistrarFalhaProcessamento("Adicionar", null, ex);
                 Notificar(ex, "Ocorreu um erro no método OrdemServicoService:AdicionarAsync", _logger);
                 throw;
             }
@@ -83,30 +90,44 @@ namespace MechanicLtda.Domain.Services
                 if (veiculo.ClienteId != ordemServico.ClienteId)
                     throw new InvalidOperationException("O veículo informado não pertence ao cliente indicado.");
 
-                var statusAnterior = existente.Status;
+                var statusAnterior       = existente.Status;
+                var inicioStatusAnterior = InicioDoStatusAtual(existente);
+                var agora                = DateTime.UtcNow;
 
                 ordemServico.Status          = existente.Status;
                 ordemServico.DataCriacao     = existente.DataCriacao;
-                ordemServico.DataModificacao = DateTime.UtcNow;
+                ordemServico.DataModificacao = agora;
                 ordemServico.Cliente         = existente.Cliente;
+
+                // O DTO de atualização não traz as datas de ciclo de vida, e o Update do EF
+                // grava todas as colunas: sem copiá-las, editar uma OS em execução apagaria
+                // o início e o fim da execução (e, com eles, o tempo médio de execução).
+                ordemServico.DataInicioExecucao  = existente.DataInicioExecucao;
+                ordemServico.DataFimExecucao     = existente.DataFimExecucao;
+                ordemServico.DataAlteracaoStatus = existente.DataAlteracaoStatus;
 
                 // Gatilho: ao preencher descrição + valor estimado na OS recebida, avança para Em Diagnóstico
                 if (!string.IsNullOrWhiteSpace(ordemServico.DescricaoProblema) &&
                     ordemServico.ValorTotalEstimado.HasValue &&
                     existente.Status == StatusOrdemServico.Recebida)
                 {
-                    ordemServico.Status = StatusOrdemServico.EmDiagnostico;
+                    ordemServico.Status              = StatusOrdemServico.EmDiagnostico;
+                    ordemServico.DataAlteracaoStatus = agora;
                 }
 
                 var resultado = await _ordemServicoRepository.AtualizarAsync(ordemServico);
 
                 if (resultado.Status != statusAnterior)
+                {
+                    RegistrarTransicao(resultado, statusAnterior, inicioStatusAnterior, agora);
                     await EnviarEmailNotificacaoStatusAsync(resultado);
+                }
 
                 return resultado;
             }
             catch (Exception ex)
             {
+                _monitoramentoService.RegistrarFalhaProcessamento("Atualizar", ordemServico.Id, ex);
                 Notificar(ex, "Ocorreu um erro no método OrdemServicoService:AtualizarAsync", _logger);
                 throw;
             }
@@ -122,10 +143,17 @@ namespace MechanicLtda.Domain.Services
                 if (ordemServico.Status != StatusOrdemServico.Recebida)
                     throw new InvalidOperationException($"A OS só pode ir para 'Em Diagnóstico' quando estiver 'Recebida'. Status atual: {ordemServico.Status}.");
 
-                ordemServico.Status          = StatusOrdemServico.EmDiagnostico;
-                ordemServico.DataModificacao = DateTime.UtcNow;
+                var statusAnterior       = ordemServico.Status;
+                var inicioStatusAnterior = InicioDoStatusAtual(ordemServico);
+                var agora                = DateTime.UtcNow;
+
+                ordemServico.Status              = StatusOrdemServico.EmDiagnostico;
+                ordemServico.DataModificacao     = agora;
+                ordemServico.DataAlteracaoStatus = agora;
 
                 var resultado = await _ordemServicoRepository.AtualizarAsync(ordemServico);
+
+                RegistrarTransicao(resultado, statusAnterior, inicioStatusAnterior, agora);
 
                 await EnviarEmailNotificacaoStatusAsync(resultado);
 
@@ -133,6 +161,7 @@ namespace MechanicLtda.Domain.Services
             }
             catch (Exception ex)
             {
+                _monitoramentoService.RegistrarFalhaProcessamento("IniciarDiagnostico", id, ex);
                 Notificar(ex, "Ocorreu um erro no método OrdemServicoService:IniciarDiagnosticoAsync", _logger);
                 throw;
             }
@@ -148,10 +177,17 @@ namespace MechanicLtda.Domain.Services
                 if (ordemServico.Status != StatusOrdemServico.EmDiagnostico)
                     throw new InvalidOperationException($"A OS só pode ir para 'Aguardando Aprovação' quando estiver 'Em Diagnóstico'. Status atual: {ordemServico.Status}.");
 
-                ordemServico.Status          = StatusOrdemServico.AguardandoAprovacao;
-                ordemServico.DataModificacao = DateTime.UtcNow;
+                var statusAnterior       = ordemServico.Status;
+                var inicioStatusAnterior = InicioDoStatusAtual(ordemServico);
+                var agora                = DateTime.UtcNow;
+
+                ordemServico.Status              = StatusOrdemServico.AguardandoAprovacao;
+                ordemServico.DataModificacao     = agora;
+                ordemServico.DataAlteracaoStatus = agora;
 
                 var resultado = await _ordemServicoRepository.AtualizarAsync(ordemServico);
+
+                RegistrarTransicao(resultado, statusAnterior, inicioStatusAnterior, agora);
 
                 await EnviarEmailNotificacaoStatusAsync(resultado);
                 await EnviarEmailAprovacaoAsync(resultado);
@@ -160,6 +196,7 @@ namespace MechanicLtda.Domain.Services
             }
             catch (Exception ex)
             {
+                _monitoramentoService.RegistrarFalhaProcessamento("AguardarAprovacao", id, ex);
                 Notificar(ex, "Ocorreu um erro no método OrdemServicoService:AguardarAprovacaoAsync", _logger);
                 throw;
             }
@@ -187,6 +224,7 @@ namespace MechanicLtda.Domain.Services
             }
             catch (Exception ex)
             {
+                _monitoramentoService.RegistrarFalhaIntegracao("Email", "NotificacaoStatus", ex);
                 _logger.LogError(ex, "Falha ao enviar e-mail de notificação de status para a OS {Id}. A transição de status não foi afetada.", ordemServico.Id);
             }
         }
@@ -238,6 +276,7 @@ namespace MechanicLtda.Domain.Services
             }
             catch (Exception ex)
             {
+                _monitoramentoService.RegistrarFalhaIntegracao("Email", "Aprovacao", ex);
                 _logger.LogError(ex, "Falha ao enviar e-mail de aprovação para a OS {Id}. A transição de status não foi afetada.", ordemServico.Id);
             }
         }
@@ -258,10 +297,17 @@ namespace MechanicLtda.Domain.Services
                 if (ordemServico.Status != StatusOrdemServico.AguardandoAprovacao)
                     throw new InvalidOperationException($"A OS só pode ser aprovada quando estiver 'Aguardando Aprovação'. Status atual: {ordemServico.Status}.");
 
-                ordemServico.Status          = StatusOrdemServico.EmExecucao;
-                ordemServico.DataModificacao = DateTime.UtcNow;
+                var statusAnterior       = ordemServico.Status;
+                var inicioStatusAnterior = InicioDoStatusAtual(ordemServico);
+                var agora                = DateTime.UtcNow;
+
+                ordemServico.Status              = StatusOrdemServico.EmExecucao;
+                ordemServico.DataModificacao     = agora;
+                ordemServico.DataAlteracaoStatus = agora;
 
                 var resultado = await _ordemServicoRepository.AtualizarAsync(ordemServico);
+
+                RegistrarTransicao(resultado, statusAnterior, inicioStatusAnterior, agora);
 
                 await EnviarEmailNotificacaoStatusAsync(resultado);
 
@@ -269,6 +315,7 @@ namespace MechanicLtda.Domain.Services
             }
             catch (Exception ex)
             {
+                _monitoramentoService.RegistrarFalhaProcessamento("Aprovar", id, ex);
                 Notificar(ex, "Ocorreu um erro no método OrdemServicoService:AprovarAsync", _logger);
                 throw;
             }
@@ -284,9 +331,14 @@ namespace MechanicLtda.Domain.Services
                 if (ordemServico.Status != StatusOrdemServico.AguardandoAprovacao)
                     throw new InvalidOperationException($"A OS só pode ser recusada quando estiver 'Aguardando Aprovação'. Status atual: {ordemServico.Status}.");
 
+                var statusAnterior       = ordemServico.Status;
+                var inicioStatusAnterior = InicioDoStatusAtual(ordemServico);
+                var agora                = DateTime.UtcNow;
+
                 // Voltar para Em Diagnóstico para revisão
-                ordemServico.Status          = StatusOrdemServico.EmDiagnostico;
-                ordemServico.DataModificacao = DateTime.UtcNow;
+                ordemServico.Status              = StatusOrdemServico.EmDiagnostico;
+                ordemServico.DataModificacao     = agora;
+                ordemServico.DataAlteracaoStatus = agora;
 
                 // Adicionar motivo da recusa na descrição ou em outro campo se disponível
                 if (!string.IsNullOrWhiteSpace(motivoRecusa))
@@ -294,12 +346,15 @@ namespace MechanicLtda.Domain.Services
 
                 var resultado = await _ordemServicoRepository.AtualizarAsync(ordemServico);
 
+                RegistrarTransicao(resultado, statusAnterior, inicioStatusAnterior, agora);
+
                 await EnviarEmailNotificacaoStatusAsync(resultado);
 
                 return resultado;
             }
             catch (Exception ex)
             {
+                _monitoramentoService.RegistrarFalhaProcessamento("Recusar", id, ex);
                 Notificar(ex, "Ocorreu um erro no método OrdemServicoService:RecusarAsync", _logger);
                 throw;
             }
@@ -315,12 +370,18 @@ namespace MechanicLtda.Domain.Services
                 if (ordemServico.Status != StatusOrdemServico.AguardandoAprovacao)
                     throw new InvalidOperationException($"A OS só pode ir para 'Em Execução' quando estiver 'Aguardando Aprovação'. Status atual: {ordemServico.Status}.");
 
-                var agora = DateTime.UtcNow;
-                ordemServico.Status = StatusOrdemServico.EmExecucao;
-                ordemServico.DataInicioExecucao = agora;
-                ordemServico.DataModificacao = agora;
+                var statusAnterior       = ordemServico.Status;
+                var inicioStatusAnterior = InicioDoStatusAtual(ordemServico);
+                var agora                = DateTime.UtcNow;
+
+                ordemServico.Status              = StatusOrdemServico.EmExecucao;
+                ordemServico.DataInicioExecucao  = agora;
+                ordemServico.DataModificacao     = agora;
+                ordemServico.DataAlteracaoStatus = agora;
 
                 var resultado = await _ordemServicoRepository.AtualizarAsync(ordemServico);
+
+                RegistrarTransicao(resultado, statusAnterior, inicioStatusAnterior, agora);
 
                 await EnviarEmailNotificacaoStatusAsync(resultado);
 
@@ -328,6 +389,7 @@ namespace MechanicLtda.Domain.Services
             }
             catch (Exception ex)
             {
+                _monitoramentoService.RegistrarFalhaProcessamento("IniciarExecucao", id, ex);
                 Notificar(ex, "Ocorreu um erro no método OrdemServicoService:IniciarExecucaoAsync", _logger);
                 throw;
             }
@@ -343,12 +405,18 @@ namespace MechanicLtda.Domain.Services
                 if (ordemServico.Status != StatusOrdemServico.EmExecucao)
                     throw new InvalidOperationException($"A OS só pode ser 'Finalizada' quando estiver 'Em Execução'. Status atual: {ordemServico.Status}.");
 
-                var agora = DateTime.UtcNow;
-                ordemServico.Status = StatusOrdemServico.Finalizada;
-                ordemServico.DataFimExecucao = agora;
-                ordemServico.DataModificacao = agora;
+                var statusAnterior       = ordemServico.Status;
+                var inicioStatusAnterior = InicioDoStatusAtual(ordemServico);
+                var agora                = DateTime.UtcNow;
+
+                ordemServico.Status              = StatusOrdemServico.Finalizada;
+                ordemServico.DataFimExecucao     = agora;
+                ordemServico.DataModificacao     = agora;
+                ordemServico.DataAlteracaoStatus = agora;
 
                 var resultado = await _ordemServicoRepository.AtualizarAsync(ordemServico);
+
+                RegistrarTransicao(resultado, statusAnterior, inicioStatusAnterior, agora);
 
                 await EnviarEmailNotificacaoStatusAsync(resultado);
 
@@ -356,6 +424,7 @@ namespace MechanicLtda.Domain.Services
             }
             catch (Exception ex)
             {
+                _monitoramentoService.RegistrarFalhaProcessamento("Finalizar", id, ex);
                 Notificar(ex, "Ocorreu um erro no método OrdemServicoService:FinalizarAsync", _logger);
                 throw;
             }
@@ -371,10 +440,17 @@ namespace MechanicLtda.Domain.Services
                 if (ordemServico.Status != StatusOrdemServico.Finalizada)
                     throw new InvalidOperationException($"A OS só pode ser 'Entregue' quando estiver 'Finalizada'. Status atual: {ordemServico.Status}.");
 
-                ordemServico.Status          = StatusOrdemServico.Entregue;
-                ordemServico.DataModificacao = DateTime.UtcNow;
+                var statusAnterior       = ordemServico.Status;
+                var inicioStatusAnterior = InicioDoStatusAtual(ordemServico);
+                var agora                = DateTime.UtcNow;
+
+                ordemServico.Status              = StatusOrdemServico.Entregue;
+                ordemServico.DataModificacao     = agora;
+                ordemServico.DataAlteracaoStatus = agora;
 
                 var resultado = await _ordemServicoRepository.AtualizarAsync(ordemServico);
+
+                RegistrarTransicao(resultado, statusAnterior, inicioStatusAnterior, agora);
 
                 await EnviarEmailNotificacaoStatusAsync(resultado);
 
@@ -382,6 +458,7 @@ namespace MechanicLtda.Domain.Services
             }
             catch (Exception ex)
             {
+                _monitoramentoService.RegistrarFalhaProcessamento("Entregar", id, ex);
                 Notificar(ex, "Ocorreu um erro no método OrdemServicoService:EntregarAsync", _logger);
                 throw;
             }
@@ -447,19 +524,22 @@ namespace MechanicLtda.Domain.Services
             }
         }
 
-        private static string GetStatusDescription(StatusOrdemServico status)
+        private static string GetStatusDescription(StatusOrdemServico status) => status.Descricao();
+
+        // OS criadas antes da coluna DataAlteracaoStatus usam a data de criação como
+        // referência de entrada no status atual.
+        private static DateTime InicioDoStatusAtual(OrdemServico ordemServico) =>
+            ordemServico.DataAlteracaoStatus ?? ordemServico.DataCriacao;
+
+        private void RegistrarTransicao(OrdemServico ordemServico, StatusOrdemServico statusAnterior,
+                                        DateTime inicioStatusAnterior, DateTime agora)
         {
-            var type = status.GetType();
-            var name = Enum.GetName(type, status);
-            if (name == null) return status.ToString();
+            // DataCriacao é gravada em horário local; num host fora de UTC a diferença
+            // poderia sair negativa para OS antigas. Tempo negativo não tem significado.
+            var tempo = agora - inicioStatusAnterior;
 
-            var field = type.GetField(name);
-            if (field == null) return status.ToString();
-
-            var displayAttribute = field.GetCustomAttributes(typeof(System.ComponentModel.DataAnnotations.DisplayAttribute), false)
-                .FirstOrDefault() as System.ComponentModel.DataAnnotations.DisplayAttribute;
-
-            return displayAttribute?.Name ?? status.ToString();
+            _monitoramentoService.RegistrarMudancaStatus(ordemServico, statusAnterior,
+                tempo < TimeSpan.Zero ? TimeSpan.Zero : tempo);
         }
 
         public async Task<OrdemServico?> ObterPorIdAsync(string id)
