@@ -5,13 +5,17 @@ name: Esteira de CI/CD - MechanicLtda (aplicacao)
 # Kubernetes vivem em repositorios separados:
 #   - Fiap-Mecanic-Ltda/InfraKubernete  (VPC, EC2/k3s, ECR, IAM/OIDC + k8s/)
 #   - repositorio de infra do banco gerenciado (RDS)
-# O deploy no cluster e feito la (workflow "Deploy no Kubernetes"), que resolve
-# sozinho a ultima imagem publicada aqui no ECR.
+# O deploy no cluster e feito la (workflow "Deploy no Kubernetes").
+#
+# - PR e push em desenvolvimento, homologacao e main: build e testes.
+# - push em main: alem disso, publica as imagens no ECR e dispara o deploy no
+#   cluster (repository_dispatch no InfraKubernete). Nao ha ambiente de
+#   homologacao na AWS (decisao do time), entao so a main chega a producao.
 on:
   push:
-    branches: [main]
+    branches: [main, desenvolvimento, homologacao]
   pull_request:
-    branches: [main]
+    branches: [main, desenvolvimento, homologacao]
   workflow_dispatch:
 
 env:
@@ -127,8 +131,26 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # O deploy roda no repositorio de infra (nao ha dispatch entre repos, para
-      # nao precisar de um PAT como secret aqui).
-      - name: Como publicar no cluster
+      # O deploy roda no repositorio de infra. O GITHUB_TOKEN deste workflow nao
+      # dispara workflows em outro repositorio, entao o disparo usa um token
+      # dedicado (fine-grained, so o InfraKubernete, permissao Contents:
+      # read/write). Sem ele configurado, o comportamento anterior continua:
+      # aviso para rodar o deploy manualmente.
+      - name: Dispara o deploy no cluster
+        env:
+          INFRA_DISPATCH_TOKEN: ${{ secrets.INFRA_DISPATCH_TOKEN }}
+          IMAGE_TAG: ${{ github.sha }}
         run: |
-          echo "::notice::Imagens publicadas com a tag ${{ github.sha }}. Para levar ao cluster, rode o workflow 'Deploy no Kubernetes' em https://github.com/Fiap-Mecanic-Ltda/InfraKubernete/actions"
+          if [ -z "$INFRA_DISPATCH_TOKEN" ]; then
+            echo "::notice::Imagens publicadas com a tag $IMAGE_TAG. Sem INFRA_DISPATCH_TOKEN, rode o workflow 'Deploy no Kubernetes' em https://github.com/Fiap-Mecanic-Ltda/InfraKubernete/actions"
+            exit 0
+          fi
+
+          curl -sS --fail-with-body -X POST \
+            -H "Authorization: Bearer $INFRA_DISPATCH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/Fiap-Mecanic-Ltda/InfraKubernete/dispatches" \
+            -d "{\"event_type\":\"imagem-publicada\",\"client_payload\":{\"image_tag\":\"$IMAGE_TAG\"}}"
+
+          echo "::notice::Deploy da tag $IMAGE_TAG disparado em Fiap-Mecanic-Ltda/InfraKubernete."
