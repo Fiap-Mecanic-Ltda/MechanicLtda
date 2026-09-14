@@ -569,12 +569,19 @@ ambiente de desenvolvimento:
 
 - Local: `http://localhost:5062/swagger`
 - Docker Compose: `http://localhost:8080/swagger`
-- Produção: `http://<ip-publico-da-instancia>:8080/swagger`
+- Produção, pelo API Gateway: `https://<api-id>.execute-api.us-east-1.amazonaws.com/swagger/index.html`
+  (URL no output `api_base_url` do repositório Lambda). O acesso direto à porta `8080` da
+  instância deixa de responder depois da virada para o gateway.
 
-> Preencher aqui o link de uma collection Postman exportada, caso seja disponibilizada como
-> alternativa ao Swagger.
+A **coleção Postman** da Fase 3 está em [`docs/postman`](docs/postman/README.md): 36 requisições
+com testes cobrindo a autenticação por CPF e por e-mail, as rotas protegidas pelo authorizer e o
+fluxo completo da ordem de serviço, sempre pelo gateway.
 
 ## Vídeo Demonstrativo
 
-> Link para o vídeo (YouTube/Vimeo, até 15 minutos) demonstrando deploy da aplicação, execução
-> do CI/CD, consumo das APIs e escalabilidade automática: **`<preencher>`**.
+| Fase | Conteúdo | Link |
+|---|---|---|
+| Fase 2 | Deploy da aplicação, execução do CI/CD, consumo das APIs e escalabilidade automática | **`<preencher>`** |
+| Fase 3 | Autenticação por CPF, pipeline e deploy automatizado, APIs protegidas, painel, logs e traces — [roteiro](docs/entrega/roteiro-video.md) | **`<preencher>`** |
+
+O PDF de entrega da Fase 3 é gerado em [`docs/entrega`](docs/entrega/README.md).

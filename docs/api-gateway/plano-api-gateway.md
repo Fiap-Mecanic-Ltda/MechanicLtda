@@ -18,7 +18,7 @@ nem `k8s/`), então as fases se distribuem assim:
 | 4 · Ajustes na aplicação | **MechanicLtda** (este repositório) | implementada em `feature/auth-cpf-api-gateway` |
 | 5 · Observabilidade (New Relic) | MechanicLtda, InfraKubernete e Lambda | implementada em `feature/observabilidade-new-relic` (aplicação) e `feature/observabilidade-e-cicd` (InfraKubernete e Lambda) |
 | 6 · CI/CD (sem ambiente de homologação) | todos os repositórios | implementada em `feature/ci-cd-branches` (aplicação), `feature/observabilidade-e-cicd` (InfraKubernete e Lambda) e `feature/ci-cd-deploy-automatico` (InfraSGBD) |
-| 7 · Documentação e vídeo | **MechanicLtda** | documentação da arquitetura em `docs/arquitetura` (`feature/documentacao-arquitetura`): diagramas, banco de dados, RFC-001 a 004 e ADR-001 a 011; faltam coleção Postman, vídeo e PDF de entrega |
+| 7 · Documentação e vídeo | **MechanicLtda** | documentação da arquitetura em `docs/arquitetura` (`feature/documentacao-arquitetura`): diagramas, banco de dados, RFC-001 a 004 e ADR-001 a 011; coleção Postman em `docs/postman`, roteiro do vídeo e gerador do PDF de entrega em `docs/entrega` (`feature/entrega-fase3`); faltam gravar o vídeo e preencher os dados do PDF |
 
 **Decisões do time registradas na implementação das Fases 5 e 6:**
 
@@ -356,10 +356,11 @@ Entregue na branch `feature/auth-cpf-api-gateway` (481 testes verdes). Detalhes 
 
 ### Fase 7 — Documentação e demonstração
 
-- [ ] Diagramas de componentes e de sequência (seções 4 e 7) finalizados em `docs/arquitetura/`.
-- [ ] README: URL do gateway, como obter token por CPF, coleção Postman em `docs/postman/`, link do Swagger via gateway.
-- [ ] RFC e ADRs finais.
-- [ ] Roteiro do vídeo: CPF inválido (400) → cliente inativo (401) → CPF válido (200); rota protegida sem token (401) → com token (200) → OS de outro cliente (403); acesso direto à `:8080` bloqueado; log JSON com correlação e dashboard de latência; execução da pipeline.
+- [x] Diagramas de componentes e de sequência (seções 4 e 7) finalizados em `docs/arquitetura/`.
+- [x] README: coleção Postman em `docs/postman/` e link do Swagger via gateway. A URL do gateway só existe depois do apply e entra no PDF de entrega.
+- [x] RFC e ADRs finais.
+- [x] Roteiro do vídeo em `docs/entrega/roteiro-video.md`: CPF inválido (400) → cliente inativo (401) → CPF válido (200); rota protegida sem token (401) → com token (200) → OS de outro cliente (403); acesso direto à `:8080` bloqueado; log JSON com correlação e dashboard de latência; execução da pipeline.
+- [ ] Gravar o vídeo e gerar o PDF final com `node docs/entrega/gerar-pdf.mjs`.
 
 ---
 
@@ -367,7 +368,7 @@ Entregue na branch `feature/auth-cpf-api-gateway` (481 testes verdes). Detalhes 
 
 - Toda chamada externa à API passa pelo gateway; a `8080` não responde fora da VPC.
 - `/auth/cpf` cumpre o contrato da seção 6, incluindo o 429 acima do limite.
-- Rota protegida sem token ou com token expirado → 401 no gateway, sem chegar ao backend.
+- Rota protegida sem token → 401 no gateway; com token inválido ou expirado → 403 do authorizer. Nos dois casos a requisição não chega ao backend.
 - Token de cliente em rota administrativa → 403; cliente consultando OS de outro cliente → 403.
 - Access log JSON com `requestId` e latências; o mesmo ID aparece no log da API.
 - Toda a infraestrutura do gateway é criada por Terraform na pipeline.
