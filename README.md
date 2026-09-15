@@ -4,6 +4,21 @@ Sistema de gestão para uma oficina mecânica (ordens de serviço, veículos, cl
 orçamentos), desenvolvido em **.NET 9** seguindo princípios de DDD, Clean Architecture e
 Clean Code.
 
+## Repositórios do projeto
+
+O projeto é distribuído em **quatro repositórios**, cada um com a sua própria esteira de CI/CD:
+
+| # | Repositório | Conteúdo | Pipeline |
+|---|---|---|---|
+| 1 | [Lambda](https://github.com/Fiap-Mecanic-Ltda/Lambda) | Function serverless (API Gateway + Lambda) que valida o usuário e emite o JWT | build, testes e deploy da função |
+| 2 | [InfraKubernete](https://github.com/Fiap-Mecanic-Ltda/InfraKubernete) | Terraform da infra de Kubernetes (VPC, EC2/k3s, ASG, ECR, SSM, IAM/OIDC) + manifestos `k8s/` | `terraform plan/apply` e deploy no cluster |
+| 3 | [InfraSGBD](https://github.com/Fiap-Mecanic-Ltda/InfraSGBD) | Terraform do RDS SQL Server (instância, subnet group, security group, connection string no SSM) | `terraform plan/apply` |
+| 4 | **MechanicLtda** (este repo) | Aplicação .NET 9 (`src/`, `tests/`, Dockerfiles) | build, testes e push das imagens no ECR |
+
+O contrato entre este repositório e os demais é o **ECR**: aqui as imagens são publicadas
+(`mechanicltda-api` / `mechanicltda-web`, com as tags `latest` e o SHA do commit) e o deploy no
+cluster é feito pelo workflow do repositório de infra de Kubernetes.
+
 ## Sobre esta fase (Tech Challenge — Fase 2)
 
 A Fase 1 entregou a API de gestão da oficina. Esta fase evolui essa base para suportar alta
@@ -41,9 +56,7 @@ MechanicLtda/
 │   ├── MechanicLtda.API.IntegrationTests
 │   ├── MechanicLtda.Application.Tests
 │   └── MechanicLtda.Domain.Tests
-├── k8s/                             # Manifestos Kubernetes (base + overlays local/prod) — ver k8s/README.md
-├── infra/                           # Infraestrutura como código (Terraform)
-└── .github/workflows/               # Pipeline de CI/CD (GitHub Actions)
+└── .github/workflows/               # Pipeline de CI/CD (GitHub Actions): build, testes e push no ECR
 ```
 
 ### Responsabilidades
@@ -59,38 +72,41 @@ MechanicLtda/
 
 ### Infraestrutura provisionada
 
-| Componente | Tecnologia | Onde |
+| Componente | Tecnologia | Repositório / arquivo |
 |---|---|---|
-| Orquestração de containers | Kubernetes (**k3s**, rodando numa EC2) | `k8s/` |
-| Banco de dados | SQL Server, gerenciado (**RDS**) em produção / container em dev local | `infra/rds.tf` |
-| Registro de imagens | **ECR** (um repositório para API, outro para Web) | `infra/ecr.tf` |
-| Segredos da aplicação | **SSM Parameter Store** (`SecureString`) | `infra/ssm.tf` |
-| Autenticação da pipeline | **OIDC** do GitHub Actions → IAM Role (sem access keys estáticas) | `infra/github_oidc.tf` |
-| Rede | VPC dedicada, subnet pública (EC2) + subnets privadas (RDS) | `infra/network.tf` |
+| Orquestração de containers | Kubernetes (**k3s**, rodando numa EC2) | InfraKubernete → `k8s/` |
+| Banco de dados | SQL Server, gerenciado (**RDS**) em produção / container em dev local | InfraSGBD → `infra/rds.tf` |
+| Registro de imagens | **ECR** (um repositório para API, outro para Web) | InfraKubernete → `infra/ecr.tf` |
+| Segredos da aplicação | **SSM Parameter Store** (`SecureString`) | InfraKubernete → `infra/ssm.tf` |
+| Autenticação da pipeline | **OIDC** do GitHub Actions → IAM Role (sem access keys estáticas) | InfraKubernete → `infra/github_oidc.tf` |
+| Rede | VPC dedicada, subnet pública (EC2) + subnets privadas (RDS) | InfraKubernete → `infra/network.tf` |
+| Autenticação serverless | **API Gateway + Lambda** emitindo o JWT | Lambda → `src/` + `infra/` |
 
-Ver `infra/` (Terraform) e `k8s/README.md` (Kubernetes) para o detalhamento completo de cada
-recurso e decisões de design.
+O detalhamento completo de cada recurso e as decisões de design estão nos READMEs dos
+repositórios de infraestrutura.
 
 ### Fluxo de deploy (CI/CD)
 
 ```text
-git push (main)
+git push (main)  ── repositório da aplicação (este)
    │
    ▼
-GitHub Actions (.github/workflows/deploy.yml)
-   │
+GitHub Actions (.github/workflows/main.yml)
    ├─ 1. Build da aplicação (dotnet build)
    ├─ 2. Testes automatizados (dotnet test)
-   ├─ 3. Build e push das imagens Docker (API + Web) → ECR
-   └─ 4. Deploy no cluster Kubernetes (k3s na EC2), via SSM Run Command:
-         ├─ aplica os manifestos (Namespace, ConfigMap, Deployments, Services, HPA)
-         ├─ monta o Secret do Kubernetes a partir do SSM Parameter Store
-         └─ aguarda o rollout terminar sem derrubar o serviço em produção
+   └─ 3. Build e push das imagens Docker (API + Web) → ECR
+              │
+              ▼
+        workflow "Deploy no Kubernetes" ── repositório InfraKubernete
+              ├─ resolve a última imagem publicada no ECR
+              ├─ renderiza os manifestos (kustomize, overlay prod)
+              ├─ monta o Secret do Kubernetes a partir do SSM Parameter Store
+              └─ aplica no k3s via SSM Run Command e aguarda o rollout
 ```
 
-A API do Kubernetes (porta 6443) nunca é exposta publicamente — a pipeline autentica na AWS via
-OIDC e usa `aws ssm send-command` para rodar `kubectl apply` diretamente na instância, o mesmo
-mecanismo usado para qualquer acesso administrativo ao servidor (sem SSH).
+A API do Kubernetes (porta 6443) nunca é exposta publicamente — a pipeline de deploy autentica na
+AWS via OIDC e usa `aws ssm send-command` para rodar `kubectl apply` diretamente na instância, o
+mesmo mecanismo usado para qualquer acesso administrativo ao servidor (sem SSH).
 
 ## Tecnologias
 
@@ -108,7 +124,10 @@ mecanismo usado para qualquer acesso administrativo ao servidor (sem SSH).
 - **Docker** e **Docker Compose** (desenvolvimento local)
 - **Kubernetes** (k3s) com Kustomize (`base` + `overlays`) e Horizontal Pod Autoscaler
 - **Terraform** (Infraestrutura como Código) — EC2, RDS, ECR, SSM Parameter Store, IAM/OIDC
-- **GitHub Actions** (CI/CD): build, testes, build/push de imagem e deploy no cluster
+  (nos repositórios de infraestrutura)
+- **AWS Lambda + API Gateway** para a autenticação serverless (repositório próprio)
+- **GitHub Actions** (CI/CD): aqui, build, testes e push das imagens no ECR; o deploy no cluster
+  roda na esteira do repositório de infra
 
 ### Justificativa do SQL Server
 
@@ -240,57 +259,36 @@ Para remover também o volume de dados do SQL Server:
 docker compose down -v
 ```
 
-## Provisionamento da Infraestrutura (Terraform)
+## Infraestrutura e deploy (outros repositórios)
 
-Todo o ambiente de produção (rede, EC2 com Kubernetes, banco de dados, registro de imagens,
-segredos e permissões de CI/CD) é provisionado via Terraform, em `infra/`.
+O Terraform e os manifestos do Kubernetes **não ficam mais aqui**. Este repositório só publica as
+imagens no ECR; provisionamento e deploy vivem nos repositórios de infraestrutura:
 
-```bash
-cd infra
-cp terraform.tfvars.example terraform.tfvars   # preencher com valores reais (nunca commitar)
-terraform init
-terraform plan     # revisa o que será criado antes de aplicar
-terraform apply
-```
-
-Principais recursos criados (ver `infra/*.tf` para o detalhamento completo):
-
-| Arquivo | Recurso |
+| O que | Onde |
 |---|---|
-| `network.tf` | VPC, subnets públicas/privadas, route tables |
-| `ec2.tf` | Instância EC2 que roda o cluster Kubernetes (k3s) |
-| `rds.tf` | SQL Server gerenciado (RDS) |
-| `ecr.tf` | Repositórios de imagem Docker (API e Web) |
-| `ssm.tf` | Segredos da aplicação no SSM Parameter Store |
-| `security_groups.tf` | Regras de firewall (portas expostas: `8080` API, `8090` Web) |
-| `github_oidc.tf` | OIDC + IAM Role que a pipeline de CI/CD assume |
+| VPC, EC2 com k3s, ASG de workers, ECR, SSM, IAM/OIDC | [InfraKubernete](https://github.com/Fiap-Mecanic-Ltda/InfraKubernete) → `infra/` |
+| Manifestos Kubernetes (Kustomize `base` + `overlays`) e o workflow de deploy | [InfraKubernete](https://github.com/Fiap-Mecanic-Ltda/InfraKubernete) → `k8s/` |
+| RDS SQL Server (instância, subnet group, SG, connection string no SSM) | [InfraSGBD](https://github.com/Fiap-Mecanic-Ltda/InfraSGBD) → `infra/` |
+| Lambda de autenticação + API Gateway | [Lambda](https://github.com/Fiap-Mecanic-Ltda/Lambda) → `src/` + `infra/` |
 
-Após o `apply`, use os outputs (`terraform output`) para cadastrar os secrets necessários no
-GitHub — ver a seção "Secrets/variáveis necessários" em `k8s/README.md`.
+Ordem de subida do ambiente do zero:
 
-Para desmontar o ambiente: `terraform destroy` (dentro de `infra/`).
+1. `terraform apply` no **InfraKubernete** (rede, EC2/k3s, ECR, IAM/OIDC).
+2. `terraform apply` no **InfraSGBD** (RDS + connection string no SSM).
+3. Push na `main` **aqui** — publica as imagens no ECR.
+4. Workflow *Deploy no Kubernetes*, no **InfraKubernete** — sobe a aplicação no cluster.
 
-## Deploy em Kubernetes
-
-Os manifestos ficam em `k8s/`, organizados com Kustomize em `base/` (recursos comuns) +
-`overlays/local/` (desenvolvimento em kind/minikube, com um pod de SQL Server próprio) +
-`overlays/prod/` (o cluster real, que usa o RDS provisionado pelo Terraform em vez de um pod
-de banco). Cobre Deployments, Services, ConfigMaps, Secrets e HPA (autoscaling por CPU/memória)
-para os hosts API e Web.
-
-Resumo para rodar localmente (kind/minikube):
+Para rodar os manifestos localmente (kind/minikube), clone o InfraKubernete e siga o
+`k8s/README.md` de lá:
 
 ```bash
 kind load docker-image mechanicltda-api:latest mechanicltda-web:latest
-kubectl apply -k k8s/overlays/local
+kubectl apply -k k8s/overlays/local      # dentro do repositório InfraKubernete
 kubectl get pods,svc,hpa -n mechanicltda
 ```
 
-Em produção, o deploy **não é manual** — a pipeline de CI/CD (`.github/workflows/deploy.yml`)
-builda as imagens, publica no ECR e aplica `k8s/overlays/prod` a cada push na `main`, via SSM
-Run Command (sem expor a API do Kubernetes publicamente).
-
-Guia completo (segredos, pré-requisitos do cluster, decisões de design): **`k8s/README.md`**.
+Para desenvolvimento local sem Kubernetes, o `docker-compose.yml` deste repositório continua
+sendo o caminho mais curto (ver a seção anterior).
 
 ## Autenticação e Autorização
 
@@ -554,11 +552,3 @@ ambiente de desenvolvimento:
 - Local: `http://localhost:5062/swagger`
 - Docker Compose: `http://localhost:8080/swagger`
 - Produção: `http://<ip-publico-da-instancia>:8080/swagger`
-
-> Preencher aqui o link de uma collection Postman exportada, caso seja disponibilizada como
-> alternativa ao Swagger.
-
-## Vídeo Demonstrativo
-
-> Link para o vídeo (YouTube/Vimeo, até 15 minutos) demonstrando deploy da aplicação, execução
-> do CI/CD, consumo das APIs e escalabilidade automática: **`<preencher>`**.
