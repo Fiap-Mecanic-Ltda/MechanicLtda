@@ -24,13 +24,19 @@ namespace MechanicLtda.API.Extensions
 
                 var secretKey = Encoding.UTF8.GetBytes(secretKeyValue);
 
+                // Dois emissores validos: a propria API (login e-mail/senha) e a Function
+                // serverless de autenticacao por CPF, que assina com a mesma chave simetrica.
+                var issuers = new[] { jwtSettings["Issuer"], jwtSettings["IssuerCpf"] }
+                    .Where(issuer => !string.IsNullOrWhiteSpace(issuer))
+                    .ToArray();
+
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer           = true,
                     ValidateAudience         = true,
                     ValidateLifetime         = true,
                     ValidateIssuerSigningKey  = true,
-                    ValidIssuer              = jwtSettings["Issuer"],
+                    ValidIssuers             = issuers,
                     ValidAudience            = jwtSettings["Audience"],
                     IssuerSigningKey         = new SymmetricSecurityKey(secretKey),
                     ClockSkew                = TimeSpan.Zero

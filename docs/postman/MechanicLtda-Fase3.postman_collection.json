@@ -1,0 +1,1798 @@
+{
+  "info": {
+    "_postman_id": "aee6e77d-f154-5dd8-9489-6d20c03f3d8c",
+    "name": "MechanicLtda · Fase 3 · API Gateway",
+    "description": "Coleção da Fase 3 do Tech Challenge 13SOAT. Todas as requisições passam pelo **AWS API Gateway (HTTP API)**: autenticação por CPF e por e-mail na Lambda, rotas protegidas pelo Lambda authorizer e a API .NET no cluster k3s pelo VPC Link.\n\n## Como usar\n\n1. Importe a coleção e o ambiente `MechanicLtda-Fase3.postman_environment.json`.\n2. No ambiente, preencha `baseUrl` com o output `api_base_url` do Terraform do repositório Lambda (sem barra no final) e a senha do administrador.\n3. Execute as pastas na ordem.\n\nOs testes de cada requisição guardam tokens e ids nas variáveis da coleção, então a coleção inteira pode ser executada pelo Collection Runner.\n\nArquitetura e decisões: `docs/arquitetura/README.md` no repositório MechanicLtda.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "00 · Saúde e documentação",
+      "description": "Rotas públicas do gateway que chegam à API pelo VPC Link e pelo ALB interno. Sem token. Servem para confirmar que a integração com o cluster está de pé.",
+      "item": [
+        {
+          "name": "Health check da API",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Mesma rota usada pelo health check do ALB e pelo monitor sintético do New Relic."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Gateway propaga o X-Correlation-Id até a API\", () => {",
+                  "    pm.response.to.have.header(\"X-Correlation-Id\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Swagger UI",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/swagger/index.html",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "swagger",
+                "index.html"
+              ]
+            },
+            "description": "Documentação OpenAPI servida pela API atrás do gateway (rota `GET /swagger/{proxy+}`)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "auth": {
+        "type": "noauth"
+      }
+    },
+    {
+      "name": "01 · Autenticação do cliente por CPF (Lambda)",
+      "description": "`POST /auth/cpf` é integrado direto à Lambda de autenticação. A função valida os dígitos do CPF, busca o cliente pelo índice cego (`CpfCnpjHash`), confere se está ativo e emite um JWT com role `Cliente` e o claim `clienteId`.\n\nA rota tem throttling próprio (5 req/s por padrão). CPFs de teste vêm do seed da aplicação.",
+      "item": [
+        {
+          "name": "CPF válido e cliente ativo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/cpf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "cpf"
+              ]
+            },
+            "description": "Autentica o cliente e guarda `tokenCliente` e `clienteId` para as próximas requisições.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cpf\": \"{{cpfCliente}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "// Decodifica o payload do JWT (base64url) para conferir as claims.",
+                  "const lerJwt = (token) => {",
+                  "    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');",
+                  "    const preenchido = base64 + '='.repeat((4 - base64.length % 4) % 4);",
+                  "    return JSON.parse(decodeURIComponent(escape(atob(preenchido))));",
+                  "};",
+                  "const corpo = pm.response.json();",
+                  "",
+                  "pm.test(\"Devolve token, expiração e o cliente identificado\", () => {",
+                  "    pm.expect(corpo.token.split('.')).to.have.lengthOf(3);",
+                  "    pm.expect(new Date(corpo.expiracao).getTime()).to.be.above(Date.now());",
+                  "    pm.expect(corpo.cliente.id).to.be.a('number');",
+                  "    pm.expect(corpo.cliente.nome).to.be.a('string').and.not.empty;",
+                  "});",
+                  "",
+                  "const claims = lerJwt(corpo.token);",
+                  "pm.test(\"Token tem role Cliente e o clienteId do cliente autenticado\", () => {",
+                  "    const role = claims.role || claims['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];",
+                  "    pm.expect(role).to.eql('Cliente');",
+                  "    pm.expect(String(claims.clienteId)).to.eql(String(corpo.cliente.id));",
+                  "    pm.expect(claims.iss).to.eql(pm.variables.get('issuerCpf'));",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('tokenCliente', corpo.token);",
+                  "pm.collectionVariables.set('clienteId', corpo.cliente.id);",
+                  "console.log(`Cliente autenticado: ${corpo.cliente.nome} (id ${corpo.cliente.id})`);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CPF sem máscara",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/cpf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "cpf"
+              ]
+            },
+            "description": "A Lambda aceita o CPF com ou sem pontuação: só os dígitos entram no hash.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cpf\": \"{{cpfClienteSemMascara}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Mesmo cliente do CPF com máscara\", () => pm.expect(String(pm.response.json().cliente.id)).to.eql(String(pm.collectionVariables.get('clienteId'))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CPF de outro cliente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/cpf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "cpf"
+              ]
+            },
+            "description": "Autentica um segundo cliente só para descobrir o `clienteIdOutro`, usado no teste de posse.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cpf\": \"{{cpfOutroCliente}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const corpo = pm.response.json();",
+                  "pm.test(\"Outro cliente tem id diferente do primeiro\", () => {",
+                  "    pm.expect(String(corpo.cliente.id)).to.not.eql(String(pm.collectionVariables.get('clienteId')));",
+                  "});",
+                  "pm.collectionVariables.set('clienteIdOutro', corpo.cliente.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CPF com dígito verificador inválido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/cpf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "cpf"
+              ]
+            },
+            "description": "Erro de formato é 400 e não consulta o banco.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cpf\": \"123.456.789-00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Mensagem de erro: CPF invalido.\", () => {",
+                  "    pm.expect(pm.response.json().mensagem).to.eql('CPF invalido.');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Corpo sem CPF",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/cpf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "cpf"
+              ]
+            },
+            "description": "Requisição sem o campo `cpf`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Mensagem de erro: CPF invalido.\", () => {",
+                  "    pm.expect(pm.response.json().mensagem).to.eql('CPF invalido.');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CPF válido não cadastrado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/cpf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "cpf"
+              ]
+            },
+            "description": "CPF com dígitos corretos que não existe na base: 401.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cpf\": \"935.411.347-80\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Mensagem de erro: Nao foi possivel autenticar com o CPF informado.\", () => {",
+                  "    pm.expect(pm.response.json().mensagem).to.eql('Nao foi possivel autenticar com o CPF informado.');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cliente inativo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/cpf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "cpf"
+              ]
+            },
+            "description": "Mesma resposta do CPF não cadastrado, de propósito: diferenciar os dois casos permitiria descobrir quem é cliente da oficina.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cpf\": \"{{cpfClienteInativo}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Mensagem de erro: Nao foi possivel autenticar com o CPF informado.\", () => {",
+                  "    pm.expect(pm.response.json().mensagem).to.eql('Nao foi possivel autenticar com o CPF informado.');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "auth": {
+        "type": "noauth"
+      }
+    },
+    {
+      "name": "02 · Autenticação do funcionário (e-mail e senha)",
+      "description": "Login de administrador e funcionário. `POST /auth/login` vai para a Lambda; `POST /api/auth/login` vai para a API pelo VPC Link. Os dois emitem o mesmo tipo de token.",
+      "item": [
+        {
+          "name": "Login na Lambda",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Guarda `tokenAdmin`, usado nas rotas administrativas.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{emailAdmin}}\",\n  \"senha\": \"{{senhaAdmin}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "// Decodifica o payload do JWT (base64url) para conferir as claims.",
+                  "const lerJwt = (token) => {",
+                  "    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');",
+                  "    const preenchido = base64 + '='.repeat((4 - base64.length % 4) % 4);",
+                  "    return JSON.parse(decodeURIComponent(escape(atob(preenchido))));",
+                  "};",
+                  "const corpo = pm.response.json();",
+                  "pm.test(\"Token administrativo\", () => {",
+                  "    const claims = lerJwt(corpo.token);",
+                  "    const role = [].concat(claims.role || claims['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']);",
+                  "    pm.expect(role).to.include('Administrador');",
+                  "});",
+                  "pm.collectionVariables.set('tokenAdmin', corpo.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login na API pelo gateway",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Rota pública do gateway que chega à API. Útil para comparar com o login da Lambda.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{emailAdmin}}\",\n  \"senha\": \"{{senhaAdmin}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Gateway propaga o X-Correlation-Id até a API\", () => {",
+                  "    pm.response.to.have.header(\"X-Correlation-Id\");",
+                  "});",
+                  "pm.test(\"Devolve token e expiração\", () => {",
+                  "    const corpo = pm.response.json();",
+                  "    pm.expect(corpo.token.split('.')).to.have.lengthOf(3);",
+                  "    pm.expect(corpo.expiracao).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Senha incorreta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Credenciais inválidas: 401 com mensagem genérica.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{emailAdmin}}\",\n  \"senha\": \"senha-errada\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Mensagem de erro: Credenciais invalidas.\", () => {",
+                  "    pm.expect(pm.response.json().mensagem).to.eql('Credenciais invalidas.');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "auth": {
+        "type": "noauth"
+      }
+    },
+    {
+      "name": "03 · Rotas protegidas: authorizer e posse do recurso",
+      "description": "Autorização em duas camadas (ADR-002):\n\n1. **Gateway** — o Lambda authorizer valida assinatura, expiração e issuer do token e filtra a role por rota. Token de cliente só passa em `GET /api/ordemservico/cliente/{clienteId}`.\n2. **API** — confere se o `clienteId` da rota é o mesmo do token.\n\nExecute antes as pastas 01 e 02.",
+      "item": [
+        {
+          "name": "Sem token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ordemservico/cliente/{{clienteId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ordemservico",
+                "cliente",
+                "{{clienteId}}"
+              ]
+            },
+            "description": "Sem o header `Authorization` o gateway nem chama o authorizer.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Sem header Authorization o gateway recusa antes do authorizer\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Resposta é do API Gateway, não da API\", () => {",
+                  "    pm.expect(pm.response.json().message).to.eql('Unauthorized');",
+                  "    pm.expect(pm.response.headers.has(\"X-Correlation-Id\")).to.be.false;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Token inválido",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ4In0.assinatura-invalida"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/ordemservico/cliente/{{clienteId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ordemservico",
+                "cliente",
+                "{{clienteId}}"
+              ]
+            },
+            "description": "Assinatura inválida: o authorizer nega e a API não é chamada.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Token com assinatura inválida é negado\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Negado pelo authorizer, sem chegar à API\", () => {",
+                  "    pm.expect(pm.response.json().message).to.eql('Forbidden');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cliente consulta as próprias OS",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ordemservico/cliente/{{clienteId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ordemservico",
+                "cliente",
+                "{{clienteId}}"
+              ]
+            },
+            "description": "Caminho feliz do cliente autenticado por CPF.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCliente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Gateway propaga o X-Correlation-Id até a API\", () => {",
+                  "    pm.response.to.have.header(\"X-Correlation-Id\");",
+                  "});",
+                  "const lista = pm.response.json();",
+                  "pm.test(\"Todas as OS devolvidas são do cliente do token\", () => {",
+                  "    pm.expect(lista).to.be.an('array');",
+                  "    const clienteId = Number(pm.collectionVariables.get('clienteId'));",
+                  "    lista.forEach(os => pm.expect(os.clienteId).to.eql(clienteId));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cliente tenta consultar OS de outro cliente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ordemservico/cliente/{{clienteIdOutro}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ordemservico",
+                "cliente",
+                "{{clienteIdOutro}}"
+              ]
+            },
+            "description": "O authorizer deixa passar (a rota é do cliente), mas a API compara o `clienteId` da rota com o do token e devolve 403.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCliente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"A API nega a consulta de outro cliente\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Gateway propaga o X-Correlation-Id até a API\", () => {",
+                  "    pm.response.to.have.header(\"X-Correlation-Id\");",
+                  "});",
+                  "pm.test(\"Negado pela verificação de posse na API\", () => {",
+                  "    const corpo = pm.response.json();",
+                  "    pm.expect(corpo.success).to.be.false;",
+                  "    pm.expect(corpo.errors[0]).to.include('próprios dados');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cliente tenta acessar rota administrativa",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cliente",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cliente"
+              ]
+            },
+            "description": "Token de cliente fora da rota permitida: negado no gateway.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCliente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Token de cliente é negado em rota administrativa\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Negado pelo authorizer, sem chegar à API\", () => {",
+                  "    pm.expect(pm.response.json().message).to.eql('Forbidden');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Administrador consulta OS de qualquer cliente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ordemservico/cliente/{{clienteIdOutro}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ordemservico",
+                "cliente",
+                "{{clienteIdOutro}}"
+              ]
+            },
+            "description": "Administrador e funcionário não têm a restrição de posse.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Gateway propaga o X-Correlation-Id até a API\", () => {",
+                  "    pm.response.to.have.header(\"X-Correlation-Id\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Administrador lista clientes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cliente",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cliente"
+              ]
+            },
+            "description": "Rota administrativa com token administrativo.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Gateway propaga o X-Correlation-Id até a API\", () => {",
+                  "    pm.response.to.have.header(\"X-Correlation-Id\");",
+                  "});",
+                  "pm.test(\"Lista de clientes\", () => pm.expect(pm.response.json()).to.be.an(\"array\").and.not.empty);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 · Fluxo completo da ordem de serviço",
+      "description": "Abertura, diagnóstico, orçamento, aprovação, execução e entrega, sempre pelo gateway.\n\nCada transição gera o evento `OrdemServicoEvento` no New Relic, com o tempo gasto no status anterior — é o que alimenta a página *Ordens de serviço* do painel.\n\n**Aprovação:** ao mover para *Aguardando Aprovação* a API envia ao cliente um e-mail com o link público de aprovação. Para aprovar pelo link, copie o token do e-mail para a variável `tokenAprovacao`; com ela vazia, a coleção aprova pela rota da oficina.",
+      "item": [
+        {
+          "name": "Ler cadastro do cliente (opcional)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cliente/{{clienteId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cliente",
+                "{{clienteId}}"
+              ]
+            },
+            "description": "Primeiro passo para trocar o e-mail do cliente. Os clientes do seed têm e-mails fictícios; para receber o link de aprovação na demonstração, preencha `emailDemonstracao` no ambiente. Sem a variável, esta requisição e a próxima são puladas."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.environment.get('emailDemonstracao')) {",
+                  "    console.log('emailDemonstracao vazio: o cliente mantém o e-mail do seed.');",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('clienteAtual', JSON.stringify(pm.response.json()));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Trocar e-mail do cliente para a demonstração (opcional)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cliente/{{clienteId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cliente",
+                "{{clienteId}}"
+              ]
+            },
+            "description": "Reenvia o cadastro lido na requisição anterior trocando só o e-mail.",
+            "body": {
+              "mode": "raw",
+              "raw": "{{corpoCliente}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.environment.get('emailDemonstracao')) {",
+                  "    console.log('emailDemonstracao vazio: o cliente mantém o e-mail do seed.');",
+                  "    pm.execution.skipRequest();",
+                  "}",
+                  "const cliente = JSON.parse(pm.collectionVariables.get('clienteAtual') || '{}');",
+                  "pm.variables.set('corpoCliente', JSON.stringify({",
+                  "    nome: cliente.nome,",
+                  "    email: pm.environment.get('emailDemonstracao'),",
+                  "    telefone: cliente.telefone,",
+                  "    cpfCnpj: cliente.cpfCnpj,",
+                  "    ativo: cliente.ativo",
+                  "}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Gateway propaga o X-Correlation-Id até a API\", () => {",
+                  "    pm.response.to.have.header(\"X-Correlation-Id\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Veículos do cliente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/veiculo/cliente/{{clienteId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "veiculo",
+                "cliente",
+                "{{clienteId}}"
+              ]
+            },
+            "description": "Escolhe o primeiro veículo do cliente autenticado por CPF."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const veiculos = pm.response.json();",
+                  "pm.test(\"Cliente tem veículo cadastrado\", () => pm.expect(veiculos).to.be.an(\"array\").and.not.empty);",
+                  "pm.collectionVariables.set('veiculoId', veiculos[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Itens de estoque",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/estoque",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "estoque"
+              ]
+            },
+            "description": "Escolhe um item com saldo para usar no orçamento."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const itens = pm.response.json().filter(e => e.quantidadeAtual > 0);",
+                  "pm.test(\"Há item com saldo\", () => pm.expect(itens).to.not.be.empty);",
+                  "pm.collectionVariables.set('estoqueId', itens[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Criar ordem de serviço",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/ordemservico",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ordemservico"
+              ]
+            },
+            "description": "Abre a OS no status *Recebida*.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descricaoProblema\": \"Barulho na suspensão dianteira ao passar em lombadas.\",\n  \"valorTotalEstimado\": 350.0,\n  \"veiculoId\": {{veiculoId}},\n  \"clienteId\": {{clienteId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Gateway propaga o X-Correlation-Id até a API\", () => {",
+                  "    pm.response.to.have.header(\"X-Correlation-Id\");",
+                  "});",
+                  "pm.test(\"OS em Recebida\", () => {",
+                  "    pm.expect(pm.response.json().status).to.eql(1);",
+                  "});",
+                  "pm.collectionVariables.set('ordemServicoId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Iniciar diagnóstico",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ordemservico/{{ordemServicoId}}/iniciar-diagnostico",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ordemservico",
+                "{{ordemServicoId}}",
+                "iniciar-diagnostico"
+              ]
+            },
+            "description": "*Recebida* → *Diagnóstico*."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('ordemServicoId')) {",
+                  "    console.warn('Execute antes \"Criar ordem de serviço\".');",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Gateway propaga o X-Correlation-Id até a API\", () => {",
+                  "    pm.response.to.have.header(\"X-Correlation-Id\");",
+                  "});",
+                  "pm.test(\"OS em Diagnóstico\", () => {",
+                  "    pm.expect(pm.response.json().status).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Adicionar item ao orçamento",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/ordem-servico/{{ordemServicoId}}/itens",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ordem-servico",
+                "{{ordemServicoId}}",
+                "itens"
+              ]
+            },
+            "description": "Baixa o estoque e cria ou atualiza o orçamento da OS.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estoqueId\": {{estoqueId}},\n  \"quantidade\": 1,\n  \"valorUnitario\": 120.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('ordemServicoId')) {",
+                  "    console.warn('Execute antes \"Criar ordem de serviço\".');",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Gateway propaga o X-Correlation-Id até a API\", () => {",
+                  "    pm.response.to.have.header(\"X-Correlation-Id\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar orçamento",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orcamento/ordem-servico/{{ordemServicoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orcamento",
+                "ordem-servico",
+                "{{ordemServicoId}}"
+              ]
+            },
+            "description": "Orçamento gerado a partir dos itens."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('ordemServicoId')) {",
+                  "    console.warn('Execute antes \"Criar ordem de serviço\".');",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const orcamento = pm.response.json();",
+                  "pm.test(\"Orçamento com valor\", () => pm.expect(orcamento.valorTotalGeral).to.be.above(0));",
+                  "pm.collectionVariables.set('orcamentoId', orcamento.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Exportar orçamento em PDF",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orcamento/{{orcamentoId}}/pdf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orcamento",
+                "{{orcamentoId}}",
+                "pdf"
+              ]
+            },
+            "description": "Download do orçamento gerado a partir dos itens."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('orcamentoId')) pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Conteúdo é PDF\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/pdf\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Enviar para aprovação do cliente",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ordemservico/{{ordemServicoId}}/aguardar-aprovacao",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ordemservico",
+                "{{ordemServicoId}}",
+                "aguardar-aprovacao"
+              ]
+            },
+            "description": "*Diagnóstico* → *Aguardando Aprovação*. Dispara os e-mails de status e de aprovação."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('ordemServicoId')) {",
+                  "    console.warn('Execute antes \"Criar ordem de serviço\".');",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Gateway propaga o X-Correlation-Id até a API\", () => {",
+                  "    pm.response.to.have.header(\"X-Correlation-Id\");",
+                  "});",
+                  "pm.test(\"OS em Aguardando Aprovação\", () => {",
+                  "    pm.expect(pm.response.json().status).to.eql(3);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cliente acompanha a OS",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ordemservico/cliente/{{clienteId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ordemservico",
+                "cliente",
+                "{{clienteId}}"
+              ]
+            },
+            "description": "O cliente, com o token do CPF, vê a OS aguardando a aprovação dele.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCliente}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('ordemServicoId')) {",
+                  "    console.warn('Execute antes \"Criar ordem de serviço\".');",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const os = pm.response.json().find(o => o.id === Number(pm.collectionVariables.get('ordemServicoId')));",
+                  "pm.test(\"OS aparece para o cliente aguardando aprovação\", () => {",
+                  "    pm.expect(os).to.not.be.undefined;",
+                  "    pm.expect(os.status).to.eql(3);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Aprovar pelo link do e-mail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/aprovacaoordemservico/{{tokenAprovacao}}/aprovar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "aprovacaoordemservico",
+                "{{tokenAprovacao}}",
+                "aprovar"
+              ]
+            },
+            "description": "Rota pública: quem clica no e-mail não tem token. Preencha `tokenAprovacao` com o valor entre `/aprovacaoordemservico/` e `/aprovar` no link recebido. Sem a variável, esta requisição é pulada.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('tokenAprovacao')) {",
+                  "    console.log('tokenAprovacao vazio: a aprovação será feita pela rota da oficina.');",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"OS aprovada pelo cliente\", () => pm.expect(pm.response.json().mensagem).to.include(\"aprovada\"));",
+                  "pm.collectionVariables.set('aprovadaPeloLink', 'true');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reutilizar o link de aprovação",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/aprovacaoordemservico/{{tokenAprovacao}}/aprovar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "aprovacaoordemservico",
+                "{{tokenAprovacao}}",
+                "aprovar"
+              ]
+            },
+            "description": "O token do e-mail é de uso único: a segunda chamada é recusada.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('aprovadaPeloLink') !== 'true') pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Token já utilizado\", () => pm.expect(pm.response.json().errors.join(\" \")).to.include(\"utilizado\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Aprovar pela oficina",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ordemservico/{{ordemServicoId}}/aprovar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ordemservico",
+                "{{ordemServicoId}}",
+                "aprovar"
+              ]
+            },
+            "description": "Alternativa ao link, para quando o e-mail não estiver acessível na demonstração. Pulada se a OS já foi aprovada pelo link."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('ordemServicoId')) {",
+                  "    console.warn('Execute antes \"Criar ordem de serviço\".');",
+                  "    pm.execution.skipRequest();",
+                  "}",
+                  "if (pm.collectionVariables.get('aprovadaPeloLink') === 'true') pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Gateway propaga o X-Correlation-Id até a API\", () => {",
+                  "    pm.response.to.have.header(\"X-Correlation-Id\");",
+                  "});",
+                  "pm.test(\"OS em Execução\", () => {",
+                  "    pm.expect(pm.response.json().status).to.eql(4);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Finalizar",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ordemservico/{{ordemServicoId}}/finalizar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ordemservico",
+                "{{ordemServicoId}}",
+                "finalizar"
+              ]
+            },
+            "description": "*Execução* → *Finalizada*."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('ordemServicoId')) {",
+                  "    console.warn('Execute antes \"Criar ordem de serviço\".');",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Gateway propaga o X-Correlation-Id até a API\", () => {",
+                  "    pm.response.to.have.header(\"X-Correlation-Id\");",
+                  "});",
+                  "pm.test(\"OS em Finalizada\", () => {",
+                  "    pm.expect(pm.response.json().status).to.eql(5);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Entregar",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ordemservico/{{ordemServicoId}}/entregar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ordemservico",
+                "{{ordemServicoId}}",
+                "entregar"
+              ]
+            },
+            "description": "*Finalizada* → *Entregue*. Encerra o ciclo e limpa as variáveis do fluxo."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('ordemServicoId')) {",
+                  "    console.warn('Execute antes \"Criar ordem de serviço\".');",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Gateway propaga o X-Correlation-Id até a API\", () => {",
+                  "    pm.response.to.have.header(\"X-Correlation-Id\");",
+                  "});",
+                  "pm.test(\"OS em Entregue\", () => {",
+                  "    pm.expect(pm.response.json().status).to.eql(6);",
+                  "});",
+                  "['ordemServicoId', 'orcamentoId', 'tokenAprovacao', 'aprovadaPeloLink']",
+                  "    .forEach(v => pm.collectionVariables.unset(v));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tempo médio de execução",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ordemservico/tempo-medio-execucao",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ordemservico",
+                "tempo-medio-execucao"
+              ]
+            },
+            "description": "Indicador calculado sobre as OS finalizadas."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Gateway propaga o X-Correlation-Id até a API\", () => {",
+                  "    pm.response.to.have.header(\"X-Correlation-Id\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{tokenAdmin}}",
+            "type": "string"
+          }
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "tokenCliente",
+      "value": "",
+      "type": "string",
+      "description": "Preenchida por 01 · CPF válido e cliente ativo"
+    },
+    {
+      "key": "clienteId",
+      "value": "",
+      "type": "string",
+      "description": "Preenchida por 01 · CPF válido e cliente ativo"
+    },
+    {
+      "key": "clienteIdOutro",
+      "value": "",
+      "type": "string",
+      "description": "Preenchida por 01 · CPF de outro cliente"
+    },
+    {
+      "key": "tokenAdmin",
+      "value": "",
+      "type": "string",
+      "description": "Preenchida por 02 · Login na Lambda"
+    },
+    {
+      "key": "veiculoId",
+      "value": "",
+      "type": "string",
+      "description": "Preenchida no fluxo de OS"
+    },
+    {
+      "key": "estoqueId",
+      "value": "",
+      "type": "string",
+      "description": "Preenchida no fluxo de OS"
+    },
+    {
+      "key": "ordemServicoId",
+      "value": "",
+      "type": "string",
+      "description": "Preenchida no fluxo de OS"
+    },
+    {
+      "key": "orcamentoId",
+      "value": "",
+      "type": "string",
+      "description": "Preenchida no fluxo de OS"
+    },
+    {
+      "key": "tokenAprovacao",
+      "value": "",
+      "type": "string",
+      "description": "Copiar do link recebido por e-mail (opcional)"
+    },
+    {
+      "key": "aprovadaPeloLink",
+      "value": "",
+      "type": "string",
+      "description": "Controle interno do fluxo de OS"
+    },
+    {
+      "key": "clienteAtual",
+      "value": "",
+      "type": "string",
+      "description": "Controle interno: cadastro do cliente antes de trocar o e-mail"
+    }
+  ]
+}

@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>MechanicLtda — Entrega da Fase 3</title>
+<style>
+  @page {
+    size: A4;
+    margin: 18mm 17mm 20mm;
+    @bottom-left { content: "MechanicLtda · Tech Challenge 13SOAT · Fase 3"; font: 7.5pt "Segoe UI", system-ui, sans-serif; color: #7a8394; }
+    @bottom-right { content: counter(page) " / " counter(pages); font: 7.5pt "Segoe UI", system-ui, sans-serif; color: #7a8394; }
+  }
+  @page paisagem { size: A4 landscape; margin: 14mm 14mm 18mm; }
+
+  :root {
+    --tinta: #1b2230;
+    --suave: #5b6576;
+    --linha: #dde2ea;
+    --fundo: #f4f6f9;
+    --marca: #0d5c7d;
+    --marca-clara: #e3f0f5;
+    --pendente: #8a5a00;
+    --pendente-fundo: #fff4d6;
+    --ok: #1f6b3a;
+    --ok-fundo: #e3f3e8;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; font: 9.6pt/1.5 "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif; color: var(--tinta); background: #fff; }
+
+  header.capa { border-bottom: 2px solid var(--tinta); padding-bottom: 10mm; margin-bottom: 7mm; }
+  .sobretitulo { font-size: 8pt; letter-spacing: .14em; text-transform: uppercase; color: var(--marca); font-weight: 600; margin: 0 0 3mm; }
+  h1 { font-size: 25pt; line-height: 1.1; margin: 0 0 2.5mm; letter-spacing: -.01em; }
+  .subtitulo { font-size: 11pt; color: var(--suave); margin: 0; max-width: 150mm; }
+  .meta { display: flex; gap: 10mm; margin-top: 6mm; font-size: 8.5pt; color: var(--suave); }
+  .meta b { color: var(--tinta); font-weight: 600; }
+
+  h2 { font-size: 12.5pt; margin: 8mm 0 2.5mm; display: flex; align-items: baseline; gap: 3mm; break-after: avoid; }
+  h2 .n { font-size: 9pt; color: var(--marca); font-weight: 700; min-width: 6mm; }
+  h2 + p.lead { margin-top: 0; }
+  p { margin: 0 0 2.5mm; }
+  p.lead { color: var(--suave); }
+  a { color: var(--marca); text-decoration: none; }
+  code { font-family: "Cascadia Mono", Consolas, "SFMono-Regular", Menlo, monospace; font-size: 8.4pt; background: var(--fundo); padding: .2mm 1.2mm; border-radius: 1mm; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1mm 0 2mm; break-inside: auto; }
+  tr { break-inside: avoid; }
+  th { text-align: left; font-size: 7.6pt; text-transform: uppercase; letter-spacing: .06em; color: var(--suave); font-weight: 600; border-bottom: 1.2px solid var(--tinta); padding: 1.6mm 2mm; }
+  td { border-bottom: 1px solid var(--linha); padding: 2mm; vertical-align: top; }
+  td.nome { font-weight: 600; white-space: nowrap; }
+  td .url { display: block; font-size: 8.3pt; word-break: break-all; }
+  .desc { color: var(--suave); font-size: 8.8pt; }
+
+  .destaque { border: 1px solid var(--linha); border-left: 3px solid var(--marca); background: var(--marca-clara); padding: 3.5mm 4.5mm; border-radius: 1.5mm; margin: 2mm 0 3mm; break-inside: avoid; }
+  .destaque .rotulo { font-size: 7.6pt; text-transform: uppercase; letter-spacing: .08em; color: var(--marca); font-weight: 700; margin-bottom: 1mm; }
+  .destaque .valor { font-size: 11pt; font-weight: 600; word-break: break-all; }
+
+  .pendente { display: inline-block; background: var(--pendente-fundo); color: var(--pendente); border: 1px dashed #d9a400; border-radius: 1mm; padding: .3mm 2mm; font-size: 8.4pt; font-weight: 600; }
+  .selo { display: inline-block; border-radius: 1mm; padding: .3mm 2mm; font-size: 8.2pt; font-weight: 600; white-space: nowrap; }
+  .selo.ok { background: var(--ok-fundo); color: var(--ok); }
+  .selo.nao { background: var(--pendente-fundo); color: var(--pendente); }
+
+  .rascunho { background: var(--pendente-fundo); color: var(--pendente); border: 1px solid #e8c56a; border-radius: 1.5mm; padding: 2.5mm 4mm; font-size: 8.6pt; margin-bottom: 6mm; }
+  .rascunho b { display: block; margin-bottom: .6mm; }
+  .rascunho ul { margin: 0; padding-left: 4.5mm; }
+
+  .nota { font-size: 8pt; color: var(--suave); margin-top: 2mm; }
+  section.diagrama h2.apos-diagrama { margin-top: 7mm; }
+  ul.decisoes { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 5mm; font-size: 8.4pt; line-height: 1.45; }
+  ul.decisoes li { border-top: 2px solid var(--marca); padding-top: 1.5mm; }
+  ul.decisoes b { display: block; margin-bottom: .5mm; }
+
+  section.diagrama { page: paisagem; break-before: page; }
+  section.diagrama h2 { margin-top: 0; }
+  section.diagrama img { width: 100%; height: auto; border: 1px solid var(--linha); border-radius: 1.5mm; padding: 3mm; background: #fff; }
+  .legenda { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5mm; margin-top: 3.5mm; font-size: 8.4pt; line-height: 1.45; }
+  .legenda div { border-top: 2px solid var(--tinta); padding-top: 1.5mm; }
+  .legenda b { display: block; margin-bottom: .5mm; }
+</style>
+</head>
+<body>
+
+<header class="capa">
+  <p class="sobretitulo">Tech Challenge · Fase 3 · 13SOAT</p>
+  <h1>MechanicLtda — Entrega da Fase 3</h1>
+  <p class="subtitulo">API Gateway com autenticação por CPF em função serverless, entrega contínua nos quatro repositórios e observabilidade da aplicação e da infraestrutura.</p>
+  <div class="meta">
+    <span>Grupo <b>%%GRUPO%%</b></span>
+    <span>Gerado em <b>%%DATA_GERACAO%%</b></span>
+    <span>Organização <b>Fiap-Mecanic-Ltda</b></span>
+  </div>
+</header>
+
+%%AVISO_RASCUNHO%%
+
+<h2><span class="n">01</span>Integrantes</h2>
+<table>
+  <thead><tr><th style="width:70%">Nome</th><th>RM</th></tr></thead>
+  <tbody>%%INTEGRANTES%%</tbody>
+</table>
+
+<h2><span class="n">02</span>Vídeo de demonstração</h2>
+<div class="destaque">
+  <div class="rotulo">Link do vídeo · até 15 minutos</div>
+  <div class="valor">%%VIDEO%%</div>
+</div>
+<p class="desc">Mostra a autenticação por CPF, a execução do pipeline de CI/CD e o deploy automatizado, o consumo das APIs protegidas, o painel de monitoramento com análise ao vivo, e logs e traces em execução. Roteiro em <a href="https://github.com/Fiap-Mecanic-Ltda/MechanicLtda/blob/main/docs/entrega/roteiro-video.md">docs/entrega/roteiro-video.md</a>.</p>
+
+<h2><span class="n">03</span>Repositórios</h2>
+<table>
+  <thead><tr><th style="width:22%">Repositório</th><th>Conteúdo</th><th style="width:30%">Pipeline</th></tr></thead>
+  <tbody>
+    <tr>
+      <td class="nome">MechanicLtda<span class="url"><a href="https://github.com/Fiap-Mecanic-Ltda/MechanicLtda">github.com/Fiap-Mecanic-Ltda/MechanicLtda</a></span></td>
+      <td class="desc">API .NET 9 e Web Razor, índice cego do CPF, verificação de posse, logs JSON com correlação, instrumentação New Relic e a documentação da arquitetura.</td>
+      <td class="desc">Build e testes em todo PR; na <code>main</code>, imagens no ECR e disparo do deploy no cluster.</td>
+    </tr>
+    <tr>
+      <td class="nome">Lambda<span class="url"><a href="https://github.com/Fiap-Mecanic-Ltda/Lambda">github.com/Fiap-Mecanic-Ltda/Lambda</a></span></td>
+      <td class="desc">Função de autenticação (<code>/auth/cpf</code> e <code>/auth/login</code>), Lambda authorizer, API Gateway HTTP API, VPC Link, rotas, throttling e alarmes do CloudWatch.</td>
+      <td class="desc">Build, testes e <code>terraform plan</code> em PR; na <code>main</code>, apply e smoke test pelo gateway.</td>
+    </tr>
+    <tr>
+      <td class="nome">InfraKubernete<span class="url"><a href="https://github.com/Fiap-Mecanic-Ltda/InfraKubernete">github.com/Fiap-Mecanic-Ltda/InfraKubernete</a></span></td>
+      <td class="desc">VPC, k3s em EC2 com ASG de workers, ALB interno, ECR, manifestos Kubernetes com HPA, e alertas, painel e monitor sintético do New Relic.</td>
+      <td class="desc">Plan em PR; na <code>main</code>, apply e deploy dos manifestos disparado pela publicação da imagem.</td>
+    </tr>
+    <tr>
+      <td class="nome">InfraSGBD<span class="url"><a href="https://github.com/Fiap-Mecanic-Ltda/InfraSGBD">github.com/Fiap-Mecanic-Ltda/InfraSGBD</a></span></td>
+      <td class="desc">RDS SQL Server Express em sub-redes privadas, cifrado e com backup, e os parâmetros de conexão no SSM.</td>
+      <td class="desc">Plan em PR; apply automático na <code>main</code>.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2><span class="n">04</span>Acesso do usuário soat-architecture</h2>
+<p class="lead">Confirmação de que o usuário <code>soat-architecture</code> foi adicionado a todos os repositórios.</p>
+<table>
+  <thead><tr><th style="width:30%">Repositório</th><th style="width:30%">Situação</th><th>Data</th></tr></thead>
+  <tbody>%%SOAT_ROWS%%</tbody>
+</table>
+<p class="nota">O convite pode ser enviado pelo script <code>scripts/proteger-branches.sh --convidar-soat</code> do repositório MechanicLtda, que também aplica a proteção das branches.</p>
+
+<h2><span class="n">05</span>Documentação</h2>
+<p class="lead">Toda a documentação da arquitetura fica no repositório da aplicação. Os demais repositórios descrevem nos próprios READMEs a parte que implementam.</p>
+<table>
+  <thead><tr><th style="width:36%">Documento</th><th>Conteúdo</th></tr></thead>
+  <tbody>
+    <tr><td class="nome"><a href="https://github.com/Fiap-Mecanic-Ltda/MechanicLtda/blob/main/docs/arquitetura/README.md">Índice da arquitetura</a></td><td class="desc">Mapa de cada item pedido no desafio para o documento correspondente.</td></tr>
+    <tr><td class="nome"><a href="https://github.com/Fiap-Mecanic-Ltda/MechanicLtda/blob/main/docs/arquitetura/01-diagrama-de-componentes.md">Diagrama de componentes</a></td><td class="desc">Nuvem, APIs e banco; monitoramento; entrega contínua. O primeiro está reproduzido na seção 07.</td></tr>
+    <tr><td class="nome"><a href="https://github.com/Fiap-Mecanic-Ltda/MechanicLtda/blob/main/docs/arquitetura/02-diagramas-de-sequencia.md">Diagramas de sequência</a></td><td class="desc">Autenticação por CPF e consulta de OS, login do funcionário, e abertura de OS até a aprovação por e-mail.</td></tr>
+    <tr><td class="nome"><a href="https://github.com/Fiap-Mecanic-Ltda/MechanicLtda/blob/main/docs/arquitetura/03-banco-de-dados.md">Banco de dados</a></td><td class="desc">Justificativa do SQL Server no RDS, diagramas ER, relacionamentos, evolução das migrations e ajustes recomendados no modelo.</td></tr>
+    <tr><td class="nome"><a href="https://github.com/Fiap-Mecanic-Ltda/MechanicLtda/tree/main/docs/rfc">RFC-001 a RFC-004</a></td><td class="desc">API Gateway, escolha da nuvem, escolha do banco e estratégia de autenticação com análise de segurança.</td></tr>
+    <tr><td class="nome"><a href="https://github.com/Fiap-Mecanic-Ltda/MechanicLtda/tree/main/docs/adr">ADR-001 a ADR-011</a></td><td class="desc">Gateway, autorização em duas camadas, índice cego do CPF, comunicação REST, HPA e ASG, k3s, quatro repositórios, ambientes, observabilidade e banco gerenciado.</td></tr>
+    <tr><td class="nome"><a href="https://github.com/Fiap-Mecanic-Ltda/MechanicLtda/tree/main/docs/postman">Coleção Postman</a></td><td class="desc">36 requisições com testes: autenticação, rotas protegidas e o fluxo completo da ordem de serviço.</td></tr>
+    <tr><td class="nome"><a href="https://github.com/Fiap-Mecanic-Ltda/MechanicLtda/blob/main/docs/api-gateway/plano-api-gateway.md">Plano do API Gateway</a></td><td class="desc">Fases de desenvolvimento, contrato do token, rotas, riscos e custos.</td></tr>
+  </tbody>
+</table>
+
+<div class="destaque">
+  <div class="rotulo">URL do API Gateway</div>
+  <div class="valor">%%GATEWAY%%</div>
+</div>
+<p class="desc">Swagger pelo gateway em <code>/swagger/index.html</code>. CPFs e usuário de teste estão no ambiente da coleção Postman e na seção de dados iniciais do README da aplicação.</p>
+
+<h2><span class="n">06</span>Requisitos da fase</h2>
+<table>
+  <thead><tr><th style="width:30%">Requisito</th><th>Como foi atendido</th><th style="width:19%">Repositório</th></tr></thead>
+  <tbody>
+    <tr><td>API Gateway para controle e roteamento</td><td class="desc">AWS API Gateway HTTP API com VPC Link e ALB interno até o cluster; throttling de 5 req/s nas rotas de autenticação e HTTPS incluso.</td><td class="desc">Lambda, InfraKubernete</td></tr>
+    <tr><td>Rotas sensíveis protegidas por autenticação com CPF</td><td class="desc">Lambda authorizer valida o token e a role por rota; a API confere a posse do recurso pelo <code>clienteId</code> do token.</td><td class="desc">Lambda, MechanicLtda</td></tr>
+    <tr><td>Função serverless que valida o CPF, consulta o cliente e emite o JWT</td><td class="desc">Lambda .NET 8 em <code>POST /auth/cpf</code>: valida os dígitos, busca pelo hash HMAC do CPF, confere se o cliente está ativo e emite JWT de 30 minutos.</td><td class="desc">Lambda, MechanicLtda</td></tr>
+    <tr><td>Infraestrutura como código</td><td class="desc">Terraform em todos os repositórios, com state remoto no S3 e outputs compartilhados por <code>terraform_remote_state</code>.</td><td class="desc">Todos</td></tr>
+    <tr><td>CI/CD com deploy automatizado e branches protegidas</td><td class="desc">GitHub Actions com PR obrigatório e check de build; a <code>main</code> publica e implanta sem passo manual. Não há ambiente de homologação na AWS (ADR-009).</td><td class="desc">Todos</td></tr>
+    <tr><td>Monitoramento de latência, recursos e saúde, com alertas</td><td class="desc">New Relic APM, integração Kubernetes, monitor sintético do <code>/health</code> pelo gateway e 8 alertas; alarmes do CloudWatch no gateway e nas Lambdas.</td><td class="desc">InfraKubernete, Lambda</td></tr>
+    <tr><td>Logs estruturados com correlação</td><td class="desc">Logs JSON com escopo; o <code>requestId</code> do gateway chega à API como <code>X-Correlation-Id</code>.</td><td class="desc">MechanicLtda, Lambda</td></tr>
+    <tr><td>Painéis de volume de OS, tempo por status e falhas de integração</td><td class="desc">Painel com quatro páginas: ordens de serviço, APIs, integrações e Kubernetes, alimentado por eventos de negócio.</td><td class="desc">InfraKubernete</td></tr>
+    <tr><td>Diagramas, RFCs, ADRs e banco de dados</td><td class="desc">Seção 05 deste documento.</td><td class="desc">MechanicLtda</td></tr>
+  </tbody>
+</table>
+
+<section class="diagrama">
+  <h2><span class="n">07</span>Diagrama de componentes</h2>
+  <img src="%%DIAGRAMA%%" alt="Diagrama de componentes: cliente, API Gateway, Lambdas, VPC Link, ALB interno, cluster k3s, RDS SQL Server e SMTP">
+  <div class="legenda">
+    <div><b>Entrada única</b>Toda chamada externa à API passa pelo API Gateway. A porta 8080 dos nós aceita apenas o security group do ALB interno.</div>
+    <div><b>Autorização em duas camadas</b>O authorizer autentica e filtra a role por rota antes do backend; a API decide a posse do recurso.</div>
+    <div><b>Dados privados</b>O RDS fica em sub-redes privadas. O CPF é gravado cifrado e localizado por um hash HMAC.</div>
+  </div>
+  <h2 class="apos-diagrama"><span class="n">08</span>Decisões que afetam a avaliação</h2>
+  <ul class="decisoes">
+    <li><b>Sem ambiente de homologação na AWS.</b> As branches <code>desenvolvimento</code> e <code>homologacao</code> executam build, testes e <code>terraform plan</code>; só a <code>main</code> faz deploy. Um segundo ambiente dobraria o custo fixo do projeto (ADR-009).</li>
+    <li><b>Cliente autenticado por CPF só consulta.</b> O token de cliente acessa apenas as próprias ordens de serviço; abertura e transições são da oficina (RFC-004).</li>
+    <li><b>Web Razor fora do gateway.</b> A interface da oficina continua publicada na porta 8090; o gateway protege a API (RFC-001, seção 8).</li>
+    <li><b>Evoluções registradas.</b> Login somente leitura no banco para a Lambda e segundo fator na autenticação por CPF estão documentados como próximos passos (documento do banco e RFC-004).</li>
+  </ul>
+</section>
+
+</body>
+</html>

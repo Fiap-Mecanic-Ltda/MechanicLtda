@@ -19,6 +19,7 @@ public class OrdemServicoServiceTests
     private readonly Mock<IConfiguration> _configurationMock;
     private readonly Mock<IOrdemServicoAprovacaoTokenRepository> _ordemServicoAprovacaoTokenRepositoryMock;
     private readonly Mock<IEmailService> _emailServiceMock;
+    private readonly Mock<IMonitoramentoService> _monitoramentoMock;
     private readonly OrdemServicoService _sut;
 
     public OrdemServicoServiceTests()
@@ -30,6 +31,7 @@ public class OrdemServicoServiceTests
         _configurationMock          = new Mock<IConfiguration>();
         _ordemServicoAprovacaoTokenRepositoryMock = new Mock<IOrdemServicoAprovacaoTokenRepository>();
         _emailServiceMock           = new Mock<IEmailService>();
+        _monitoramentoMock          = new Mock<IMonitoramentoService>();
 
         _sut = new OrdemServicoService(
             _loggerMock.Object,
@@ -38,7 +40,8 @@ public class OrdemServicoServiceTests
             _ordemServicoRepositoryMock.Object,
             _veiculoRepositoryMock.Object,
             _ordemServicoAprovacaoTokenRepositoryMock.Object,
-            _emailServiceMock.Object);
+            _emailServiceMock.Object,
+            _monitoramentoMock.Object);
     }
 
     // ─── helpers ────────────────────────────────────────────────────────────────
@@ -350,6 +353,53 @@ public class OrdemServicoServiceTests
         // Assert
         Assert.Equal(StatusOrdemServico.AguardandoAprovacao, resultado.Status);
         Assert.NotNull(resultado.DataModificacao);
+    }
+
+    [Fact]
+    public async Task AguardarAprovacaoAsync_DeveEnviarLinksDeAprovacaoEmMinusculas()
+    {
+        // O roteamento do API Gateway diferencia maiúsculas: a rota pública é
+        // /api/aprovacaoordemservico/{token}/... Um link em PascalCase cairia na
+        // rota protegida e o cliente receberia 401 ao clicar no e-mail.
+
+        // Arrange
+        var configuracao = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["AppSettings:BaseUrlAprovacao"]             = "https://gateway.exemplo.com/",
+                ["AppSettings:AprovacaoTokenExpiracaoHoras"] = "72"
+            })
+            .Build();
+
+        var sut = new OrdemServicoService(
+            _loggerMock.Object,
+            configuracao,
+            _notificadorMock.Object,
+            _ordemServicoRepositoryMock.Object,
+            _veiculoRepositoryMock.Object,
+            _ordemServicoAprovacaoTokenRepositoryMock.Object,
+            _emailServiceMock.Object,
+            _monitoramentoMock.Object);
+
+        var os = CriarOrdemServico(status: StatusOrdemServico.EmDiagnostico);
+        os.Cliente = new Cliente { Id = 1, Nome = "Fernanda Lima", Email = "fernanda@email.com", CpfCnpj = "52998224725", Ativo = true };
+
+        _ordemServicoRepositoryMock.Setup(r => r.ObterPorIdAsync("1")).ReturnsAsync(os);
+        _ordemServicoRepositoryMock.Setup(r => r.AtualizarAsync(It.IsAny<OrdemServico>())).ReturnsAsync(os);
+
+        var corpos = new List<string>();
+        _emailServiceMock
+            .Setup(e => e.EnviarEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Callback<string, string, string, string>((_, _, _, corpo) => corpos.Add(corpo))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await sut.AguardarAprovacaoAsync(1);
+
+        // Assert
+        var corpoAprovacao = Assert.Single(corpos, c => c.Contains("/aprovar"));
+        Assert.Contains("https://gateway.exemplo.com/api/aprovacaoordemservico/", corpoAprovacao);
+        Assert.DoesNotContain("AprovacaoOrdemServico", corpoAprovacao);
     }
 
     [Fact]
@@ -688,6 +738,235 @@ public class OrdemServicoServiceTests
         await Assert.ThrowsAsync<KeyNotFoundException>(() => _sut.RemoverAsync(id));
 
         _ordemServicoRepositoryMock.Verify(r => r.RemoverAsync(It.IsAny<string>()), Times.Never);
+    }
+
+    #endregion
+
+    // ─── Monitoramento ───────────────────────────────────────────────────────────
+
+    #region Monitoramento
+
+    [Fact]
+    public async Task AdicionarAsync_QuandoCriada_DeveRegistrarEventoDeCriacaoComDataDoStatus()
+    {
+        // Arrange
+        var veiculo = CriarVeiculo();
+        OrdemServico? gravada = null;
+
+        _veiculoRepositoryMock.Setup(r => r.ObterPorIdAsync("1")).ReturnsAsync(veiculo);
+        _ordemServicoRepositoryMock
+            .Setup(r => r.AdicionarAsync(It.IsAny<OrdemServico>()))
+            .Callback<OrdemServico>(os => { os.Id = 10; gravada = os; })
+            .ReturnsAsync((OrdemServico os) => os);
+        _ordemServicoRepositoryMock.Setup(r => r.ObterPorIdAsync("10")).ReturnsAsync(() => gravada);
+
+        // Act
+        await _sut.AdicionarAsync("Barulho no motor", 500m, 1, 1);
+
+        // Assert
+        Assert.NotNull(gravada!.DataAlteracaoStatus);
+        _monitoramentoMock.Verify(m => m.RegistrarOrdemServicoCriada(It.Is<OrdemServico>(os => os.Id == 10)), Times.Once);
+    }
+
+    [Fact]
+    public async Task IniciarDiagnosticoAsync_DeveRegistrarTempoQueAOSFicouComoRecebida()
+    {
+        // Arrange
+        var os = CriarOrdemServico(status: StatusOrdemServico.Recebida);
+        os.DataAlteracaoStatus = DateTime.UtcNow.AddMinutes(-90);
+
+        _ordemServicoRepositoryMock.Setup(r => r.ObterPorIdAsync("1")).ReturnsAsync(os);
+        _ordemServicoRepositoryMock.Setup(r => r.AtualizarAsync(It.IsAny<OrdemServico>())).ReturnsAsync(os);
+
+        // Act
+        await _sut.IniciarDiagnosticoAsync(1);
+
+        // Assert
+        _monitoramentoMock.Verify(m => m.RegistrarMudancaStatus(
+            It.Is<OrdemServico>(o => o.Status == StatusOrdemServico.EmDiagnostico),
+            StatusOrdemServico.Recebida,
+            It.Is<TimeSpan>(t => t.TotalMinutes >= 89 && t.TotalMinutes <= 91)), Times.Once);
+
+        Assert.True((DateTime.UtcNow - os.DataAlteracaoStatus!.Value).TotalSeconds < 5);
+    }
+
+    [Fact]
+    public async Task FinalizarAsync_DeveRegistrarTempoEmExecucao()
+    {
+        // Arrange
+        var os = CriarOrdemServico(status: StatusOrdemServico.EmExecucao);
+        os.DataAlteracaoStatus = DateTime.UtcNow.AddHours(-3);
+
+        _ordemServicoRepositoryMock.Setup(r => r.ObterPorIdAsync("1")).ReturnsAsync(os);
+        _ordemServicoRepositoryMock.Setup(r => r.AtualizarAsync(It.IsAny<OrdemServico>())).ReturnsAsync(os);
+
+        // Act
+        await _sut.FinalizarAsync(1);
+
+        // Assert
+        _monitoramentoMock.Verify(m => m.RegistrarMudancaStatus(
+            It.IsAny<OrdemServico>(),
+            StatusOrdemServico.EmExecucao,
+            It.Is<TimeSpan>(t => t.TotalHours >= 2.9 && t.TotalHours <= 3.1)), Times.Once);
+    }
+
+    [Fact]
+    public async Task EntregarAsync_SemDataDoStatus_DeveUsarDataDeCriacaoComoReferencia()
+    {
+        // OS gravada antes da coluna DataAlteracaoStatus existir.
+
+        // Arrange
+        var os = CriarOrdemServico(status: StatusOrdemServico.Finalizada);
+        os.DataCriacao         = DateTime.UtcNow.AddDays(-2);
+        os.DataAlteracaoStatus = null;
+
+        _ordemServicoRepositoryMock.Setup(r => r.ObterPorIdAsync("1")).ReturnsAsync(os);
+        _ordemServicoRepositoryMock.Setup(r => r.AtualizarAsync(It.IsAny<OrdemServico>())).ReturnsAsync(os);
+
+        // Act
+        await _sut.EntregarAsync(1);
+
+        // Assert
+        _monitoramentoMock.Verify(m => m.RegistrarMudancaStatus(
+            It.IsAny<OrdemServico>(),
+            StatusOrdemServico.Finalizada,
+            It.Is<TimeSpan>(t => t.TotalHours >= 47.9 && t.TotalHours <= 48.1)), Times.Once);
+    }
+
+    [Fact]
+    public async Task RegistrarTransicao_ComDataDoStatusNoFuturo_NaoDeveRegistrarTempoNegativo()
+    {
+        // Arrange
+        var os = CriarOrdemServico(status: StatusOrdemServico.Recebida);
+        os.DataAlteracaoStatus = DateTime.UtcNow.AddHours(3);
+
+        _ordemServicoRepositoryMock.Setup(r => r.ObterPorIdAsync("1")).ReturnsAsync(os);
+        _ordemServicoRepositoryMock.Setup(r => r.AtualizarAsync(It.IsAny<OrdemServico>())).ReturnsAsync(os);
+
+        // Act
+        await _sut.IniciarDiagnosticoAsync(1);
+
+        // Assert
+        _monitoramentoMock.Verify(m => m.RegistrarMudancaStatus(
+            It.IsAny<OrdemServico>(), StatusOrdemServico.Recebida, TimeSpan.Zero), Times.Once);
+    }
+
+    [Fact]
+    public async Task AtualizarAsync_DevePreservarDatasDeCicloDeVida()
+    {
+        // O DTO de atualização não traz as datas; sem preservá-las, editar uma OS em
+        // execução apagaria o início da execução e quebraria o tempo médio de execução.
+
+        // Arrange
+        var inicioExecucao = DateTime.UtcNow.AddHours(-5);
+        var inicioStatus   = DateTime.UtcNow.AddHours(-5);
+
+        var existente = CriarOrdemServico(status: StatusOrdemServico.EmExecucao);
+        existente.DataInicioExecucao  = inicioExecucao;
+        existente.DataAlteracaoStatus = inicioStatus;
+
+        var atualizacao = CriarOrdemServico(status: StatusOrdemServico.Recebida);
+        atualizacao.DescricaoProblema = "Barulho no motor e na suspensão";
+
+        OrdemServico? gravada = null;
+        _ordemServicoRepositoryMock.Setup(r => r.ObterPorIdAsync("1")).ReturnsAsync(existente);
+        _veiculoRepositoryMock.Setup(r => r.ObterPorIdAsync("1")).ReturnsAsync(CriarVeiculo());
+        _ordemServicoRepositoryMock
+            .Setup(r => r.AtualizarAsync(It.IsAny<OrdemServico>()))
+            .Callback<OrdemServico>(os => gravada = os)
+            .ReturnsAsync((OrdemServico os) => os);
+
+        // Act
+        await _sut.AtualizarAsync(atualizacao);
+
+        // Assert
+        Assert.Equal(StatusOrdemServico.EmExecucao, gravada!.Status);
+        Assert.Equal(inicioExecucao, gravada.DataInicioExecucao);
+        Assert.Equal(inicioStatus, gravada.DataAlteracaoStatus);
+        _monitoramentoMock.Verify(m => m.RegistrarMudancaStatus(
+            It.IsAny<OrdemServico>(), It.IsAny<StatusOrdemServico>(), It.IsAny<TimeSpan>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AtualizarAsync_QuandoAvancaParaDiagnostico_DeveRegistrarTransicao()
+    {
+        // Arrange
+        var existente = CriarOrdemServico(status: StatusOrdemServico.Recebida);
+        existente.DataAlteracaoStatus = DateTime.UtcNow.AddMinutes(-30);
+
+        var atualizacao = CriarOrdemServico(status: StatusOrdemServico.Recebida);
+
+        _ordemServicoRepositoryMock.Setup(r => r.ObterPorIdAsync("1")).ReturnsAsync(existente);
+        _veiculoRepositoryMock.Setup(r => r.ObterPorIdAsync("1")).ReturnsAsync(CriarVeiculo());
+        _ordemServicoRepositoryMock
+            .Setup(r => r.AtualizarAsync(It.IsAny<OrdemServico>()))
+            .ReturnsAsync((OrdemServico os) => os);
+
+        // Act
+        var resultado = await _sut.AtualizarAsync(atualizacao);
+
+        // Assert
+        Assert.Equal(StatusOrdemServico.EmDiagnostico, resultado.Status);
+        _monitoramentoMock.Verify(m => m.RegistrarMudancaStatus(
+            It.IsAny<OrdemServico>(),
+            StatusOrdemServico.Recebida,
+            It.Is<TimeSpan>(t => t.TotalMinutes >= 29 && t.TotalMinutes <= 31)), Times.Once);
+    }
+
+    [Fact]
+    public async Task FinalizarAsync_QuandoRepositorioFalha_DeveRegistrarFalhaDeProcessamento()
+    {
+        // Arrange
+        var os = CriarOrdemServico(status: StatusOrdemServico.EmExecucao);
+        var falhaBanco = new TimeoutException("Timeout ao gravar a OS");
+
+        _ordemServicoRepositoryMock.Setup(r => r.ObterPorIdAsync("1")).ReturnsAsync(os);
+        _ordemServicoRepositoryMock.Setup(r => r.AtualizarAsync(It.IsAny<OrdemServico>())).ThrowsAsync(falhaBanco);
+
+        // Act
+        await Assert.ThrowsAsync<TimeoutException>(() => _sut.FinalizarAsync(1));
+
+        // Assert
+        _monitoramentoMock.Verify(m => m.RegistrarFalhaProcessamento("Finalizar", 1, falhaBanco), Times.Once);
+        _monitoramentoMock.Verify(m => m.RegistrarMudancaStatus(
+            It.IsAny<OrdemServico>(), It.IsAny<StatusOrdemServico>(), It.IsAny<TimeSpan>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task IniciarDiagnosticoAsync_QuandoTransicaoInvalida_DeveRegistrarFalhaParaClassificacao()
+    {
+        // Arrange
+        var os = CriarOrdemServico(status: StatusOrdemServico.EmExecucao);
+        _ordemServicoRepositoryMock.Setup(r => r.ObterPorIdAsync("1")).ReturnsAsync(os);
+
+        // Act
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.IniciarDiagnosticoAsync(1));
+
+        // Assert
+        _monitoramentoMock.Verify(m => m.RegistrarFalhaProcessamento(
+            "IniciarDiagnostico", 1, It.IsAny<InvalidOperationException>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task IniciarDiagnosticoAsync_QuandoEmailFalha_DeveRegistrarFalhaDeIntegracaoSemInterromperATransicao()
+    {
+        // Arrange
+        var os = CriarOrdemServico(status: StatusOrdemServico.Recebida);
+        os.Cliente = new Cliente { Id = 1, Nome = "Fernanda Lima", Email = "fernanda@email.com", CpfCnpj = "52998224725", Ativo = true };
+        var falhaSmtp = new IOException("SMTP indisponível");
+
+        _ordemServicoRepositoryMock.Setup(r => r.ObterPorIdAsync("1")).ReturnsAsync(os);
+        _ordemServicoRepositoryMock.Setup(r => r.AtualizarAsync(It.IsAny<OrdemServico>())).ReturnsAsync(os);
+        _emailServiceMock
+            .Setup(e => e.EnviarEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ThrowsAsync(falhaSmtp);
+
+        // Act
+        var resultado = await _sut.IniciarDiagnosticoAsync(1);
+
+        // Assert
+        Assert.Equal(StatusOrdemServico.EmDiagnostico, resultado.Status);
+        _monitoramentoMock.Verify(m => m.RegistrarFalhaIntegracao("Email", "NotificacaoStatus", falhaSmtp), Times.Once);
     }
 
     #endregion

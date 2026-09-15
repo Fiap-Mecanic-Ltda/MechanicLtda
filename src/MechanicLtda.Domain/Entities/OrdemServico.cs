@@ -16,6 +16,13 @@ namespace MechanicLtda.Domain.Entities
 
         public DateTime? DataFimExecucao { get; set; }
 
+        /// <summary>
+        /// Quando a OS entrou no status atual (UTC). Permite medir quanto tempo ela ficou em
+        /// cada etapa — Diagnóstico, Execução, Finalização — e não só o intervalo de execução.
+        /// Nulo nas OS criadas antes desta coluna existir; nelas a referência é DataCriacao.
+        /// </summary>
+        public DateTime? DataAlteracaoStatus { get; set; }
+
         [Required]
         public StatusOrdemServico Status { get; set; } = StatusOrdemServico.Recebida;
 
