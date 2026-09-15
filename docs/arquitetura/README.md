@@ -49,3 +49,6 @@ Registro curto das decisões permanentes: contexto, decisão e consequências.
 
 - [Plano de desenvolvimento do API Gateway](../api-gateway/plano-api-gateway.md) — fases, rotas,
   contrato do token, riscos e custos.
+- [Coleção Postman](../postman/README.md) — autenticação, rotas protegidas e fluxo da ordem de
+  serviço pelo gateway, com testes.
+- [Entrega da fase](../entrega/README.md) — roteiro do vídeo e gerador do PDF de entrega.
