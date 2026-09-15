@@ -91,6 +91,9 @@ namespace MechanicLtda.API.Controllers
         {
             try
             {
+                if (!PodeAcessarCliente(clienteId))
+                    return ClienteSemPermissao();
+
                 return CustomResponse(await _ordemServicoAppService.ObterPorClienteIdAsync(clienteId));
             }
             catch (Exception ex)

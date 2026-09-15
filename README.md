@@ -173,14 +173,23 @@ Configure a string de conexão, os metadados do JWT e a chave de criptografia em
   },
   "JwtSettings": {
     "Issuer": "MechanicLtda.API",
+    "IssuerCpf": "MechanicLtda.Auth.Cpf",
     "Audience": "MechanicLtda.Clients",
     "ExpiracaoMinutos": 60
   },
   "Encryption": {
-    "CpfCnpjKey": "sua-chave-de-criptografia-com-no-minimo-32-caracteres"
+    "CpfCnpjKey": "sua-chave-de-criptografia-com-no-minimo-32-caracteres",
+    "CpfCnpjHashKey": "sua-chave-de-hash-com-no-minimo-32-caracteres"
   }
 }
 ```
+
+| Chave | Uso |
+|---|---|
+| `JwtSettings:Issuer` | Emissor dos tokens gerados pelo login por e-mail e senha |
+| `JwtSettings:IssuerCpf` | Emissor aceito para os tokens da Function serverless de autenticação por CPF |
+| `Encryption:CpfCnpjKey` | Criptografia do CPF/CNPJ no banco |
+| `Encryption:CpfCnpjHashKey` | Chave do índice cego (HMAC) que permite localizar o cliente pelo CPF — precisa ser **a mesma** configurada na Lambda, senão a autenticação por CPF não encontra o cliente. Também pode vir da variável de ambiente `CPF_HASH_KEY` |
 
 A chave usada para assinar e validar tokens JWT é lida da variável de ambiente `JWT_SECRET_KEY`:
 
@@ -200,6 +209,7 @@ Crie um arquivo `.env` na raiz do projeto:
 SA_PASSWORD=SuaSenhaForte@123
 JWT_SECRET_KEY=sua-chave-jwt-secreta-com-no-minimo-32-caracteres
 ENCRYPTION_KEY=sua-chave-de-criptografia-com-no-minimo-32-caracteres
+CPF_HASH_KEY=sua-chave-de-hash-com-no-minimo-32-caracteres
 ```
 
 | Variável | Uso |
@@ -207,6 +217,7 @@ ENCRYPTION_KEY=sua-chave-de-criptografia-com-no-minimo-32-caracteres
 | `SA_PASSWORD` | Senha do usuário `sa` do SQL Server |
 | `JWT_SECRET_KEY` | Chave secreta para assinatura e validação dos tokens JWT |
 | `ENCRYPTION_KEY` | Chave de criptografia dos campos CPF/CNPJ |
+| `CPF_HASH_KEY` | Chave do índice cego (HMAC) do CPF/CNPJ, compartilhada com a Lambda de autenticação |
 
 > Nunca commite o arquivo `.env`.
 
@@ -306,7 +317,7 @@ Todos os endpoints exigem autenticação, exceto `POST /api/auth/login`.
 |---|---|
 | `Administrador` | Gestão completa, incluindo usuários |
 | `Funcionario` | Fluxos operacionais de clientes, veículos, estoque, ordens, itens e orçamentos |
-| `Cliente` | Consulta de progresso das próprias ordens de serviço |
+| `Cliente` | Consulta de progresso das próprias ordens de serviço, com o token emitido pela autenticação por CPF (que carrega o claim `clienteId`) |
 
 ## Endpoints
 
@@ -427,6 +438,11 @@ Os orçamentos são gerados e atualizados automaticamente ao adicionar, atualiza
 ## Validações e Segurança
 
 - CPF/CNPJ de clientes é validado na API e criptografado no banco via `CpfCnpjEncryptionConverter`.
+- Além do valor cifrado, o cliente guarda o **índice cego** `CpfCnpjHash` (HMAC-SHA256 dos dígitos). É o que a Function serverless de autenticação usa para localizar o cliente pelo CPF sem descriptografar a coluna — que, por usar IV aleatório, não é pesquisável por igualdade. Ver [ADR-003](docs/adr/ADR-003-indice-cego-cpf.md).
+- A API aceita tokens de **dois emissores**: o próprio login por e-mail e senha e a Function serverless de autenticação por CPF (`JwtSettings:IssuerCpf`), ambos assinados com a mesma chave simétrica.
+- Rotas por cliente (`GET /api/ordemservico/cliente/{clienteId}`) verificam a **posse do recurso**: com role `Cliente`, o `clienteId` da rota precisa ser o do claim `clienteId` do token, senão a resposta é `403`. Ver [ADR-002](docs/adr/ADR-002-autorizacao-em-duas-camadas.md).
+- As rotas são geradas em minúsculas (`LowercaseUrls`), porque o roteamento do API Gateway é case-sensitive.
+- Requisições vindas do API Gateway trazem `X-Correlation-Id`; o middleware de correlação coloca esse id no escopo de log e o devolve na resposta.
 - Placas aceitam o formato antigo (`ABC1234`) e Mercosul (`ABC1D23`).
 - Tokens JWT incluem claims de identificação, e-mail, nome de usuário, tipo de usuário e roles.
 - A chave `JWT_SECRET_KEY` deve existir no ambiente de execução para geração e validação de tokens.

@@ -1,3 +1,10 @@
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuracao
+@{
+    // Com a API atrás do API Gateway, o Swagger fica na URL pública do gateway
+    // (AppSettings:UrlSwaggerApi). Sem essa configuração, o link continua
+    // montado a partir da porta 8080 do mesmo host, como no docker-compose.
+    var urlSwaggerApi = Configuracao["AppSettings:UrlSwaggerApi"];
+}
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -36,7 +43,7 @@
         // resolveria contra a origem do próprio Web (porta 8090, sem Swagger),
         // não da API - por isso o link é montado em runtime a partir do
         // hostname atual, trocando só a porta.
-        document.getElementById('swagger-link').href =
+        document.getElementById('swagger-link').href = @Json.Serialize(urlSwaggerApi) ||
             window.location.protocol + '//' + window.location.hostname + ':8080/swagger';
     </script>
 

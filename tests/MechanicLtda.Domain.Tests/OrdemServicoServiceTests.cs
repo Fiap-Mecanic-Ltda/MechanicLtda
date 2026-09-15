@@ -353,6 +353,52 @@ public class OrdemServicoServiceTests
     }
 
     [Fact]
+    public async Task AguardarAprovacaoAsync_DeveEnviarLinksDeAprovacaoEmMinusculas()
+    {
+        // O roteamento do API Gateway diferencia maiúsculas: a rota pública é
+        // /api/aprovacaoordemservico/{token}/... Um link em PascalCase cairia na
+        // rota protegida e o cliente receberia 401 ao clicar no e-mail.
+
+        // Arrange
+        var configuracao = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["AppSettings:BaseUrlAprovacao"]             = "https://gateway.exemplo.com/",
+                ["AppSettings:AprovacaoTokenExpiracaoHoras"] = "72"
+            })
+            .Build();
+
+        var sut = new OrdemServicoService(
+            _loggerMock.Object,
+            configuracao,
+            _notificadorMock.Object,
+            _ordemServicoRepositoryMock.Object,
+            _veiculoRepositoryMock.Object,
+            _ordemServicoAprovacaoTokenRepositoryMock.Object,
+            _emailServiceMock.Object);
+
+        var os = CriarOrdemServico(status: StatusOrdemServico.EmDiagnostico);
+        os.Cliente = new Cliente { Id = 1, Nome = "Fernanda Lima", Email = "fernanda@email.com", CpfCnpj = "52998224725", Ativo = true };
+
+        _ordemServicoRepositoryMock.Setup(r => r.ObterPorIdAsync("1")).ReturnsAsync(os);
+        _ordemServicoRepositoryMock.Setup(r => r.AtualizarAsync(It.IsAny<OrdemServico>())).ReturnsAsync(os);
+
+        var corpos = new List<string>();
+        _emailServiceMock
+            .Setup(e => e.EnviarEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Callback<string, string, string, string>((_, _, _, corpo) => corpos.Add(corpo))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await sut.AguardarAprovacaoAsync(1);
+
+        // Assert
+        var corpoAprovacao = Assert.Single(corpos, c => c.Contains("/aprovar"));
+        Assert.Contains("https://gateway.exemplo.com/api/aprovacaoordemservico/", corpoAprovacao);
+        Assert.DoesNotContain("AprovacaoOrdemServico", corpoAprovacao);
+    }
+
+    [Fact]
     public async Task AguardarAprovacaoAsync_QuandoOSNaoEmDiagnostico_DeveLancarInvalidOperationException()
     {
         // Arrange

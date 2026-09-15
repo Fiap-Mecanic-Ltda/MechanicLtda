@@ -217,8 +217,13 @@ namespace MechanicLtda.Domain.Services
                 var baseUrl = _configuration["AppSettings:BaseUrlAprovacao"]?.TrimEnd('/')
                     ?? throw new InvalidOperationException("AppSettings:BaseUrlAprovacao não configurado.");
 
-                var linkAprovar = $"{baseUrl}/api/AprovacaoOrdemServico/{token.Token}/aprovar";
-                var linkRecusar = $"{baseUrl}/api/AprovacaoOrdemServico/{token.Token}/recusar";
+                // Caminho em minúsculas de propósito: no API Gateway o roteamento
+                // diferencia maiúsculas, e a rota pública é
+                // "GET /api/aprovacaoordemservico/{token}/aprovar". Com
+                // "AprovacaoOrdemServico" o link cairia em "ANY /api/{proxy+}",
+                // que exige token, e o cliente receberia 401 ao clicar no e-mail.
+                var linkAprovar = $"{baseUrl}/api/aprovacaoordemservico/{token.Token}/aprovar";
+                var linkRecusar = $"{baseUrl}/api/aprovacaoordemservico/{token.Token}/recusar";
 
                 var corpoHtml = $"""
                     <p>Olá, {ordemServico.Cliente.Nome}.</p>

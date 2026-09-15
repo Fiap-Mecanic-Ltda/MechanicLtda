@@ -10,14 +10,17 @@ namespace MechanicLtda.Domain.Services
     public class ClienteService : BaseService, IClienteService
     {
         private readonly IClienteRepository _clienteRepository;
+        private readonly IDocumentoHashService _documentoHashService;
         private readonly ILogger<ClienteService> _logger;
 
         public ClienteService(ILogger<ClienteService> logger,
                               IConfiguration configuration,
                               INotificadorService notificadorService,
-                              IClienteRepository clienteRepository) : base(notificadorService, configuration)
+                              IClienteRepository clienteRepository,
+                              IDocumentoHashService documentoHashService) : base(notificadorService, configuration)
         {
             _clienteRepository = clienteRepository;
+            _documentoHashService = documentoHashService;
             _logger = logger;
         }
 
@@ -35,6 +38,7 @@ namespace MechanicLtda.Domain.Services
                     Email = email,
                     Telefone = telefone,
                     CpfCnpj = cpfCnpj,
+                    CpfCnpjHash = _documentoHashService.GerarHash(cpfCnpj),
                     Ativo = true,
                     DataCriacao = DateTime.Now
                 };
@@ -61,6 +65,10 @@ namespace MechanicLtda.Domain.Services
 
                 cliente.DataCriacao = existente.DataCriacao;
                 cliente.DataModificacao = DateTime.UtcNow;
+
+                // Índice cego recalculado junto com o documento: se o CPF/CNPJ muda, o hash
+                // precisa acompanhar, senão a autenticação por CPF passa a não achar o cliente.
+                cliente.CpfCnpjHash = _documentoHashService.GerarHash(cliente.CpfCnpj);
 
                 return await _clienteRepository.AtualizarAsync(cliente);
             }

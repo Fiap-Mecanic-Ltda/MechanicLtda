@@ -20,6 +20,15 @@ namespace MechanicLtda.Domain.Entities
         [MaxLength(14)]
         public string CpfCnpj { get; set; }
 
+        /// <summary>
+        /// Índice cego do CPF/CNPJ (HMAC-SHA256 dos dígitos, em hexadecimal).
+        /// Existe porque CpfCnpj é cifrado com IV aleatório e não pode ser pesquisado por
+        /// igualdade: a autenticação por CPF localiza o cliente por este campo.
+        /// Nulo apenas em linhas gravadas antes do backfill.
+        /// </summary>
+        [MaxLength(64)]
+        public string? CpfCnpjHash { get; set; }
+
         [Required]
         public bool Ativo { get; set; }
 
