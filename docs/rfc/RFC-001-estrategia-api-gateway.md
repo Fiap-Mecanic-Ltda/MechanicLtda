@@ -2,8 +2,8 @@
 
 | Campo | Valor |
 |---|---|
-| Status | Proposto |
-| Data | 2026-09-12 |
+| Status | Aceito — revisado após a implementação (ver seção 9) |
+| Data | 2026-09-12 (revisão em 2026-09-13) |
 | Autores | Time MechanicLtda (13SOAT) |
 | Fase | Tech Challenge — Fase 3 |
 | Repositórios afetados | MechanicLtda (aplicação), InfraKubernete, Lambda |
@@ -93,7 +93,28 @@ Adotar o **AWS API Gateway (HTTP API)** como ponto único de entrada, integrado 
 
 ## 8. Pendências para decisão do time
 
-1. Homologação: stack completa separada ou cluster e banco compartilhados com namespaces?
-2. O Web (Razor, porta `8090`) entra atrás do gateway nesta entrega?
-3. O cliente autenticado por CPF poderá abrir ordem de serviço ou apenas consultar?
-4. Domínio próprio com certificado ACM?
+| Pendência | Situação |
+|---|---|
+| Homologação: stack separada ou namespaces no mesmo cluster? | **Decidido:** sem ambiente de homologação na AWS — [ADR-009](../adr/ADR-009-sem-ambiente-de-homologacao.md) |
+| O Web (Razor, porta `8090`) entra atrás do gateway nesta entrega? | Em aberto. O Web continua publicado direto |
+| O cliente autenticado por CPF poderá abrir ordem de serviço ou apenas consultar? | **Decidido:** apenas consultar as próprias OS — [RFC-004](RFC-004-estrategia-de-autenticacao.md) |
+| Domínio próprio com certificado ACM? | Em aberto. O projeto usa o endpoint padrão do API Gateway |
+
+## 9. Revisão após a implementação
+
+A decisão central — HTTP API, VPC Link, ALB interno, Lambda authorizer e backend privado — foi
+implementada como proposta. Mudou a distribuição entre repositórios e alguns detalhes:
+
+| Proposto nesta RFC | Implementado | Motivo |
+|---|---|---|
+| HTTP API, VPC Link e rotas no **InfraKubernete** | No repositório **Lambda** | O repositório Lambda já tinha um HTTP API publicando `POST /auth/login`. As rotas da aplicação, o VPC Link e o authorizer entraram no mesmo gateway, com uma única URL. O InfraKubernete provê o ALB interno, as sub-redes de aplicação e os outputs lidos por `terraform_remote_state` ([ADR-008](../adr/ADR-008-quatro-repositorios.md)) |
+| Duas funções: `auth-cpf` e `jwt-authorizer` | Uma função de autenticação com duas rotas (`/auth/cpf` e `/auth/login`) e um authorizer, no mesmo pacote com handlers diferentes | A função existente autenticava e-mail e senha; o fluxo por CPF entrou como segunda rota, evitando um segundo cold start e um segundo conjunto de segredos |
+| Resposta de `/auth/cpf` com `tokenType` e `expiresIn` | `{ token, expiracao, cliente }`, erro em `mensagem` | Mesmo formato do `/auth/login` que já existia |
+| Login somente leitura no banco para a Lambda (InfraSGBD) | Não implementado; a Lambda usa a connection string existente | Registrado como ajuste recomendado no [documento do banco](../arquitetura/03-banco-de-dados.md) |
+| Regra de entrada na porta 1433 no InfraSGBD | Criada no repositório da Lambda | Evita dependência circular: o banco não precisa saber que a Lambda existe |
+| Alarmes no InfraKubernete | Alarmes do gateway e das Lambdas no repositório Lambda (CloudWatch); alertas da aplicação e do cluster no New Relic, no InfraKubernete | Cada alarme fica junto do recurso que monitora ([ADR-010](../adr/ADR-010-observabilidade-new-relic.md)) |
+
+Dois problemas só apareceram na implementação e foram corrigidos na aplicação: os links de
+aprovação por e-mail usavam `/api/AprovacaoOrdemServico`, que o roteamento do gateway, sensível a
+maiúsculas, mandaria para a rota protegida; e o link "API" do Web apontava para a porta 8080, que
+deixa de responder depois da virada.

@@ -18,7 +18,7 @@ nem `k8s/`), então as fases se distribuem assim:
 | 4 · Ajustes na aplicação | **MechanicLtda** (este repositório) | implementada em `feature/auth-cpf-api-gateway` |
 | 5 · Observabilidade (New Relic) | MechanicLtda, InfraKubernete e Lambda | implementada em `feature/observabilidade-new-relic` (aplicação) e `feature/observabilidade-e-cicd` (InfraKubernete e Lambda) |
 | 6 · CI/CD (sem ambiente de homologação) | todos os repositórios | implementada em `feature/ci-cd-branches` (aplicação), `feature/observabilidade-e-cicd` (InfraKubernete e Lambda) e `feature/ci-cd-deploy-automatico` (InfraSGBD) |
-| 7 · Documentação e vídeo | **MechanicLtda** | parcial (RFC/ADR prontos) |
+| 7 · Documentação e vídeo | **MechanicLtda** | documentação da arquitetura em `docs/arquitetura` (`feature/documentacao-arquitetura`): diagramas, banco de dados, RFC-001 a 004 e ADR-001 a 011; faltam coleção Postman, vídeo e PDF de entrega |
 
 **Decisões do time registradas na implementação das Fases 5 e 6:**
 
