@@ -3,6 +3,9 @@ using MechanicLtda.Web.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Logs em JSON fora do ambiente de desenvolvimento (mesmo formato da API).
+builder.AddLogsEstruturados();
+
 if (builder.Environment.IsDevelopment())
 {
     builder.Configuration.AddUserSecrets<Program>();

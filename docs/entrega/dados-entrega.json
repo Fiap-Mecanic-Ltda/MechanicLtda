@@ -1,0 +1,14 @@
+{
+  "grupo": "",
+  "integrantes": [
+    { "nome": "", "rm": "" }
+  ],
+  "videoUrl": "",
+  "gatewayUrl": "",
+  "soatArchitecture": {
+    "MechanicLtda": { "confirmado": false, "data": "" },
+    "Lambda": { "confirmado": false, "data": "" },
+    "InfraKubernete": { "confirmado": false, "data": "" },
+    "InfraSGBD": { "confirmado": false, "data": "" }
+  }
+}

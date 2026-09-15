@@ -1,5 +1,6 @@
 using MechanicLtda.Application.AppServices;
 using MechanicLtda.Application.AppServices.Interfaces;
+using MechanicLtda.Application.Security;
 using MechanicLtda.Domain.Interfaces.Repositories;
 using MechanicLtda.Domain.Interfaces.Services;
 using MechanicLtda.Domain.Services;
@@ -29,6 +30,13 @@ namespace MechanicLtda.Bootstrap.Extensions
 
             // Serviços de Infraestrutura
             services.AddScoped<IEmailService, EmailService>();
+
+            // Observabilidade: eventos de negócio para o New Relic. Singleton porque não
+            // guarda estado — só repassa para o agente.
+            services.AddSingleton<IMonitoramentoService, NewRelicMonitoramentoService>();
+
+            // Segurança: índice cego do CPF/CNPJ (usado pela autenticação por CPF)
+            services.AddScoped<IDocumentoHashService, DocumentoHashService>();
 
             // Domain Services
             services.AddScoped<IUsuarioService, UsuarioService>();

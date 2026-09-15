@@ -16,6 +16,7 @@ copilot-chat/
 .copilot-chat/
 design/
 graphify-out/
+TestResults/
 
 # Secrets and sensitive configuration
 appsettings.*.json
@@ -30,12 +31,3 @@ secrets/
 .env
 /env .env
 
-# Terraform
-infra/.terraform/
-infra/*.tfstate
-infra/*.tfstate.*
-infra/crash.log*
-infra/*.tfvars
-!infra/terraform.tfvars.example
-infra/tfplan
-infra/*.tfplan

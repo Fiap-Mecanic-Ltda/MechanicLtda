@@ -38,6 +38,10 @@ namespace MechanicLtda.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<string>("CpfCnpjHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<DateTime>("DataCriacao")
                         .HasColumnType("datetime2");
 
@@ -59,6 +63,10 @@ namespace MechanicLtda.Infrastructure.Migrations
                         .HasColumnType("nvarchar(20)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CpfCnpjHash")
+                        .IsUnique()
+                        .HasFilter("[CpfCnpjHash] IS NOT NULL");
 
                     b.ToTable("Clientes");
                 });
@@ -178,6 +186,9 @@ namespace MechanicLtda.Infrastructure.Migrations
 
                     b.Property<int>("ClienteId")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("DataAlteracaoStatus")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("DataCriacao")
                         .HasColumnType("datetime2");
