@@ -5,6 +5,9 @@ using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Logs em JSON (com o CorrelationId nos escopos) fora do ambiente de desenvolvimento.
+builder.AddLogsEstruturados();
+
 // Add User Secrets in development environment
 if (builder.Environment.IsDevelopment())
 {

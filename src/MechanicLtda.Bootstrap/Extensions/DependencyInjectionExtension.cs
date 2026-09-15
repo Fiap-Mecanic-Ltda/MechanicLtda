@@ -31,6 +31,10 @@ namespace MechanicLtda.Bootstrap.Extensions
             // Serviços de Infraestrutura
             services.AddScoped<IEmailService, EmailService>();
 
+            // Observabilidade: eventos de negócio para o New Relic. Singleton porque não
+            // guarda estado — só repassa para o agente.
+            services.AddSingleton<IMonitoramentoService, NewRelicMonitoramentoService>();
+
             // Segurança: índice cego do CPF/CNPJ (usado pela autenticação por CPF)
             services.AddScoped<IDocumentoHashService, DocumentoHashService>();
 

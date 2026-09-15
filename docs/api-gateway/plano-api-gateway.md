@@ -16,9 +16,21 @@ nem `k8s/`), então as fases se distribuem assim:
 | 2 · API Gateway (rotas da aplicação, VPC Link, throttling, access log) | [Lambda](https://github.com/Fiap-Mecanic-Ltda/Lambda) | implementada em `feature/auth-cpf-e-rotas-protegidas` |
 | 3 · Autenticação por CPF e Lambda authorizer | [Lambda](https://github.com/Fiap-Mecanic-Ltda/Lambda) | implementada em `feature/auth-cpf-e-rotas-protegidas` |
 | 4 · Ajustes na aplicação | **MechanicLtda** (este repositório) | implementada em `feature/auth-cpf-api-gateway` |
-| 5 · Observabilidade do gateway (alarmes e painel) | [InfraKubernete](https://github.com/Fiap-Mecanic-Ltda/InfraKubernete) | a fazer |
-| 6 · CI/CD e ambientes | todos os repositórios | a fazer |
+| 5 · Observabilidade (New Relic) | MechanicLtda, InfraKubernete e Lambda | implementada em `feature/observabilidade-new-relic` (aplicação) e `feature/observabilidade-e-cicd` (InfraKubernete e Lambda) |
+| 6 · CI/CD (sem ambiente de homologação) | todos os repositórios | implementada em `feature/ci-cd-branches` (aplicação), `feature/observabilidade-e-cicd` (InfraKubernete e Lambda) e `feature/ci-cd-deploy-automatico` (InfraSGBD) |
 | 7 · Documentação e vídeo | **MechanicLtda** | parcial (RFC/ADR prontos) |
+
+**Decisões do time registradas na implementação das Fases 5 e 6:**
+
+- **Sem ambiente de homologação na AWS.** As branches de homologação (e `desenvolvimento`, na
+  aplicação) rodam build, testes e `plan`; só a `main` aplica e faz deploy, automaticamente. Todo
+  apply roda no Environment `production`, onde revisores obrigatórios podem aprovar depois do
+  `plan`.
+- **New Relic** como ferramenta de observabilidade: agente APM .NET nas imagens, eventos de
+  negócio (`OrdemServicoEvento`, `OrdemServicoFalha`, `FalhaIntegracao`), integração Kubernetes
+  pelo HelmChart do k3s, e alertas, painel e monitor sintético como código em
+  `InfraKubernete/observability`. O API Gateway e as Lambdas têm alarmes no CloudWatch, porque
+  só aparecem no New Relic com a integração AWS da conta.
 
 Duas correções em relação ao plano original, feitas na implementação:
 
