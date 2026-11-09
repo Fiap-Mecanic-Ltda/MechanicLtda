@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Aplica a proteção de branches exigida pelo Tech Challenge nos quatro
-# repositórios do projeto: nada de commit direto, merge só por Pull Request
+# Aplica a proteção de branches exigida pelo Tech Challenge nos repositórios
+# do projeto (inclusive os três do OS Service da Fase 4): nada de commit direto, merge só por Pull Request
 # aprovado e, onde o CI roda em todo PR, checks obrigatórios.
 #
 # Pré-requisitos: GitHub CLI instalado e autenticado com uma conta ADMIN da
@@ -80,8 +80,20 @@ proteger InfraKubernete homolog
 proteger InfraSGBD      main
 proteger InfraSGBD      homologacao
 
+# Fase 4: OS Service. "Build da imagem Docker" só roda em PR (no push da main o
+# job é o de publicação no ECR), então é exigido como check do PR.
+proteger OrdemServico-service         main            "Build e testes" "Build da imagem Docker"
+proteger OrdemServico-service         homologacao     "Build e testes" "Build da imagem Docker"
+proteger OrdemServico-service         desenvolvimento "Build e testes" "Build da imagem Docker"
+
+proteger OrdemServico-InfraKubernete  main
+proteger OrdemServico-InfraKubernete  homologacao
+
+proteger OrdemServico-InfraSGBD       main
+proteger OrdemServico-InfraSGBD       homologacao
+
 if [ "$CONVIDAR_SOAT" = true ]; then
-  for repo in MechanicLtda Lambda InfraKubernete InfraSGBD; do
+  for repo in MechanicLtda Lambda InfraKubernete InfraSGBD OrdemServico-service OrdemServico-InfraKubernete OrdemServico-InfraSGBD; do
     if gh api -X PUT "repos/$ORG/$repo/collaborators/soat-architecture" -f permission=pull >/dev/null 2>/tmp/protecao-erro; then
       echo "ok     convite de leitura para soat-architecture em $repo"
     else
