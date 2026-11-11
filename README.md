@@ -4,6 +4,23 @@ Sistema de gestão para uma oficina mecânica (ordens de serviço, veículos, cl
 orçamentos), desenvolvido em **.NET 9** seguindo princípios de DDD, Clean Architecture e
 Clean Code.
 
+## Documentação da arquitetura
+
+A documentação arquitetural da Fase 3 está em [`docs/arquitetura`](docs/arquitetura/README.md).
+Os diagramas são Mermaid e o GitHub os renderiza direto no navegador.
+
+| Item | Documento |
+|---|---|
+| Diagrama de componentes — nuvem, APIs, banco e monitoramento | [01 — Diagrama de componentes](docs/arquitetura/01-diagrama-de-componentes.md) |
+| Diagramas de sequência — autenticação e abertura de ordem de serviço | [02 — Diagramas de sequência](docs/arquitetura/02-diagramas-de-sequencia.md) |
+| Justificativa do banco, ajustes no modelo relacional, diagrama ER e relacionamentos | [03 — Banco de dados](docs/arquitetura/03-banco-de-dados.md) |
+| RFCs — nuvem, banco de dados, autenticação e API Gateway | [`docs/rfc`](docs/rfc) |
+| ADRs — padrão de comunicação, HPA e outras nove decisões permanentes | [`docs/adr`](docs/adr) |
+
+Também em `docs/`: a [coleção Postman](docs/postman/README.md) do fluxo pelo gateway, o
+[plano do API Gateway](docs/api-gateway/plano-api-gateway.md) e a
+[entrega da fase](docs/entrega/README.md) — roteiro do vídeo e gerador do PDF.
+
 ## Repositórios do projeto
 
 O projeto é distribuído em **quatro repositórios**, cada um com a sua própria esteira de CI/CD:
@@ -19,21 +36,29 @@ O contrato entre este repositório e os demais é o **ECR**: aqui as imagens sã
 (`mechanicltda-api` / `mechanicltda-web`, com as tags `latest` e o SHA do commit) e o deploy no
 cluster é feito pelo workflow do repositório de infra de Kubernetes.
 
-## Sobre esta fase (Tech Challenge — Fase 2)
+## Sobre esta fase (Tech Challenge — Fase 3)
 
-A Fase 1 entregou a API de gestão da oficina. Esta fase evolui essa base para suportar alta
-disponibilidade e volume de pico, sem alterar as regras de negócio já existentes:
+A Fase 1 entregou a API de gestão da oficina e a Fase 2 a levou para a AWS: containerizada,
+orquestrada em Kubernetes com HPA, provisionada por Terraform e publicada por uma esteira de
+CI/CD. Esta fase fecha o ambiente atrás de um ponto único de entrada, tira a autenticação do
+cliente de dentro do cluster e torna o sistema observável:
 
-- **Escalabilidade e resiliência**: containerização com Docker, orquestração em Kubernetes com
-  Horizontal Pod Autoscaler (HPA) por CPU/memória.
-- **Infraestrutura como código**: todo o ambiente (rede, banco, containers, registry, IAM) é
-  provisionado via Terraform, sem passos manuais no console da AWS.
-- **Automação do provisionamento e do deploy**: pipeline de CI/CD (GitHub Actions) cobrindo
-  build, testes, build/push da imagem Docker e deploy no cluster Kubernetes a cada push na
-  `main`.
-- **Novas funcionalidades na Ordem de Serviço**: aprovação/recusa de orçamento por link de
-  e-mail, notificação automática de mudança de status por e-mail, e listagem com ordenação por
-  prioridade de status e exclusão lógica das OS já concluídas.
+- **API Gateway como única porta de entrada**: o AWS API Gateway (HTTP API) recebe o tráfego em
+  HTTPS e alcança o cluster por VPC Link e ALB interno, com throttling e access log por rota — os
+  nós deixam de responder direto na internet. Ver
+  [ADR-001](docs/adr/ADR-001-api-gateway-http-api.md).
+- **Autenticação serverless por CPF**: uma Lambda valida o CPF, localiza o cliente pelo índice
+  cego e emite o JWT; uma segunda Lambda (*authorizer*) valida o token e filtra a role antes de a
+  requisição chegar ao cluster, e a API ainda confere a posse do recurso. Ver
+  [RFC-004](docs/rfc/RFC-004-estrategia-de-autenticacao.md) e
+  [ADR-002](docs/adr/ADR-002-autorizacao-em-duas-camadas.md).
+- **Banco de dados gerenciado**: SQL Server no RDS, cifrado em repouso, em sub-redes privadas e
+  com backup automático. Ver [RFC-003](docs/rfc/RFC-003-escolha-do-banco-de-dados.md).
+- **Observabilidade ponta a ponta**: APM, logs, traces e eventos de negócio no New Relic, com
+  painel, alertas e monitor sintético; alarmes do CloudWatch na borda serverless. Ver
+  [ADR-010](docs/adr/ADR-010-observabilidade-new-relic.md).
+- **Documentação da arquitetura**: diagramas de componentes e de sequência, modelo de dados,
+  RFCs e ADRs — indexados no início deste README.
 
 ## Arquitetura
 
@@ -132,6 +157,10 @@ mesmo mecanismo usado para qualquer acesso administrativo ao servidor (sem SSH).
 ### Justificativa do SQL Server
 
 O SQL Server foi escolhido por oferecer um banco relacional robusto para o domínio da oficina, em que ordens de serviço, itens, estoque, clientes, veículos, orçamentos e usuários exigem integridade referencial, transações consistentes e consultas estruturadas. A escolha também se encaixa bem com o Entity Framework Core, ASP.NET Core Identity e migrations, reduzindo atrito na evolução do schema e facilitando execução local ou via Docker Compose com SQL Server 2022.
+
+A justificativa formal — por que relacional, por que SQL Server, por que gerenciado e os
+trade-offs aceitos — está em [03 — Banco de dados](docs/arquitetura/03-banco-de-dados.md),
+junto com o diagrama ER e os ajustes feitos no modelo relacional.
 
 ## Modelo de Domínio
 

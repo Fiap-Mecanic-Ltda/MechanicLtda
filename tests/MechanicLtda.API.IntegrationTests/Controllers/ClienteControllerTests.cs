@@ -217,6 +217,36 @@ public class ClienteControllerTests : IClassFixture<CustomWebApplicationFactory>
     }
 
     /// <summary>
+    /// Atualizar mantendo o próprio e-mail. A checagem de e-mail em uso devolve o
+    /// próprio cliente; se essa consulta vier rastreada, o EF Core recusa o Update
+    /// com outra instância do mesmo Id. O caso feliz acima não pega isso porque
+    /// sempre troca o e-mail.
+    /// </summary>
+    [Fact]
+    public async Task PutCliente_MantendoOMesmoEmail_DeveRetornar200()
+    {
+        // Arrange
+        await AutenticarAsync();
+        var email     = $"mesmo.email.{Guid.NewGuid():N}@teste.com";
+        var clienteId = await CriarClienteEObterIdAsync(email);
+
+        var payload = new
+        {
+            nome     = "Cliente Teste",
+            email,
+            cpfCnpj  = "12345678909",
+            telefone = "11999999999",
+            ativo    = true
+        };
+
+        // Act
+        var response = await _client.PutAsJsonAsync($"/api/cliente/{clienteId}", payload);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    /// <summary>
     /// Cobre o branch "if (!ModelState.IsValid) return CustomResponse(ModelState)" em Atualizar.
     /// E-mail inválido viola [EmailAddress].
     /// </summary>
