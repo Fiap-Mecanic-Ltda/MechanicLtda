@@ -9,7 +9,8 @@
 #
 #   bash scripts/proteger-branches.sh                  # aplica
 #   APROVACOES=2 bash scripts/proteger-branches.sh     # exige 2 aprovações
-#   bash scripts/proteger-branches.sh --convidar-soat  # também convida soat-architecture (leitura)
+#   bash scripts/proteger-branches.sh --convidar-soat  # também roda scripts/convidar-soat.sh
+#                                                      (soat-architecture com leitura em todos os repositórios)
 set -uo pipefail
 
 ORG="Fiap-Mecanic-Ltda"
@@ -93,14 +94,7 @@ proteger OrdemServico-InfraSGBD       main
 proteger OrdemServico-InfraSGBD       homologacao
 
 if [ "$CONVIDAR_SOAT" = true ]; then
-  for repo in MechanicLtda Lambda InfraKubernete InfraSGBD OrdemServico-service OrdemServico-InfraKubernete OrdemServico-InfraSGBD; do
-    if gh api -X PUT "repos/$ORG/$repo/collaborators/soat-architecture" -f permission=pull >/dev/null 2>/tmp/protecao-erro; then
-      echo "ok     convite de leitura para soat-architecture em $repo"
-    else
-      echo "FALHOU convite em $repo -> $(tr '\n' ' ' </tmp/protecao-erro)"
-      falhas=$((falhas + 1))
-    fi
-  done
+  bash "$(dirname "$0")/convidar-soat.sh" || falhas=$((falhas + 1))
 fi
 
 if [ "$falhas" -gt 0 ]; then
