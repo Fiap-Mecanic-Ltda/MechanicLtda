@@ -14,8 +14,8 @@ using Xunit;
 namespace MechanicLtda.Application.Tests;
 
 /// <summary>
-/// Substituto control·vel para SignInManager, necess·rio pois o Moq n„o consegue
-/// criar proxies de SignInManager quando o UserManager tambÈm È um proxy (Castle DynamicProxy).
+/// Substituto control√°vel para SignInManager, necess√°rio pois o Moq n√£o consegue
+/// criar proxies de SignInManager quando o UserManager tamb√©m √© um proxy (Castle DynamicProxy).
 /// </summary>
 internal sealed class FakeSignInManager : SignInManager<Usuario>
 {
@@ -46,7 +46,7 @@ public class AuthAppServiceTests
 
     public AuthAppServiceTests()
     {
-        // Define a vari·vel de ambiente necess·ria para GerarTokenAsync
+        // Define a vari√°vel de ambiente necess√°ria para GerarTokenAsync
         Environment.SetEnvironmentVariable("JWT_SECRET_KEY", "chave-secreta-de-teste-super-segura-12345678");
 
         var userStoreMock = new Mock<IUserStore<Usuario>>();

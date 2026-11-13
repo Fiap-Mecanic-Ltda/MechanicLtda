@@ -7,5 +7,7 @@ namespace MechanicLtda.Domain.Interfaces.Repositories
     {
         Task<bool> EmailExisteAsync(string email);
         Task<Cliente?> ObterPorEmailAsync(string email);
+        Task<bool> CpfCnpjHashEmUsoAsync(string cpfCnpjHash, int? ignorarClienteId = null);
+        Task<bool> PossuiVeiculosAsync(int clienteId);
     }
 }

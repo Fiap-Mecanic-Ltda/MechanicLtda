@@ -32,13 +32,17 @@ namespace MechanicLtda.Domain.Services
                 if (emailExiste)
                     throw new InvalidOperationException($"Já existe um cliente com o e-mail '{email}'.");
 
+                var cpfCnpjHash = _documentoHashService.GerarHash(cpfCnpj);
+                if (await _clienteRepository.CpfCnpjHashEmUsoAsync(cpfCnpjHash))
+                    throw new InvalidOperationException("Já existe um cliente com este CPF/CNPJ.");
+
                 var cliente = new Cliente
                 {
                     Nome = nome,
                     Email = email,
                     Telefone = telefone,
                     CpfCnpj = cpfCnpj,
-                    CpfCnpjHash = _documentoHashService.GerarHash(cpfCnpj),
+                    CpfCnpjHash = cpfCnpjHash,
                     Ativo = true,
                     DataCriacao = DateTime.Now
                 };
@@ -69,6 +73,8 @@ namespace MechanicLtda.Domain.Services
                 // Índice cego recalculado junto com o documento: se o CPF/CNPJ muda, o hash
                 // precisa acompanhar, senão a autenticação por CPF passa a não achar o cliente.
                 cliente.CpfCnpjHash = _documentoHashService.GerarHash(cliente.CpfCnpj);
+                if (await _clienteRepository.CpfCnpjHashEmUsoAsync(cliente.CpfCnpjHash, cliente.Id))
+                    throw new InvalidOperationException("Já existe um cliente com este CPF/CNPJ.");
 
                 return await _clienteRepository.AtualizarAsync(cliente);
             }
@@ -111,6 +117,10 @@ namespace MechanicLtda.Domain.Services
             {
                 var existente = await _clienteRepository.ObterPorIdAsync(id)
                     ?? throw new KeyNotFoundException($"Cliente com Id '{id}' não encontrado.");
+
+                if (await _clienteRepository.PossuiVeiculosAsync(existente.Id))
+                    throw new InvalidOperationException(
+                        "O cliente tem veículos cadastrados. Exclua ou transfira os veículos antes, ou inative o cliente.");
 
                 await _clienteRepository.RemoverAsync(id);
             }

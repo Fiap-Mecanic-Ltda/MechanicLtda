@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
 
-namespace MechanicLtda.API.Validations
+namespace MechanicLtda.Application.Validations
 {
     public class CpfCnpjAttribute : ValidationAttribute
     {

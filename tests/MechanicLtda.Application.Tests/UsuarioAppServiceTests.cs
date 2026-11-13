@@ -39,6 +39,7 @@ public class UsuarioAppServiceTests
         {
             UserName = "maria",
             Email    = "maria@email.com",
+            Senha    = "Senha123",
             Tipo     = TipoUsuario.Funcionario
         };
 
@@ -48,6 +49,10 @@ public class UsuarioAppServiceTests
         _serviceMock
             .Setup(s => s.AdicionarAsnyc(dto.UserName, dto.Email, dto.Tipo))
             .ReturnsAsync(usuarioCriado);
+
+        _userManagerMock
+            .Setup(u => u.AddPasswordAsync(usuarioCriado, dto.Senha))
+            .ReturnsAsync(IdentityResult.Success);
 
         _userManagerMock
             .Setup(u => u.AddToRoleAsync(usuarioCriado, It.IsAny<string>()))
@@ -66,6 +71,36 @@ public class UsuarioAppServiceTests
     }
 
     [Fact]
+    public async Task AdicionarAsync_QuandoSenhaVazia_NaoDeveCriarUsuario()
+    {
+        var dto = new UsuarioCreateDto { UserName = "joao", Email = "joao@email.com", Senha = "", Tipo = TipoUsuario.Funcionario };
+
+        var response = await _sut.AdicionarAsync(dto);
+
+        Assert.True(response.hasErrors);
+        _serviceMock.Verify(s => s.AdicionarAsnyc(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<TipoUsuario>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AdicionarAsync_QuandoSenhaRecusadaPeloIdentity_DeveRemoverUsuarioCriado()
+    {
+        var dto = new UsuarioCreateDto { UserName = "joao", Email = "joao@email.com", Senha = "abc", Tipo = TipoUsuario.Funcionario };
+        var usuarioCriado = new Usuario { Id = "u1", UserName = dto.UserName, Email = dto.Email };
+
+        _serviceMock.Setup(s => s.AdicionarAsnyc(dto.UserName, dto.Email, dto.Tipo)).ReturnsAsync(usuarioCriado);
+        _userManagerMock
+            .Setup(u => u.AddPasswordAsync(usuarioCriado, dto.Senha))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Senha fraca" }));
+
+        var response = await _sut.AdicionarAsync(dto);
+
+        Assert.True(response.hasErrors);
+        Assert.Contains("Senha fraca", response.getErrors);
+        _serviceMock.Verify(s => s.RemoverAsync("u1"), Times.Once);
+        _userManagerMock.Verify(u => u.AddToRoleAsync(It.IsAny<Usuario>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
     public async Task AdicionarAsync_QuandoServicoLancaExcecao_DeveRetornarResponseComErro()
     {
         // Arrange
@@ -73,7 +108,7 @@ public class UsuarioAppServiceTests
 
         _serviceMock
             .Setup(s => s.AdicionarAsnyc(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<TipoUsuario>()))
-            .ThrowsAsync(new InvalidOperationException("[show]E-mail j· cadastrado."));
+            .ThrowsAsync(new InvalidOperationException("[show]E-mail j√° cadastrado."));
 
         // Act
         var response = await _sut.AdicionarAsync(dto);
@@ -128,7 +163,7 @@ public class UsuarioAppServiceTests
         _mapperMock.Setup(m => m.Map<Usuario>(dto)).Returns(new Usuario());
         _serviceMock
             .Setup(s => s.AtualizarAsync(It.IsAny<Usuario>()))
-            .ThrowsAsync(new KeyNotFoundException("Usu·rio n„o encontrado."));
+            .ThrowsAsync(new KeyNotFoundException("Usu√°rio n√£o encontrado."));
 
         // Act
         var response = await _sut.AtualizarAsync(id, dto);
@@ -205,7 +240,7 @@ public class UsuarioAppServiceTests
         var id = Guid.NewGuid().ToString();
         _serviceMock
             .Setup(s => s.RemoverAsync(id))
-            .ThrowsAsync(new KeyNotFoundException("Usu·rio n„o encontrado."));
+            .ThrowsAsync(new KeyNotFoundException("Usu√°rio n√£o encontrado."));
 
         // Act
         var response = await _sut.RemoverAsync(id);

@@ -36,7 +36,7 @@ namespace MechanicLtda.API.Controllers
             }
             catch (Exception ex)
             {
-                GravaException(ex, "Falha ao obter veículos", _logger);
+                GravaException(ex, "Falha ao obter veÃ­culos", _logger);
                 return CustomResponse();
             }
         }
@@ -59,7 +59,7 @@ namespace MechanicLtda.API.Controllers
             }
             catch (Exception ex)
             {
-                GravaException(ex, "Falha ao obter veículo", _logger);
+                GravaException(ex, "Falha ao obter veÃ­culo", _logger);
                 return CustomResponse();
             }
         }
@@ -73,7 +73,7 @@ namespace MechanicLtda.API.Controllers
             }
             catch (Exception ex)
             {
-                GravaException(ex, "Falha ao obter veículos do cliente", _logger);
+                GravaException(ex, "Falha ao obter veÃ­culos do cliente", _logger);
                 return CustomResponse();
             }
         }
@@ -99,7 +99,7 @@ namespace MechanicLtda.API.Controllers
             }
             catch (Exception ex)
             {
-                GravaException(ex, "Falha ao criar veículo", _logger);
+                GravaException(ex, "Falha ao criar veÃ­culo", _logger);
                 return CustomResponse();
             }
         }
@@ -117,7 +117,7 @@ namespace MechanicLtda.API.Controllers
             }
             catch (Exception ex)
             {
-                GravaException(ex, "Falha ao atualizar veículo", _logger);
+                GravaException(ex, "Falha ao atualizar veÃ­culo", _logger);
                 return CustomResponse();
             }
         }
@@ -131,7 +131,7 @@ namespace MechanicLtda.API.Controllers
             }
             catch (Exception ex)
             {
-                GravaException(ex, "Falha ao remover veículo", _logger);
+                GravaException(ex, "Falha ao remover veÃ­culo", _logger);
                 return CustomResponse();
             }
         }
