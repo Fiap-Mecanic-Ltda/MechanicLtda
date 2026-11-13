@@ -1,3 +1,4 @@
+@inject Microsoft.Extensions.Options.IOptions<MechanicLtda.Web.Integracoes.IntegracoesOptions> Integracoes
 @inject Microsoft.Extensions.Configuration.IConfiguration Configuracao
 @{
     // Com a API atrás do API Gateway, o Swagger fica na URL pública do gateway
@@ -24,6 +25,10 @@
                 <a asp-controller="OrdensServico" asp-action="Index">Ordens</a>
                 <a asp-controller="ServicosOficina" asp-action="Index">Serviços</a>
                 <a asp-controller="Estoques" asp-action="Index">Estoque</a>
+                @if (Integracoes.Value.ExecucaoService.Habilitado)
+                {
+                    <a asp-controller="Oficina" asp-action="Index">Oficina</a>
+                }
                 <form class="logout-form" asp-controller="Conta" asp-action="Logout" method="post">
                     <button type="submit">Sair</button>
                 </form>

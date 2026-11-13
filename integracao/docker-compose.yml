@@ -1,0 +1,199 @@
+# Homologação local do sistema integrado: MechanicLtda (API + Web) ligado ao OrdemServico-service
+# e ao ExecucaoProducao-service, com a Saga rodando num RabbitMQ só. O Billing ainda não fala
+# RabbitMQ, então o OS Service o simula (Simuladores__Billing=true): o "cliente" paga sozinho
+# quando a OS chega em Aguardando Aprovação.
+#
+# Os três repositórios precisam estar lado a lado:
+#   ./MechanicLtda  ./OrdemServico-service  ./ExecucaoProducao-service
+# (ou aponte OS_SERVICE_DIR e EXECUCAO_SERVICE_DIR no .env).
+#
+#   cd integracao && cp .env.example .env && docker compose up --build
+#   Web: http://localhost:8090 (admin@mechanic.com / Admin@123)
+#   RabbitMQ: http://localhost:15672
+#
+# Roteiro de teste em README.md.
+name: mechanicltda-integracao
+
+x-jwt: &jwt
+  JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+  JwtSettings__SecretKey: ${JWT_SECRET_KEY}
+  JwtSettings__Issuer: MechanicLtda.API
+  JwtSettings__IssuerCpf: MechanicLtda.Auth.Cpf
+  JwtSettings__Audience: MechanicLtda.Clients
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      SA_PASSWORD: ${SA_PASSWORD}
+      ACCEPT_EULA: "Y"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$${SA_PASSWORD}\" -Q 'SELECT 1' -No"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-inMemory"]
+    ports:
+      - "8000:8000"
+
+  # ── MechanicLtda ──────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ..
+      dockerfile: src/MechanicLtda.API/Dockerfile
+    ports:
+      - "8080:8080"
+    environment: &mechanic-env
+      <<: *jwt
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=MechanicLtdaDb;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;
+      JwtSettings__ExpiracaoMinutos: "480"
+      Encryption__CpfCnpjKey: ${ENCRYPTION_KEY}
+      Encryption__CpfCnpjHashKey: ${CPF_HASH_KEY}
+      EmailSettings__Password: ${EMAIL_PASSWORD:-}
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  web:
+    build:
+      context: ..
+      dockerfile: src/MechanicLtda.Web/Dockerfile
+    ports:
+      - "8090:8080"
+    environment:
+      <<: *mechanic-env
+      # O que este compose existe para testar: o Web chamando os microsserviços.
+      Integracoes__OsService__Habilitado: ${WEB_USA_OS_SERVICE:-true}
+      Integracoes__OsService__BaseUrl: http://os-service:8080
+      Integracoes__ExecucaoService__Habilitado: ${WEB_USA_EXECUCAO:-true}
+      Integracoes__ExecucaoService__BaseUrl: http://execucao:8080
+    depends_on:
+      api:
+        condition: service_healthy
+      os-service:
+        condition: service_healthy
+      execucao:
+        condition: service_healthy
+
+  # ── OrdemServico-service (orquestrador da Saga) ───────────────────────────
+  os-service:
+    build:
+      context: ${OS_SERVICE_DIR:-../../OrdemServico-service}
+      dockerfile: src/OsService.API/Dockerfile
+    ports:
+      - "8081:8080"
+    environment:
+      <<: *jwt
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=OsServiceDb;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Usuario: ${RABBITMQ_USER}
+      RabbitMq__Senha: ${RABBITMQ_PASSWORD}
+      Saga__Habilitada: ${SAGA_HABILITADA:-true}
+      # A Execução real está no mesmo RabbitMQ: o simulador dela fica desligado. O Billing
+      # continua simulado até o OrcamentoPagamento-service consumir os comandos da Saga.
+      Simuladores__Habilitados: "true"
+      Simuladores__Execucao: "false"
+      Simuladores__Billing: "true"
+      Integracoes__MechanicLtdaApi__BaseUrl: http://api:8080
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  # ── ExecucaoProducao-service (participante da Saga) ───────────────────────
+  execucao:
+    build:
+      context: ${EXECUCAO_SERVICE_DIR:-../../ExecucaoProducao-service}
+      dockerfile: src/ExecucaoService.API/Dockerfile
+    ports:
+      - "8082:8080"
+    environment:
+      <<: *jwt
+      ASPNETCORE_ENVIRONMENT: Development
+      DynamoDb__ServiceUrl: http://dynamodb:8000
+      DynamoDb__CriarTabelas: "true"
+      AWS_ACCESS_KEY_ID: local
+      AWS_SECRET_ACCESS_KEY: local
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Usuario: ${RABBITMQ_USER}
+      RabbitMq__Senha: ${RABBITMQ_PASSWORD}
+      Mensageria__Habilitada: ${SAGA_HABILITADA:-true}
+      # true faz diagnóstico e reparo avançarem sozinhos (só demonstração).
+      Execucao__ModoAutomatico: ${MODO_AUTOMATICO:-false}
+    depends_on:
+      dynamodb:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  # Carga inicial: copia o estoque e o catálogo de serviços do MechanicLtda para a Execução,
+  # com os mesmos ids (tools/ExecucaoService.Carga). Roda uma vez e sai; repetir não duplica.
+  carga-execucao:
+    image: mcr.microsoft.com/dotnet/sdk:9.0
+    volumes:
+      - ${EXECUCAO_SERVICE_DIR:-../../ExecucaoProducao-service}:/src:ro
+      - ./carga-execucao.sh:/carga-execucao.sh:ro
+    environment:
+      MONOLITO_URL: http://api:8080
+      DynamoDb__ServiceUrl: http://dynamodb:8000
+      DynamoDb__CriarTabelas: "true"
+      AWS_ACCESS_KEY_ID: local
+      AWS_SECRET_ACCESS_KEY: local
+      ADMIN_EMAIL: admin@mechanic.com
+      ADMIN_SENHA: Admin@123
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+    entrypoint: ["bash", "/carga-execucao.sh"]
+    depends_on:
+      api:
+        condition: service_healthy
+      execucao:
+        condition: service_healthy
+    restart: "no"
+
+volumes:
+  sqlserver_data:

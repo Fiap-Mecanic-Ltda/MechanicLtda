@@ -203,7 +203,14 @@ Pontos em que o serviço **não** é idêntico ao código daqui:
 
 ## 6. Estado atual deste repositório
 
-Nada foi alterado aqui. Em particular:
+O Web já sabe falar com a Execução, mas só com a chave ligada
+(`Integracoes:ExecucaoService:Habilitado=true` e `Integracoes:ExecucaoService:BaseUrl`).
+Desligada, que é o padrão, nada muda. Com ela ligada, estoque e serviços vão para a Execução
+(`EstoqueHttpAppService` e `ServicoOficinaHttpAppService`), a tela de estoque mostra reservada e
+disponível, e o menu ganha a **Oficina** (`OficinaController`): fila, assumir e registrar o
+diagnóstico, iniciar e finalizar o reparo, e as rotas manuais quando a Saga está desligada.
+
+Fora isso, o código de estoque daqui continua intacto:
 
 - As rotas `/api/estoque/*` e `/api/servicos-oficina/*` continuam respondendo.
 - `MechanicLtda.Web` (`EstoquesController`, `ServicosOficinaController`,
@@ -241,18 +248,16 @@ removido daqui enquanto o OS deste repositório ainda apontar para `Estoque` e `
 ### TODO 3 — Virar o tráfego e ligar a mensageria
 
 - [ ] `rotear_trafego_alb = true` no ExecucaoProducao-InfraKubernete (regra de prioridade 110).
-- [ ] `MechanicLtda.Web`: trocar `IEstoqueAppService` e `IServicoOficinaAppService` por
-      `HttpClient` tipado no gateway em `EstoquesController`, `ServicosOficinaController`,
-      `ItensOrdemServicoController` (listas de peças e serviços) e `HomeController` (estoque
-      crítico). Mostrar a quantidade reservada nas telas de estoque.
-- [ ] Tela nova (ou reaproveitada) para o mecânico: fila de execução, diagnóstico, iniciar e
-      finalizar o reparo.
+- [x] `MechanicLtda.Web`: trocar `IEstoqueAppService` e `IServicoOficinaAppService` por
+      `HttpClient` tipado em `EstoquesController`, `ServicosOficinaController`,
+      `ItensOrdemServicoController` e `HomeController`, atrás de
+      `Integracoes:ExecucaoService:Habilitado`. Quantidade reservada na tela de estoque.
+- [x] Tela para o mecânico (Oficina): fila de execução, diagnóstico, iniciar e finalizar.
+- [ ] Ligar a chave no Web do cluster (ConfigMap do InfraKubernete).
 - [ ] `Mensageria__Habilitada="true"` no ConfigMap da Execução, junto com a Saga do OS Service
       (`Saga__Habilitada="true"` e `Simuladores__Execucao=false`).
-- [ ] Atualizar a cópia de `docs/contratos-eventos.md` do ExecucaoProducao-service, que ainda
-      descreve o comando `SolicitarPagamento` e o status `AguardandoPagamento`, para ficar igual
-      à do OS Service (regra do pagamento em Aguardando Aprovação). O código da Execução não
-      muda.
+- [x] Atualizar a cópia de `docs/contratos-eventos.md` do ExecucaoProducao-service para ficar
+      igual à do OS Service (PR #8 do ExecucaoProducao-service).
 
 ### TODO 4 — Remover o que foi externalizado
 

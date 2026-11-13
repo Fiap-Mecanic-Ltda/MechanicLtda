@@ -18,6 +18,10 @@ namespace MechanicLtda.Application.DTOs
         public int VeiculoId { get; set; }
         public int ClienteId { get; set; }
 
+        /// <summary>Preenchidos só quando a OS vem do OrdemServico-service (Saga).</summary>
+        public int? OrcamentoId { get; set; }
+        public int? PagamentoId { get; set; }
+
         private static string GetDisplayName(Enum value)
         {
             var type = value.GetType();

@@ -36,7 +36,23 @@
         <form asp-action="AlterarStatus" asp-route-id="@Model.Ordem.Id" method="post"><input type="hidden" name="acao" value="execucao" /><button class="btn btn-small btn-secondary" type="submit">Execução</button></form>
         <form asp-action="AlterarStatus" asp-route-id="@Model.Ordem.Id" method="post"><input type="hidden" name="acao" value="finalizar" /><button class="btn btn-small btn-secondary" type="submit">Finalizar</button></form>
         <form asp-action="AlterarStatus" asp-route-id="@Model.Ordem.Id" method="post"><input type="hidden" name="acao" value="entregar" /><button class="btn btn-small btn-secondary" type="submit">Entregar</button></form>
+        @if (Model.ViaOsService)
+        {
+            <form asp-action="AlterarStatus" asp-route-id="@Model.Ordem.Id" method="post" style="display:flex; gap:6px; align-items:center;">
+                <input type="hidden" name="acao" value="cancelar" />
+                <label for="motivoCancelamento" class="sr-only">Motivo do cancelamento</label>
+                <input type="text" id="motivoCancelamento" name="motivoCancelamento" placeholder="Motivo do cancelamento (opcional)" maxlength="500" />
+                <button class="btn btn-small btn-danger" type="submit">Cancelar OS</button>
+            </form>
+        }
     </div>
+    @if (Model.ViaOsService)
+    {
+        <p class="muted" style="margin-top: 10px;">
+            Esta OS está no serviço de Ordem de Serviço. Com a Saga ligada, diagnóstico, orçamento, pagamento e execução
+            avançam sozinhos pelos eventos, e os botões que a Saga controla respondem com a explicação.
+        </p>
+    }
 </section>
 
 <section class="grid grid-2" style="margin-top: 18px;">
@@ -66,7 +82,7 @@
                             <td>@item.ValorUnitario.ToString("C")</td>
                             <td>@item.ValorTotal.ToString("C")</td>
                             <td class="actions">
-                                <a class="btn btn-small btn-secondary" asp-controller="ItensOrdemServico" asp-action="Edit" asp-route-id="@item.Id">Editar</a>
+                                <a class="btn btn-small btn-secondary" asp-controller="ItensOrdemServico" asp-action="Edit" asp-route-id="@item.Id" asp-route-ordemServicoId="@Model.Ordem.Id">Editar</a>
                                 <form asp-controller="ItensOrdemServico" asp-action="Delete" asp-route-id="@item.Id" method="post">
                                     <input type="hidden" name="ordemServicoId" value="@Model.Ordem.Id" />
                                     <button class="btn btn-small btn-danger" type="submit">Excluir</button>
@@ -82,7 +98,14 @@
 
     <article class="panel">
         <h2>Orçamento</h2>
-        @if (Model.Orcamento is null)
+        @if (Model.ViaOsService)
+        {
+            <div class="stack">
+                <div><span class="muted">Orçamento no Billing</span><br /><strong>@(Model.Ordem.OrcamentoId?.ToString("'#'0") ?? "Ainda não gerado")</strong></div>
+                <div><span class="muted">Pagamento</span><br /><strong>@(Model.Ordem.PagamentoId?.ToString("'#'0") ?? "Ainda não confirmado")</strong></div>
+            </div>
+        }
+        else if (Model.Orcamento is null)
         {
             <div class="empty">Nenhum orçamento gerado para esta ordem.</div>
         }
@@ -101,3 +124,33 @@
     </article>
 </section>
 
+@if (Model.ViaOsService)
+{
+    <section class="panel" style="margin-top: 18px;">
+        <h2>Histórico de status</h2>
+        @if (!Model.Historico.Any())
+        {
+            <div class="empty">Sem alterações registradas.</div>
+        }
+        else
+        {
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Quando</th><th>De</th><th>Para</th><th>Origem</th><th>Motivo</th></tr></thead>
+                    <tbody>
+                    @foreach (var h in Model.Historico.OrderByDescending(x => x.DataAlteracao))
+                    {
+                        <tr>
+                            <td>@h.DataAlteracao.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</td>
+                            <td>@(h.StatusAnteriorDescricao ?? "-")</td>
+                            <td><span class="badge">@h.StatusNovoDescricao</span></td>
+                            <td>@h.Origem</td>
+                            <td>@(h.Motivo ?? "-")</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+}

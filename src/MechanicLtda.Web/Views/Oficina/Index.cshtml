@@ -1,0 +1,61 @@
+@model OficinaIndexViewModel
+@{
+    ViewData["Title"] = "Oficina";
+}
+
+<section class="page-header">
+    <div>
+        <h1>Oficina</h1>
+        <p>Fila de diagnóstico e de reparo do serviço de Execução.</p>
+    </div>
+</section>
+
+<section class="panel">
+    <form method="get" asp-action="Index" class="actions" style="align-items:center;">
+        <label for="status">Status</label>
+        <select id="status" name="status">
+            <option value="">Em andamento</option>
+            @foreach (var s in OficinaIndexViewModel.StatusExecucao)
+            {
+                <option value="@s" selected="@(s == Model.Status)">@s</option>
+            }
+        </select>
+        <button class="btn btn-small btn-secondary" type="submit">Filtrar</button>
+    </form>
+</section>
+
+@if (!Model.SagaNoOsService)
+{
+    <section class="panel" style="margin-top: 18px;">
+        <h2>Receber OS manualmente</h2>
+        <p class="muted">Sem a Saga, a OS não chega sozinha. Informe o número para colocá-la na fila de diagnóstico.</p>
+        <form asp-action="Receber" method="post" class="actions" style="align-items:center;">
+            <label for="ordemServicoId" class="sr-only">Número da OS</label>
+            <input type="number" id="ordemServicoId" name="ordemServicoId" min="1" required placeholder="Número da OS" />
+            <button class="btn btn-small" type="submit">Receber</button>
+        </form>
+    </section>
+}
+
+<div class="table-wrap" style="margin-top: 18px;">
+    <table>
+        <thead><tr><th>OS</th><th>Status</th><th>Problema</th><th>Entrada</th><th>Última mudança</th><th></th></tr></thead>
+        <tbody>
+        @foreach (var item in Model.Fila)
+        {
+            <tr>
+                <td>#@item.OrdemServicoId</td>
+                <td><span class="badge">@item.Status</span></td>
+                <td>@(item.DescricaoProblema ?? "-")</td>
+                <td>@item.DataEntrada.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                <td>@item.DataAlteracaoStatus.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                <td class="actions"><a class="btn btn-small btn-secondary" asp-action="Details" asp-route-id="@item.OrdemServicoId">Abrir</a></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+@if (!Model.Fila.Any())
+{
+    <div class="empty">Nenhuma OS nesta fila.</div>
+}
