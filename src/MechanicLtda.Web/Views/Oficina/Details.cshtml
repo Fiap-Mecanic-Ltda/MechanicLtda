@@ -1,0 +1,173 @@
+@model OficinaDetalheViewModel
+@{
+    var e = Model.Execucao;
+    ViewData["Title"] = $"Oficina - OS #{e.OrdemServicoId}";
+}
+
+<section class="page-header">
+    <div>
+        <h1>OS #@e.OrdemServicoId na oficina</h1>
+        <p>@(e.DescricaoProblema ?? "Sem descrição do problema")</p>
+    </div>
+    <div class="actions">
+        <a class="btn btn-secondary" asp-action="Index">Voltar para a fila</a>
+        <a class="btn btn-secondary" asp-controller="OrdensServico" asp-action="Details" asp-route-id="@e.OrdemServicoId">Ver a OS</a>
+    </div>
+</section>
+
+<section class="grid grid-4">
+    <article class="card metric"><div class="label">Status na oficina</div><div class="value" style="font-size: 1.25rem;">@e.Status</div></article>
+    <article class="card metric"><div class="label">Cliente</div><div class="value" style="font-size: 1.25rem;">@(e.ClienteId is null ? "-" : $"#{e.ClienteId}")</div></article>
+    <article class="card metric"><div class="label">Veículo</div><div class="value" style="font-size: 1.25rem;">@(e.VeiculoId is null ? "-" : $"#{e.VeiculoId}")</div></article>
+    <article class="card metric"><div class="label">Total dos itens</div><div class="value" style="font-size: 1.25rem;">@e.ValorTotalItens.ToString("C")</div></article>
+</section>
+
+<section class="panel" style="margin-top: 18px;">
+    <h2>Próximo passo</h2>
+    <div class="actions">
+        @switch (e.Status)
+        {
+            case "AguardandoDiagnostico":
+                <form asp-action="Acao" asp-route-id="@e.OrdemServicoId" method="post"><input type="hidden" name="acao" value="assumir" /><button class="btn btn-small" type="submit">Assumir o diagnóstico</button></form>
+                break;
+            case "EmDiagnostico":
+                <form asp-action="Acao" asp-route-id="@e.OrdemServicoId" method="post" style="display:flex; gap:6px; align-items:center;">
+                    <input type="hidden" name="acao" value="falha" />
+                    <label for="motivoFalha" class="sr-only">Motivo da falha</label>
+                    <input type="text" id="motivoFalha" name="texto" placeholder="Motivo da falha no diagnóstico" maxlength="1000" />
+                    <button class="btn btn-small btn-danger" type="submit">Registrar falha</button>
+                </form>
+                break;
+            case "DiagnosticoConcluido":
+                if (Model.SagaNoOsService)
+                {
+                    <span class="muted">Aguardando o orçamento e o pagamento do cliente. A execução é liberada pela Saga.</span>
+                }
+                else
+                {
+                    <form asp-action="Acao" asp-route-id="@e.OrdemServicoId" method="post"><input type="hidden" name="acao" value="liberar" /><button class="btn btn-small" type="submit">Liberar execução (sem Saga)</button></form>
+                }
+                break;
+            case "NaFila":
+                <form asp-action="Acao" asp-route-id="@e.OrdemServicoId" method="post"><input type="hidden" name="acao" value="iniciar" /><button class="btn btn-small" type="submit">Iniciar o reparo</button></form>
+                break;
+            case "EmExecucao":
+                <form asp-action="Acao" asp-route-id="@e.OrdemServicoId" method="post" style="display:flex; gap:6px; align-items:center;">
+                    <input type="hidden" name="acao" value="finalizar" />
+                    <label for="obsFinal" class="sr-only">Observação</label>
+                    <input type="text" id="obsFinal" name="texto" placeholder="Observação (opcional)" maxlength="1000" />
+                    <button class="btn btn-small" type="submit">Finalizar o reparo</button>
+                </form>
+                break;
+            default:
+                <span class="muted">Nada a fazer: a OS está @e.Status.ToLowerInvariant() na oficina.</span>
+                break;
+        }
+        @if (!Model.Final && e.Status != "EmExecucao" && !Model.SagaNoOsService)
+        {
+            <form asp-action="Acao" asp-route-id="@e.OrdemServicoId" method="post" style="display:flex; gap:6px; align-items:center;">
+                <input type="hidden" name="acao" value="cancelar" />
+                <label for="motivoCancelamento" class="sr-only">Motivo</label>
+                <input type="text" id="motivoCancelamento" name="texto" placeholder="Motivo do cancelamento" maxlength="1000" />
+                <button class="btn btn-small btn-danger" type="submit">Cancelar (sem Saga)</button>
+            </form>
+        }
+    </div>
+    @if (!string.IsNullOrWhiteSpace(e.MotivoCancelamento))
+    {
+        <p class="muted" style="margin-top: 10px;">Motivo do cancelamento: @e.MotivoCancelamento</p>
+    }
+</section>
+
+@if (e.Status == "EmDiagnostico")
+{
+    <section class="panel" style="margin-top: 18px;">
+        <h2>Registrar o diagnóstico</h2>
+        <p class="muted">Peças e insumos ficam reservados até o pagamento. Linhas sem item são ignoradas. Peças e insumos precisam do valor unitário; no serviço do catálogo ele pode ficar vazio e vale o valor base. Serviço novo entra primeiro no catálogo, em Serviços.</p>
+        <form asp-action="Diagnostico" asp-route-id="@e.OrdemServicoId" method="post">
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Item</th><th>Complemento</th><th>Qtd.</th><th>Valor unitário</th></tr></thead>
+                    <tbody>
+                    @for (var i = 0; i < Model.Diagnostico.Itens.Count; i++)
+                    {
+                        <tr>
+                            <td>
+                                <label for="Itens_@(i)__Origem" class="sr-only">Item @(i + 1)</label>
+                                <select id="Itens_@(i)__Origem" name="Itens[@i].Origem">
+                                    <option value="">(linha vazia)</option>
+                                    <optgroup label="Estoque (disponível)">
+                                        @foreach (var est in Model.Estoques)
+                                        {
+                                            <option value="E:@est.Id">@est.Nome (@est.Tipo, @est.QuantidadeDisponivel)</option>
+                                        }
+                                    </optgroup>
+                                    <optgroup label="Serviços">
+                                        @foreach (var s in Model.Servicos)
+                                        {
+                                            <option value="S:@s.Id">@s.Nome (@s.ValorBase.ToString("C"))</option>
+                                        }
+                                    </optgroup>
+                                </select>
+                            </td>
+                            <td><input type="text" name="Itens[@i].Descricao" maxlength="1000" aria-label="Descrição do item @(i + 1)" /></td>
+                            <td><input type="number" name="Itens[@i].Quantidade" min="1" value="1" style="width: 80px;" aria-label="Quantidade do item @(i + 1)" /></td>
+                            <td><input type="number" name="Itens[@i].ValorUnitario" min="0" step="0.01" style="width: 120px;" aria-label="Valor unitário do item @(i + 1)" /></td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+            <div class="field field-full" style="margin-top: 12px;">
+                <label for="Observacao">Observação</label>
+                <textarea id="Observacao" name="Observacao" rows="2" maxlength="1000"></textarea>
+            </div>
+            <div class="form-actions"><button class="btn" type="submit">Concluir diagnóstico</button></div>
+        </form>
+    </section>
+}
+
+<section class="grid grid-2" style="margin-top: 18px;">
+    <article class="panel">
+        <h2>Itens</h2>
+        @if (!e.Itens.Any())
+        {
+            <div class="empty">Nenhum item registrado.</div>
+        }
+        else
+        {
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Item</th><th>Tipo</th><th>Qtd.</th><th>Total</th></tr></thead>
+                    <tbody>
+                    @foreach (var item in e.Itens)
+                    {
+                        <tr><td>@item.Descricao</td><td><span class="badge">@item.Tipo</span></td><td>@item.Quantidade</td><td>@item.ValorTotal.ToString("C")</td></tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </article>
+    <article class="panel">
+        <h2>Histórico na oficina</h2>
+        @if (!e.Historico.Any())
+        {
+            <div class="empty">Sem histórico.</div>
+        }
+        else
+        {
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Quando</th><th>De</th><th>Para</th><th>Observação</th></tr></thead>
+                    <tbody>
+                    @foreach (var h in e.Historico.OrderByDescending(x => x.DataHora))
+                    {
+                        <tr><td>@h.DataHora.ToLocalTime().ToString("dd/MM HH:mm:ss")</td><td>@(h.StatusAnterior ?? "-")</td><td>@h.StatusNovo</td><td>@(h.Observacao ?? "-")</td></tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </article>
+</section>

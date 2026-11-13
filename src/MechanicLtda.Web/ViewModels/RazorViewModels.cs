@@ -154,6 +154,10 @@ namespace MechanicLtda.Web.ViewModels
         public OrdemServicoDto Ordem { get; set; } = new();
         public IEnumerable<ItemOrdemServicoDto> Itens { get; set; } = [];
         public OrcamentoDto? Orcamento { get; set; }
+
+        /// <summary>A OS veio do OrdemServico-service (Integracoes:OsService:Habilitado).</summary>
+        public bool ViaOsService { get; set; }
+        public IEnumerable<MechanicLtda.Web.Integracoes.HistoricoStatusOrdemServicoDto> Historico { get; set; } = [];
     }
 
     public class ItemOrdemServicoFormViewModel
@@ -194,3 +198,71 @@ namespace MechanicLtda.Web.ViewModels
 
 
 
+
+namespace MechanicLtda.Web.ViewModels
+{
+    using MechanicLtda.Web.Integracoes;
+
+    public class OficinaIndexViewModel
+    {
+        public IEnumerable<FilaExecucaoDto> Fila { get; set; } = [];
+        public string? Status { get; set; }
+        public bool SagaNoOsService { get; set; }
+
+        public static readonly string[] StatusExecucao =
+            ["AguardandoDiagnostico", "EmDiagnostico", "DiagnosticoConcluido", "NaFila", "EmExecucao", "Finalizada", "Cancelada"];
+    }
+
+    public class OficinaDetalheViewModel
+    {
+        public ExecucaoDto Execucao { get; set; } = default!;
+        public bool SagaNoOsService { get; set; }
+        public DiagnosticoFormViewModel Diagnostico { get; set; } = new();
+        public IReadOnlyList<EstoqueDto> Estoques { get; set; } = [];
+        public IReadOnlyList<ServicoOficinaDto> Servicos { get; set; } = [];
+
+        public bool Final => Execucao.Status is "Finalizada" or "Cancelada";
+    }
+
+    public class DiagnosticoFormViewModel
+    {
+        public List<LinhaDiagnosticoViewModel> Itens { get; set; } = [];
+
+        [MaxLength(1000)]
+        public string? Observacao { get; set; }
+    }
+
+    /// <summary>
+    /// Uma linha do diagnóstico. "Origem" junta estoque e catálogo num select só:
+    /// "E:{id}" (peça ou insumo) ou "S:{id}" (serviço do catálogo). A Execução só aceita
+    /// serviço que esteja no catálogo; a descrição é um complemento opcional.
+    /// </summary>
+    public class LinhaDiagnosticoViewModel
+    {
+        public string? Origem { get; set; }
+
+        [MaxLength(1000)]
+        public string? Descricao { get; set; }
+
+        public int Quantidade { get; set; }
+        public decimal? ValorUnitario { get; set; }
+
+        public bool Vazia => string.IsNullOrWhiteSpace(Origem);
+
+        public ItemDiagnosticoDto? Converter(IReadOnlyDictionary<int, TipoEstoque> tiposEstoque)
+        {
+            var descricao = string.IsNullOrWhiteSpace(Descricao) ? null : Descricao.Trim();
+            var partes = (Origem ?? string.Empty).Split(':', 2);
+
+            if (partes.Length == 2 && int.TryParse(partes[1], out var id))
+            {
+                if (partes[0] == "E" && tiposEstoque.TryGetValue(id, out var tipo))
+                    return new ItemDiagnosticoDto(descricao, tipo == TipoEstoque.Peca ? "Peca" : "Insumo", Quantidade, ValorUnitario, id, null);
+                if (partes[0] == "S")
+                    return new ItemDiagnosticoDto(descricao, "Servico", Quantidade, ValorUnitario, null, id);
+            }
+
+            return null;
+        }
+    }
+}

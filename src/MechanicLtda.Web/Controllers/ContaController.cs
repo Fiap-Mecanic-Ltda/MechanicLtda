@@ -1,3 +1,4 @@
+using MechanicLtda.Web.Integracoes;
 using MechanicLtda.Web.ViewModels;
 using MechanicLtda.Application.AppServices.Interfaces;
 using Microsoft.AspNetCore.Authentication;
@@ -68,6 +69,9 @@ namespace MechanicLtda.Web.Controllers
         {
             var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
             var claims = jwt.Claims.Select(NormalizarClaim).ToList();
+
+            // O token fica no cookie (HttpOnly) para o Web repassá-lo aos microsserviços.
+            claims.Add(new Claim(TokenDoUsuarioHandler.ClaimToken, token));
 
             return new ClaimsPrincipal(new ClaimsIdentity(
                 claims,

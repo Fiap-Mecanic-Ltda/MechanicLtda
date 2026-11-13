@@ -223,7 +223,15 @@ Pontos em que o serviço **não** é idêntico ao código daqui:
 
 ## 6. Estado atual deste repositório
 
-Nada foi alterado aqui. Em particular:
+O Web já sabe falar com o OS Service, mas só com a chave ligada
+(`Integracoes:OsService:Habilitado=true` e `Integracoes:OsService:BaseUrl`). Desligada, que é o
+padrão, nada muda. Com ela ligada, `OrdensServicoController`, `ItensOrdemServicoController` e
+`HomeController` usam `OrdemServicoHttpAppService` e `ItensOrdemServicoHttp`
+(`src/MechanicLtda.Web/Integracoes`), que repassam o JWT do login e o `X-Correlation-Id`; os
+status 7, 9 e 10 aparecem nas telas; a OS mostra o histórico e ganha o botão Cancelar. O
+docker-compose de [integracao/](../../integracao/README.md) sobe tudo ligado para teste.
+
+Fora isso, o código de OS daqui continua intacto:
 
 - As rotas `/api/ordemservico/*`, `/api/ordem-servico/{id}/itens` e a aprovação por token
   continuam respondendo.
@@ -254,13 +262,15 @@ OS nenhuma.
 ### TODO 2 — Virar o tráfego para o serviço
 
 - [ ] `rotear_trafego_alb = true` no OrdemServico-InfraKubernete (regra de prioridade 100).
-- [ ] `MechanicLtda.Web`: trocar `IOrdemServicoAppService` e `IItemOrdemServicoAppService` por
-      `HttpClient` tipado no gateway em `OrdensServicoController`, `ItensOrdemServicoController` e
-      `HomeController`. O envelope de erro é `{ success, errors }`.
-- [ ] Incluir os status 7, 9 e 10 nas views (`Views/OrdensServico`), no filtro e no dashboard.
+- [x] `MechanicLtda.Web`: trocar `IOrdemServicoAppService` e `IItemOrdemServicoAppService` por
+      `HttpClient` tipado em `OrdensServicoController`, `ItensOrdemServicoController` e
+      `HomeController`, atrás de `Integracoes:OsService:Habilitado`.
+- [ ] Ligar a chave no Web do cluster (ConfigMap do InfraKubernete), apontando para o API
+      Gateway ou para o Service `os-service.ordem-servico.svc.cluster.local`.
+- [x] Incluir os status 7, 9 e 10 nas views e no dashboard.
 - [ ] Decidir o que fazer com as OS que já existem em `MechanicLtdaDb`: migrar para `OsServiceDb`
       (não há ferramenta de carga pronta) ou deixar as antigas como histórico somente leitura.
-- [ ] `HttpClientFactory` com retry só nos `GET`.
+- [ ] `HttpClientFactory` com retry só nos `GET` (hoje há timeout, sem retry).
 
 ### TODO 3 — Ligar a Saga
 

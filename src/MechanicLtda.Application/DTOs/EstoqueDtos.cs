@@ -8,6 +8,13 @@ namespace MechanicLtda.Application.DTOs
         public string Nome { get; set; }
         public TipoEstoque Tipo { get; set; }
         public int QuantidadeAtual { get; set; }
+
+        /// <summary>
+        /// Reservado por diagnósticos ainda não pagos. Só o ExecucaoProducao-service reserva;
+        /// no estoque deste repositório é sempre zero.
+        /// </summary>
+        public int QuantidadeReservada { get; set; }
+        public int QuantidadeDisponivel => QuantidadeAtual - QuantidadeReservada;
         public int QuantidadeMinima { get; set; }
         public DateTime DataUltimaAtualizacao { get; set; }
         public bool BaixoEstoque { get; set; }

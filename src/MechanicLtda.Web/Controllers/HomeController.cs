@@ -44,7 +44,7 @@ namespace MechanicLtda.Web.Controllers
             {
                 TotalClientes = clientes.hasErrors ? 0 : clientes.getResponse.Count(),
                 TotalVeiculos = veiculos.hasErrors ? 0 : veiculos.getResponse.Count(),
-                TotalOrdensAbertas = ordensLista.Count(x => x.Status != StatusOrdemServico.Entregue),
+                TotalOrdensAbertas = ordensLista.Count(x => x.Status is not (StatusOrdemServico.Entregue or StatusOrdemServico.Cancelada)),
                 TotalItensBaixoEstoque = estoquesLista.Count(x => x.BaixoEstoque),
                 OrdensRecentes = ordensLista.OrderByDescending(x => x.DataCriacao).Take(5),
                 EstoquesCriticos = estoquesLista.Where(x => x.BaixoEstoque).OrderBy(x => x.QuantidadeAtual).Take(5)

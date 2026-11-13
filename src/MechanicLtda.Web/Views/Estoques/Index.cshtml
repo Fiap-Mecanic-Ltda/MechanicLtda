@@ -1,5 +1,8 @@
 @model IEnumerable<EstoqueDto>
+@inject Microsoft.Extensions.Options.IOptions<MechanicLtda.Web.Integracoes.IntegracoesOptions> Integracoes
 @{
+    // Com a Execução, o diagnóstico reserva peças antes do pagamento.
+    var comReserva = Integracoes.Value.ExecucaoService.Habilitado;
     ViewData["Title"] = "Estoque";
 }
 
@@ -13,7 +16,7 @@
 
 <div class="table-wrap">
     <table>
-        <thead><tr><th>Item</th><th>Tipo</th><th>Quantidade</th><th>Mínimo</th><th>Atualizado</th><th></th></tr></thead>
+        <thead><tr><th>Item</th><th>Tipo</th><th>Quantidade</th>@if (comReserva) {<th>Reservada</th><th>Disponível</th>}<th>Mínimo</th><th>Atualizado</th><th></th></tr></thead>
         <tbody>
         @foreach (var item in Model)
         {
@@ -21,6 +24,11 @@
                 <td>@item.Nome</td>
                 <td><span class="badge">@item.Tipo</span></td>
                 <td><span class="badge @(item.BaixoEstoque ? "badge-warn" : "badge-ok")">@item.QuantidadeAtual</span></td>
+                @if (comReserva)
+                {
+                    <td>@item.QuantidadeReservada</td>
+                    <td>@item.QuantidadeDisponivel</td>
+                }
                 <td>@item.QuantidadeMinima</td>
                 <td>@item.DataUltimaAtualizacao.ToString("dd/MM/yyyy")</td>
                 <td class="actions">
