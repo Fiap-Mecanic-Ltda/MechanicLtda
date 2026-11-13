@@ -43,13 +43,13 @@ public class ClienteControllerTests : IClassFixture<CustomWebApplicationFactory>
 
     private async Task<int> CriarClienteEObterIdAsync(
         string? email = null,
-        string cpfCnpj = "52998224725")
+        string? cpfCnpj = null)
     {
         var payload = new
         {
             nome     = "Cliente Teste",
             email    = email ?? $"cliente.{Guid.NewGuid():N}@teste.com",
-            cpfCnpj  = cpfCnpj,
+            cpfCnpj  = cpfCnpj ?? CpfTeste.Novo(),
             telefone = "11999999999"
         };
 
@@ -131,7 +131,7 @@ public class ClienteControllerTests : IClassFixture<CustomWebApplicationFactory>
             nome     = "João Silva",
             email    = $"joao.{Guid.NewGuid():N}@teste.com",
             telefone = "11999999999",
-            cpfCnpj  = "52998224725"
+            cpfCnpj  = CpfTeste.Novo()
         };
 
         // Act
@@ -152,7 +152,7 @@ public class ClienteControllerTests : IClassFixture<CustomWebApplicationFactory>
         {
             nome     = "Maria Souza",
             email    = emailFixo,
-            cpfCnpj  = "52998224725"
+            cpfCnpj  = CpfTeste.Novo()
         };
 
         await _client.PostAsJsonAsync("/api/cliente", payload);
@@ -178,7 +178,7 @@ public class ClienteControllerTests : IClassFixture<CustomWebApplicationFactory>
         var payload = new
         {
             email   = "sem.nome@teste.com",
-            cpfCnpj = "52998224725"
+            cpfCnpj = CpfTeste.Novo()
         };
 
         // Act
@@ -204,7 +204,7 @@ public class ClienteControllerTests : IClassFixture<CustomWebApplicationFactory>
         {
             nome     = "Nome Atualizado",
             email    = $"atualizado.{Guid.NewGuid():N}@teste.com",
-            cpfCnpj  = "52998224725",
+            cpfCnpj  = CpfTeste.Novo(),
             telefone = "11988887777",
             ativo    = true
         };
@@ -234,7 +234,7 @@ public class ClienteControllerTests : IClassFixture<CustomWebApplicationFactory>
         {
             nome     = "Cliente Teste",
             email,
-            cpfCnpj  = "12345678909",
+            cpfCnpj  = CpfTeste.Novo(),
             telefone = "11999999999",
             ativo    = true
         };
@@ -262,7 +262,7 @@ public class ClienteControllerTests : IClassFixture<CustomWebApplicationFactory>
         {
             nome     = "Nome",
             email    = "nao-e-um-email",
-            cpfCnpj  = "52998224725",
+            cpfCnpj  = CpfTeste.Novo(),
             telefone = "11988887777",
             ativo    = true
         };
@@ -287,7 +287,7 @@ public class ClienteControllerTests : IClassFixture<CustomWebApplicationFactory>
         {
             nome     = "Nome",
             email    = $"inexistente.{Guid.NewGuid():N}@teste.com",
-            cpfCnpj  = "52998224725",
+            cpfCnpj  = CpfTeste.Novo(),
             telefone = "11988887777",
             ativo    = true
         };

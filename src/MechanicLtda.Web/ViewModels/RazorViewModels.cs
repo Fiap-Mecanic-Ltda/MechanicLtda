@@ -1,3 +1,4 @@
+using MechanicLtda.Application.Validations;
 using MechanicLtda.Web.Integracoes;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.ComponentModel.DataAnnotations;
@@ -45,6 +46,7 @@ namespace MechanicLtda.Web.ViewModels
 
         [Required(ErrorMessage = "Informe o CPF ou CNPJ.")]
         [MaxLength(14)]
+        [CpfCnpj(ErrorMessage = "Informe um CPF ou CNPJ válido.")]
         public string CpfCnpj { get; set; } = string.Empty;
 
         public bool Ativo { get; set; } = true;
@@ -56,6 +58,7 @@ namespace MechanicLtda.Web.ViewModels
 
         [Required(ErrorMessage = "Informe a placa.")]
         [MaxLength(8)]
+        [PlacaVeiculo(ErrorMessage = "Informe a placa no formato ABC1234 ou ABC1D23.")]
         public string Placa { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Informe a marca.")]
