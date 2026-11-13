@@ -9,14 +9,14 @@ namespace MechanicLtda.Web.Controllers
 {
     public class ItensOrdemServicoController : RazorControllerBase
     {
-        private readonly IItensOrdemServicoWeb _itemAppService;
-        private readonly IEstoqueAppService _estoqueAppService;
-        private readonly IServicoOficinaAppService _servicoAppService;
+        private readonly IItensOrdemServicoCliente _itemAppService;
+        private readonly IEstoqueCliente _estoqueAppService;
+        private readonly IServicoOficinaCliente _servicoAppService;
 
         public ItensOrdemServicoController(
-            IItensOrdemServicoWeb itemAppService,
-            IEstoqueAppService estoqueAppService,
-            IServicoOficinaAppService servicoAppService)
+            IItensOrdemServicoCliente itemAppService,
+            IEstoqueCliente estoqueAppService,
+            IServicoOficinaCliente servicoAppService)
         {
             _itemAppService = itemAppService;
             _estoqueAppService = estoqueAppService;

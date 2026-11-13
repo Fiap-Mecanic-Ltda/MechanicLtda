@@ -1,7 +1,7 @@
+using MechanicLtda.Web.Integracoes;
 using MechanicLtda.Web.ViewModels;
 using MechanicLtda.Application.AppServices.Interfaces;
 using MechanicLtda.Application.DTOs;
-using MechanicLtda.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -9,9 +9,9 @@ namespace MechanicLtda.Web.Controllers
 {
     public class EstoquesController : RazorControllerBase
     {
-        private readonly IEstoqueAppService _estoqueAppService;
+        private readonly IEstoqueCliente _estoqueAppService;
 
-        public EstoquesController(IEstoqueAppService estoqueAppService)
+        public EstoquesController(IEstoqueCliente estoqueAppService)
         {
             _estoqueAppService = estoqueAppService;
         }

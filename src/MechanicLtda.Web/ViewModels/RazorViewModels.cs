@@ -1,5 +1,4 @@
-using MechanicLtda.Application.DTOs;
-using MechanicLtda.Domain.Enums;
+using MechanicLtda.Web.Integracoes;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.ComponentModel.DataAnnotations;
 
@@ -153,11 +152,7 @@ namespace MechanicLtda.Web.ViewModels
     {
         public OrdemServicoDto Ordem { get; set; } = new();
         public IEnumerable<ItemOrdemServicoDto> Itens { get; set; } = [];
-        public OrcamentoDto? Orcamento { get; set; }
-
-        /// <summary>A OS veio do OrdemServico-service (Integracoes:OsService:Habilitado).</summary>
-        public bool ViaOsService { get; set; }
-        public IEnumerable<MechanicLtda.Web.Integracoes.HistoricoStatusOrdemServicoDto> Historico { get; set; } = [];
+        public IEnumerable<HistoricoStatusOrdemServicoDto> Historico { get; set; } = [];
     }
 
     public class ItemOrdemServicoFormViewModel
@@ -180,20 +175,6 @@ namespace MechanicLtda.Web.ViewModels
         public IEnumerable<SelectListItem> ServicosOficina { get; set; } = [];
     }
 
-    public class OrcamentoFormViewModel
-    {
-        public int Id { get; set; }
-        public int OrdemServicoId { get; set; }
-
-        [Range(0, 9999999, ErrorMessage = "Informe o valor de peças.")]
-        public decimal ValorTotalPecas { get; set; }
-
-        [Range(0, 9999999, ErrorMessage = "Informe o valor de insumos.")]
-        public decimal ValorTotalInsumos { get; set; }
-
-        public decimal ValorTotalGeral { get; set; }
-        public DateTime? Validade { get; set; }
-    }
 }
 
 
@@ -201,13 +182,11 @@ namespace MechanicLtda.Web.ViewModels
 
 namespace MechanicLtda.Web.ViewModels
 {
-    using MechanicLtda.Web.Integracoes;
-
     public class OficinaIndexViewModel
     {
         public IEnumerable<FilaExecucaoDto> Fila { get; set; } = [];
         public string? Status { get; set; }
-        public bool SagaNoOsService { get; set; }
+        public bool SagaHabilitada { get; set; }
 
         public static readonly string[] StatusExecucao =
             ["AguardandoDiagnostico", "EmDiagnostico", "DiagnosticoConcluido", "NaFila", "EmExecucao", "Finalizada", "Cancelada"];
@@ -216,7 +195,7 @@ namespace MechanicLtda.Web.ViewModels
     public class OficinaDetalheViewModel
     {
         public ExecucaoDto Execucao { get; set; } = default!;
-        public bool SagaNoOsService { get; set; }
+        public bool SagaHabilitada { get; set; }
         public DiagnosticoFormViewModel Diagnostico { get; set; } = new();
         public IReadOnlyList<EstoqueDto> Estoques { get; set; } = [];
         public IReadOnlyList<ServicoOficinaDto> Servicos { get; set; } = [];

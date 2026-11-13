@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using MechanicLtda.Application.AppServices.Interfaces;
 using MechanicLtda.Web.Integracoes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
@@ -11,57 +10,49 @@ namespace MechanicLtda.Web.Tests
 {
     public class IntegracoesExtensionTests
     {
+        private static readonly Dictionary<string, string?> Enderecos = new()
+        {
+            ["Integracoes:OsService:BaseUrl"] = "http://os:8080",
+            ["Integracoes:ExecucaoService:BaseUrl"] = "http://execucao:8080",
+        };
+
         private static ServiceProvider Montar(Dictionary<string, string?> config)
         {
             var configuracao = new ConfigurationBuilder().AddInMemoryCollection(config).Build();
             var services = new ServiceCollection();
             services.AddLogging();
-            // O que o Bootstrap registra hoje (em processo).
-            services.AddScoped(_ => Mock.Of<IOrdemServicoAppService>());
-            services.AddScoped(_ => Mock.Of<IItemOrdemServicoAppService>());
-            services.AddScoped(_ => Mock.Of<IEstoqueAppService>());
-            services.AddScoped(_ => Mock.Of<IServicoOficinaAppService>());
             services.AddIntegracoesMicrosservicos(configuracao);
             return services.BuildServiceProvider();
         }
 
         [Fact]
-        public void Sem_chaves_tudo_continua_em_processo()
+        public void As_telas_usam_os_servicos()
         {
-            using var sp = Montar([]);
-            using var escopo = sp.CreateScope();
-
-            Assert.IsNotType<OrdemServicoHttpAppService>(escopo.ServiceProvider.GetRequiredService<IOrdemServicoAppService>());
-            Assert.IsType<ItensOrdemServicoEmProcesso>(escopo.ServiceProvider.GetRequiredService<IItensOrdemServicoWeb>());
-            Assert.Null(escopo.ServiceProvider.GetService<IOrdemServicoRemoto>());
-            Assert.Null(escopo.ServiceProvider.GetService<IExecucaoCliente>());
-        }
-
-        [Fact]
-        public void Com_as_chaves_as_telas_usam_os_servicos()
-        {
-            using var sp = Montar(new()
-            {
-                ["Integracoes:OsService:Habilitado"] = "true",
-                ["Integracoes:OsService:BaseUrl"] = "http://os:8080",
-                ["Integracoes:ExecucaoService:Habilitado"] = "true",
-                ["Integracoes:ExecucaoService:BaseUrl"] = "http://execucao:8080",
-            });
+            using var sp = Montar(Enderecos);
             using var escopo = sp.CreateScope();
             var s = escopo.ServiceProvider;
 
-            Assert.IsType<OrdemServicoHttpAppService>(s.GetRequiredService<IOrdemServicoAppService>());
-            Assert.IsType<ItensOrdemServicoHttp>(s.GetRequiredService<IItensOrdemServicoWeb>());
-            Assert.IsType<EstoqueHttpAppService>(s.GetRequiredService<IEstoqueAppService>());
-            Assert.IsType<ServicoOficinaHttpAppService>(s.GetRequiredService<IServicoOficinaAppService>());
+            Assert.IsType<OrdemServicoHttpAppService>(s.GetRequiredService<IOrdemServicoCliente>());
+            Assert.IsType<ItensOrdemServicoHttp>(s.GetRequiredService<IItensOrdemServicoCliente>());
+            Assert.IsType<EstoqueHttpAppService>(s.GetRequiredService<IEstoqueCliente>());
+            Assert.IsType<ServicoOficinaHttpAppService>(s.GetRequiredService<IServicoOficinaCliente>());
             Assert.IsType<ExecucaoHttpCliente>(s.GetRequiredService<IExecucaoCliente>());
-            Assert.NotNull(s.GetService<IOrdemServicoRemoto>());
+        }
+
+        [Theory]
+        [InlineData("Integracoes:OsService:BaseUrl")]
+        [InlineData("Integracoes:ExecucaoService:BaseUrl")]
+        public void Sem_a_URL_de_um_servico_o_Web_nao_sobe(string chave)
+        {
+            var config = new Dictionary<string, string?>(Enderecos) { [chave] = null };
+            Assert.Throws<InvalidOperationException>(() => Montar(config));
         }
 
         [Fact]
-        public void Chave_ligada_sem_URL_falha_na_subida()
+        public void Saga_ligada_por_padrao()
         {
-            Assert.Throws<InvalidOperationException>(() => Montar(new() { ["Integracoes:OsService:Habilitado"] = "true" }));
+            using var sp = Montar(Enderecos);
+            Assert.True(sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<IntegracoesOptions>>().Value.SagaHabilitada);
         }
 
         [Fact]

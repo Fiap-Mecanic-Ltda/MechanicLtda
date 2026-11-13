@@ -38,7 +38,6 @@ services:
       - Encryption__CpfCnpjKey=${ENCRYPTION_KEY}
       - Encryption__CpfCnpjHashKey=${CPF_HASH_KEY}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-      - EmailSettings__Password=${EMAIL_PASSWORD}
     depends_on:
       sqlserver:
         condition: service_healthy
@@ -67,7 +66,13 @@ services:
       - Encryption__CpfCnpjKey=${ENCRYPTION_KEY}
       - Encryption__CpfCnpjHashKey=${CPF_HASH_KEY}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-      - EmailSettings__Password=${EMAIL_PASSWORD}
+      # OS, itens, estoque e serviços da oficina vivem no OrdemServico-service e no
+      # ExecucaoProducao-service. Por padrão o Web os procura no host (portas 8081 e 8082);
+      # para subir tudo junto, use integracao/docker-compose.yml.
+      - Integracoes__OsService__BaseUrl=${OS_SERVICE_URL:-http://host.docker.internal:8081}
+      - Integracoes__ExecucaoService__BaseUrl=${EXECUCAO_SERVICE_URL:-http://host.docker.internal:8082}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       api:
         condition: service_healthy

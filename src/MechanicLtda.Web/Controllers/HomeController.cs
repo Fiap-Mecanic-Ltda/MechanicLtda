@@ -1,7 +1,7 @@
+using MechanicLtda.Web.Integracoes;
 using MechanicLtda.Web.ViewModels;
 using MechanicLtda.Application.DTOs;
 using MechanicLtda.Application.AppServices.Interfaces;
-using MechanicLtda.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MechanicLtda.Web.Controllers
@@ -10,14 +10,14 @@ namespace MechanicLtda.Web.Controllers
     {
         private readonly IClienteAppService _clienteAppService;
         private readonly IVeiculoAppService _veiculoAppService;
-        private readonly IOrdemServicoAppService _ordemServicoAppService;
-        private readonly IEstoqueAppService _estoqueAppService;
+        private readonly IOrdemServicoCliente _ordemServicoAppService;
+        private readonly IEstoqueCliente _estoqueAppService;
 
         public HomeController(
             IClienteAppService clienteAppService,
             IVeiculoAppService veiculoAppService,
-            IOrdemServicoAppService ordemServicoAppService,
-            IEstoqueAppService estoqueAppService)
+            IOrdemServicoCliente ordemServicoAppService,
+            IEstoqueCliente estoqueAppService)
         {
             _clienteAppService = clienteAppService;
             _veiculoAppService = veiculoAppService;

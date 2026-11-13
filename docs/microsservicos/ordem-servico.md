@@ -223,23 +223,17 @@ Pontos em que o serviço **não** é idêntico ao código daqui:
 
 ## 6. Estado atual deste repositório
 
-O Web já sabe falar com o OS Service, mas só com a chave ligada
-(`Integracoes:OsService:Habilitado=true` e `Integracoes:OsService:BaseUrl`). Desligada, que é o
-padrão, nada muda. Com ela ligada, `OrdensServicoController`, `ItensOrdemServicoController` e
-`HomeController` usam `OrdemServicoHttpAppService` e `ItensOrdemServicoHttp`
-(`src/MechanicLtda.Web/Integracoes`), que repassam o JWT do login e o `X-Correlation-Id`; os
-status 7, 9 e 10 aparecem nas telas; a OS mostra o histórico e ganha o botão Cancelar. O
-docker-compose de [integracao/](../../integracao/README.md) sobe tudo ligado para teste.
+OS e itens saíram daqui: o Web só fala com o OS Service (`Integracoes:OsService:BaseUrl`,
+obrigatória). `OrdensServicoController`, `ItensOrdemServicoController` e `HomeController` usam
+`OrdemServicoHttpAppService` e `ItensOrdemServicoHttp` (`src/MechanicLtda.Web/Integracoes`), que
+repassam o JWT do login e o `X-Correlation-Id`; os status 7, 9 e 10 aparecem nas telas; a OS
+mostra o histórico, os ids de orçamento e pagamento do Billing e o botão Cancelar. O
+docker-compose de [integracao/](../../integracao/README.md) sobe tudo junto para teste.
 
-Fora isso, o código de OS daqui continua intacto:
-
-- As rotas `/api/ordemservico/*`, `/api/ordem-servico/{id}/itens` e a aprovação por token
-  continuam respondendo.
-- `MechanicLtda.Web` (`OrdensServicoController`, `ItensOrdemServicoController` e
-  `HomeController`) continua usando `IOrdemServicoAppService` e `IItemOrdemServicoAppService` em
-  processo.
-- As tabelas `OrdensServico`, `ItensOrdemServico` e `OrdemServicoAprovacaoTokens` continuam em
-  `MechanicLtdaDb`.
+A API deste repositório não tem mais `/api/ordemservico/*`, `/api/ordem-servico/{id}/itens`,
+`/api/orcamento/*` nem a aprovação por token. As tabelas antigas (`OrdensServico`,
+`ItensOrdemServico`, `OrdemServicoAprovacaoTokens`, `Orcamentos`) continuam em `MechanicLtdaDb`
+como histórico.
 
 ## TODO — ordem segura de execução
 
@@ -264,8 +258,8 @@ OS nenhuma.
 - [ ] `rotear_trafego_alb = true` no OrdemServico-InfraKubernete (regra de prioridade 100).
 - [x] `MechanicLtda.Web`: trocar `IOrdemServicoAppService` e `IItemOrdemServicoAppService` por
       `HttpClient` tipado em `OrdensServicoController`, `ItensOrdemServicoController` e
-      `HomeController`, atrás de `Integracoes:OsService:Habilitado`.
-- [ ] Ligar a chave no Web do cluster (ConfigMap do InfraKubernete), apontando para o API
+      `HomeController`.
+- [ ] `Integracoes__OsService__BaseUrl` no ConfigMap do Web (InfraKubernete), apontando para o API
       Gateway ou para o Service `os-service.ordem-servico.svc.cluster.local`.
 - [x] Incluir os status 7, 9 e 10 nas views e no dashboard.
 - [ ] Decidir o que fazer com as OS que já existem em `MechanicLtdaDb`: migrar para `OsServiceDb`
@@ -283,47 +277,23 @@ OS nenhuma.
 - [ ] Definir quem envia as notificações de status (assinando `OrdemServicoStatusAlterado`) e
       desligar a aprovação por token daqui.
 
-### TODO 4 — Remover o que foi externalizado
+### TODO 4 — Remover o que foi externalizado (feito)
 
-Só depois de 1 a 3 estáveis, e junto com a remoção do orçamento ([orcamento.md](orcamento.md)),
-porque `Orcamento` aponta para `OrdemServico`.
-
-**Remover por completo:**
-
-- [ ] `src/MechanicLtda.Domain/Entities/OrdemServico.cs`, `ItemOrdemServico.cs`, `OrdemServicoAprovacaoToken.cs`
-- [ ] `src/MechanicLtda.Domain/Enums/StatusOrdemServico.cs`, `StatusOrdemServicoExtensions.cs`
-- [ ] `src/MechanicLtda.Domain/Interfaces/Repositories/IOrdemServicoRepository.cs`, `IItemOrdemServicoRepository.cs`, `IOrdemServicoAprovacaoTokenRepository.cs`
-- [ ] `src/MechanicLtda.Domain/Interfaces/Services/IOrdemServicoService.cs`, `IItemOrdemServicoService.cs`
-- [ ] `src/MechanicLtda.Domain/Services/OrdemServicoService.cs`, `ItemOrdemServicoService.cs`
-- [ ] `src/MechanicLtda.Application/AppServices/OrdemServicoAppService.cs`, `ItemOrdemServicoAppService.cs` e as interfaces
-- [ ] `src/MechanicLtda.Application/DTOs/OrdemServicoDtos.cs`, `ItemOrdemServicoDtos.cs`
-- [ ] `src/MechanicLtda.Infrastructure/Repositories/OrdemServicoRepository.cs`, `ItemOrdemServicoRepository.cs`, `OrdemServicoAprovacaoTokenRepository.cs`
-- [ ] `src/MechanicLtda.Infrastructure/FluentAPI/ConfiguracaoTabelas/OrdemServicoConfig.cs`, `ItemOrdemServicoConfig.cs`, `OrdemServicoAprovacaoTokenConfig.cs`
-- [ ] `src/MechanicLtda.API/Controllers/OrdemServicoController.cs`, `ItemOrdemServicoController.cs`, `AprovacaoOrdemServicoController.cs`
-- [ ] `src/MechanicLtda.API/ViewModels/OrdemServicoViewModels.cs`, `ItemOrdemServicoViewModels.cs`, `AprovacaoOrdemServicoViewModel.cs`
-- [ ] Testes: `OrdemServicoServiceTests`, `ItemOrdemServicoServiceTests`, `OrdemServicoAppServiceTests`,
-      `ItemOrdemServicoAppServiceTests`, `OrdemServicoControllerTests`, `ItemOrdemServicoControllerTests`,
-      `OrdemServicoPosseTests`
-
-**Editar (remover apenas o trecho):**
-
-| Arquivo | O que sai |
-|---|---|
-| `src/MechanicLtda.Infrastructure/BancoAPIContext.cs` | linhas ~24–26: `DbSet` de `OrdensServico`, `OrdemServicoAprovacaoTokens`, `ItensOrdemServico` |
-| `src/MechanicLtda.Bootstrap/Extensions/DependencyInjectionExtension.cs` | linhas ~24, ~25, ~29, ~45, ~46, ~56 e ~57: repositórios, serviços e AppServices de OS e itens |
-| `src/MechanicLtda.Bootstrap/Extensions/DataSeederExtension.cs` | linhas ~90–136: seed de OS e itens |
-| `src/MechanicLtda.Application/Mapping/SharedAutoMapperProfile.cs` | linhas ~21, ~22 e ~33–35: mapeamentos de OS e itens |
-| `src/MechanicLtda.API/Extensions/AutoMapperProfile.cs` | linhas ~21–24 |
-| `src/MechanicLtda.Web/ViewModels/RazorViewModels.cs` | `OrdemServicoFormViewModel`, `OrdensServicoIndexViewModel`, `OrdemServicoDetalheViewModel`, `ItemOrdemServicoFormViewModel` viram os modelos do cliente HTTP |
-
-**Banco e documentação:**
-
-- [ ] Migration nova com `DROP TABLE` de `ItensOrdemServico`, `OrdemServicoAprovacaoTokens` e
-      `OrdensServico` (nessa ordem, por causa das chaves estrangeiras). **Não** apagar
-      `AddOrdemServico`, `AddItemOrdemServico` nem `AddOrdemServicoAprovacaoToken`.
-- [ ] Atualizar o `README.md` (endpoints, modelo de domínio, repositórios do projeto) e os
-      diagramas em [docs/arquitetura](../arquitetura/README.md).
-- [ ] Marcar a [ADR-005](../adr/ADR-005-comunicacao-sincrona-rest.md) como substituída pela
+- [x] Domínio, aplicação, API, repositórios, configurações do EF, seed e testes de OS, itens,
+      aprovação por token e orçamento saíram deste repositório, junto com o envio de e-mail
+      (`IEmailService`, MailKit) e os eventos de negócio para o New Relic, que só a OS usava.
+- [x] O Web chama só o OS Service: contratos em `src/MechanicLtda.Web/Integracoes`, sem as
+      chaves `Habilitado`. Sem `Integracoes:OsService:BaseUrl` o Web não sobe.
+- [x] Migration `SaidaOsEstoqueParaMicrosservicos`: as tabelas `OrdensServico`,
+      `ItensOrdemServico`, `OrdemServicoAprovacaoTokens` e `Orcamentos` **ficam** no banco como
+      histórico, sem perda de dados. Só caem as chaves estrangeiras de `OrdensServico` para
+      `Clientes` e `Veiculos`, que travariam a exclusão de cliente ou veículo. Apagar as tabelas
+      fica para quando a decisão do TODO 2 sobre as OS antigas for tomada.
+- [x] `README.md` atualizado (endpoints, modelo de domínio, seed).
+- [ ] Notificação de status ao cliente: hoje ninguém envia. Quem assumir assina
+      `OrdemServicoStatusAlterado`.
+- [ ] Diagramas em [docs/arquitetura](../arquitetura/README.md) e a
+      [ADR-005](../adr/ADR-005-comunicacao-sincrona-rest.md) marcada como substituída pela
       ADR-001 do OS Service.
 
 ## Referências

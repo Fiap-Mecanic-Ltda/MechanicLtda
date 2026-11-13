@@ -1,62 +1,20 @@
 using System.Net.Http.Json;
-using MechanicLtda.Application.AppServices.Interfaces;
 using MechanicLtda.Application.DTOs;
-using MechanicLtda.Domain.Enums;
 
 namespace MechanicLtda.Web.Integracoes
 {
     /// <summary>
-    /// Itens da OS vistos pelo Web. Diferente de IItemOrdemServicoAppService, toda operação
-    /// recebe a OS: no OS Service o item só é endereçável dentro dela
-    /// (/api/ordem-servico/{ordemServicoId}/itens/{id}).
-    /// </summary>
-    public interface IItensOrdemServicoWeb
-    {
-        Task<ResponseDto<IEnumerable<ItemOrdemServicoDto>>> ListarAsync(int ordemServicoId);
-        Task<ResponseDto<ItemOrdemServicoDto>> ObterAsync(int ordemServicoId, int id);
-        Task<ResponseDto<ItemOrdemServicoDto>> AdicionarAsync(int ordemServicoId, ItemOrdemServicoCreateDto dto);
-        Task<ResponseDto<ItemOrdemServicoDto>> AtualizarAsync(int ordemServicoId, int id, ItemOrdemServicoUpdateDto dto);
-        Task<ResponseDto<bool>> RemoverAsync(int ordemServicoId, int id);
-    }
-
-    /// <summary>Itens no banco deste repositório (comportamento de antes da Fase 4).</summary>
-    public class ItensOrdemServicoEmProcesso : IItensOrdemServicoWeb
-    {
-        private readonly IItemOrdemServicoAppService _app;
-
-        public ItensOrdemServicoEmProcesso(IItemOrdemServicoAppService app)
-        {
-            _app = app;
-        }
-
-        public Task<ResponseDto<IEnumerable<ItemOrdemServicoDto>>> ListarAsync(int ordemServicoId) =>
-            _app.ObterPorOrdemServicoIdAsync(ordemServicoId);
-
-        public Task<ResponseDto<ItemOrdemServicoDto>> ObterAsync(int ordemServicoId, int id) =>
-            _app.ObterPorIdAsync(id.ToString());
-
-        public Task<ResponseDto<ItemOrdemServicoDto>> AdicionarAsync(int ordemServicoId, ItemOrdemServicoCreateDto dto) =>
-            _app.AdicionarAsync(ordemServicoId, dto);
-
-        public Task<ResponseDto<ItemOrdemServicoDto>> AtualizarAsync(int ordemServicoId, int id, ItemOrdemServicoUpdateDto dto) =>
-            _app.AtualizarAsync(id.ToString(), dto);
-
-        public Task<ResponseDto<bool>> RemoverAsync(int ordemServicoId, int id) =>
-            _app.RemoverAsync(id.ToString());
-    }
-
-    /// <summary>
     /// Itens no OS Service. O serviço não tem chave estrangeira para estoque e serviços: cada
     /// item leva tipo (Peca, Insumo, Servico), descrição e valor. Quem classifica é o Web, a
-    /// partir do cadastro de estoque e de serviços (local ou na Execução, conforme a chave).
+    /// partir do estoque e do catálogo de serviços da Execução.
     /// </summary>
-    public class ItensOrdemServicoHttp : IItensOrdemServicoWeb
+    public class ItensOrdemServicoHttp : IItensOrdemServicoCliente
     {
         private readonly HttpClient _http;
-        private readonly IEstoqueAppService _estoque;
-        private readonly IServicoOficinaAppService _servicos;
+        private readonly IEstoqueCliente _estoque;
+        private readonly IServicoOficinaCliente _servicos;
 
-        public ItensOrdemServicoHttp(HttpClient http, IEstoqueAppService estoque, IServicoOficinaAppService servicos)
+        public ItensOrdemServicoHttp(HttpClient http, IEstoqueCliente estoque, IServicoOficinaCliente servicos)
         {
             _http = http;
             _estoque = estoque;

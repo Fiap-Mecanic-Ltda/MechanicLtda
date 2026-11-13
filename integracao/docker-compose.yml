@@ -72,7 +72,6 @@ services:
       JwtSettings__ExpiracaoMinutos: "480"
       Encryption__CpfCnpjKey: ${ENCRYPTION_KEY}
       Encryption__CpfCnpjHashKey: ${CPF_HASH_KEY}
-      EmailSettings__Password: ${EMAIL_PASSWORD:-}
     depends_on:
       sqlserver:
         condition: service_healthy
@@ -91,11 +90,10 @@ services:
       - "8090:8080"
     environment:
       <<: *mechanic-env
-      # O que este compose existe para testar: o Web chamando os microsserviços.
-      Integracoes__OsService__Habilitado: ${WEB_USA_OS_SERVICE:-true}
+      # OS, itens, estoque e serviços da oficina vivem só nos microsserviços.
       Integracoes__OsService__BaseUrl: http://os-service:8080
-      Integracoes__ExecucaoService__Habilitado: ${WEB_USA_EXECUCAO:-true}
       Integracoes__ExecucaoService__BaseUrl: http://execucao:8080
+      Integracoes__SagaHabilitada: ${SAGA_HABILITADA:-true}
     depends_on:
       api:
         condition: service_healthy
@@ -171,23 +169,18 @@ services:
       retries: 30
       start_period: 20s
 
-  # Carga inicial: copia o estoque e o catálogo de serviços do MechanicLtda para a Execução,
-  # com os mesmos ids (tools/ExecucaoService.Carga). Roda uma vez e sai; repetir não duplica.
+  # Carga de exemplo: o DynamoDB Local sobe vazio, então este serviço cadastra algumas peças,
+  # insumos e serviços na Execução pela API dela e sai. Repetir não duplica.
   carga-execucao:
-    image: mcr.microsoft.com/dotnet/sdk:9.0
+    image: curlimages/curl:8.10.1
     volumes:
-      - ${EXECUCAO_SERVICE_DIR:-../../ExecucaoProducao-service}:/src:ro
       - ./carga-execucao.sh:/carga-execucao.sh:ro
     environment:
       MONOLITO_URL: http://api:8080
-      DynamoDb__ServiceUrl: http://dynamodb:8000
-      DynamoDb__CriarTabelas: "true"
-      AWS_ACCESS_KEY_ID: local
-      AWS_SECRET_ACCESS_KEY: local
+      EXECUCAO_URL: http://execucao:8080
       ADMIN_EMAIL: admin@mechanic.com
       ADMIN_SENHA: Admin@123
-      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
-    entrypoint: ["bash", "/carga-execucao.sh"]
+    entrypoint: ["sh", "/carga-execucao.sh"]
     depends_on:
       api:
         condition: service_healthy

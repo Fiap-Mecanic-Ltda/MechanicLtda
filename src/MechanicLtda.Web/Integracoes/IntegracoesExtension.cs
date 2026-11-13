@@ -1,56 +1,35 @@
-using MechanicLtda.Application.AppServices.Interfaces;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
-
 namespace MechanicLtda.Web.Integracoes
 {
     public static class IntegracoesExtension
     {
         /// <summary>
-        /// Registra os clientes HTTP dos microsservicos e, para cada chave ligada, troca a
-        /// implementação em processo pela remota. Precisa vir depois de AddDependencyInjection.
+        /// Registra os clientes HTTP do OrdemServico-service e do ExecucaoProducao-service.
+        /// Sem as duas BaseUrl válidas o Web não sobe: não há mais OS nem estoque em processo.
         /// </summary>
         public static IServiceCollection AddIntegracoesMicrosservicos(this IServiceCollection services, IConfiguration configuration)
         {
             var opcoes = configuration.GetSection(IntegracoesOptions.Secao).Get<IntegracoesOptions>() ?? new IntegracoesOptions();
+            Validar(opcoes.OsService, "OsService");
+            Validar(opcoes.ExecucaoService, "ExecucaoService");
             services.Configure<IntegracoesOptions>(configuration.GetSection(IntegracoesOptions.Secao));
 
             services.AddHttpContextAccessor();
             services.AddTransient<TokenDoUsuarioHandler>();
 
-            if (opcoes.ExecucaoService.Habilitado)
-            {
-                Validar(opcoes.ExecucaoService, "ExecucaoService");
-                AddCliente<EstoqueHttpAppService>(services, opcoes.ExecucaoService);
-                AddCliente<ServicoOficinaHttpAppService>(services, opcoes.ExecucaoService);
-                AddCliente<ExecucaoHttpCliente>(services, opcoes.ExecucaoService);
-
-                services.Replace(ServiceDescriptor.Scoped<IEstoqueAppService>(sp => sp.GetRequiredService<EstoqueHttpAppService>()));
-                services.Replace(ServiceDescriptor.Scoped<IServicoOficinaAppService>(sp => sp.GetRequiredService<ServicoOficinaHttpAppService>()));
-                services.AddScoped<IExecucaoCliente>(sp => sp.GetRequiredService<ExecucaoHttpCliente>());
-            }
-
-            if (opcoes.OsService.Habilitado)
-            {
-                Validar(opcoes.OsService, "OsService");
-                AddCliente<OrdemServicoHttpAppService>(services, opcoes.OsService);
-                AddCliente<ItensOrdemServicoHttp>(services, opcoes.OsService);
-
-                services.Replace(ServiceDescriptor.Scoped<IOrdemServicoAppService>(sp => sp.GetRequiredService<OrdemServicoHttpAppService>()));
-                services.AddScoped<IOrdemServicoRemoto>(sp => sp.GetRequiredService<OrdemServicoHttpAppService>());
-                services.AddScoped<IItensOrdemServicoWeb>(sp => sp.GetRequiredService<ItensOrdemServicoHttp>());
-            }
-            else
-            {
-                services.AddScoped<IItensOrdemServicoWeb, ItensOrdemServicoEmProcesso>();
-            }
+            AddCliente<IEstoqueCliente, EstoqueHttpAppService>(services, opcoes.ExecucaoService);
+            AddCliente<IServicoOficinaCliente, ServicoOficinaHttpAppService>(services, opcoes.ExecucaoService);
+            AddCliente<IExecucaoCliente, ExecucaoHttpCliente>(services, opcoes.ExecucaoService);
+            AddCliente<IOrdemServicoCliente, OrdemServicoHttpAppService>(services, opcoes.OsService);
+            AddCliente<IItensOrdemServicoCliente, ItensOrdemServicoHttp>(services, opcoes.OsService);
 
             return services;
         }
 
-        private static void AddCliente<T>(IServiceCollection services, ServicoRemotoOptions opcoes) where T : class
+        private static void AddCliente<TInterface, TImplementacao>(IServiceCollection services, ServicoRemotoOptions opcoes)
+            where TInterface : class
+            where TImplementacao : class, TInterface
         {
-            services.AddHttpClient<T>(http =>
+            services.AddHttpClient<TInterface, TImplementacao>(http =>
                 {
                     http.BaseAddress = new Uri(opcoes.BaseUrl.TrimEnd('/') + "/");
                     http.Timeout = TimeSpan.FromSeconds(opcoes.TimeoutSegundos);
@@ -62,14 +41,7 @@ namespace MechanicLtda.Web.Integracoes
         {
             if (!Uri.TryCreate(opcoes.BaseUrl, UriKind.Absolute, out _))
                 throw new InvalidOperationException(
-                    $"Integracoes:{nome}:Habilitado está ligado, mas Integracoes:{nome}:BaseUrl não é uma URL válida.");
+                    $"Integracoes:{nome}:BaseUrl precisa ser a URL do serviço (ex.: http://{nome.ToLowerInvariant()}:8080).");
         }
-    }
-
-    /// <summary>O que as views precisam saber sobre as chaves.</summary>
-    public static class IntegracoesViewExtensions
-    {
-        public static IntegracoesOptions Integracoes(this IServiceProvider services) =>
-            services.GetRequiredService<IOptions<IntegracoesOptions>>().Value;
     }
 }

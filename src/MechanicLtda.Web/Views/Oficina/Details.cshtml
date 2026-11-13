@@ -39,7 +39,7 @@
                 </form>
                 break;
             case "DiagnosticoConcluido":
-                if (Model.SagaNoOsService)
+                if (Model.SagaHabilitada)
                 {
                     <span class="muted">Aguardando o orçamento e o pagamento do cliente. A execução é liberada pela Saga.</span>
                 }
@@ -63,7 +63,7 @@
                 <span class="muted">Nada a fazer: a OS está @e.Status.ToLowerInvariant() na oficina.</span>
                 break;
         }
-        @if (!Model.Final && e.Status != "EmExecucao" && !Model.SagaNoOsService)
+        @if (!Model.Final && e.Status != "EmExecucao" && !Model.SagaHabilitada)
         {
             <form asp-action="Acao" asp-route-id="@e.OrdemServicoId" method="post" style="display:flex; gap:6px; align-items:center;">
                 <input type="hidden" name="acao" value="cancelar" />
