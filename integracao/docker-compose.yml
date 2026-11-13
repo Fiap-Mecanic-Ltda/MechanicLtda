@@ -90,6 +90,8 @@ services:
       - "8090:8080"
     environment:
       <<: *mechanic-env
+      # Sem isto o container usa a cultura invariante e os valores saem como "¤300.00".
+      LANG: pt_BR.UTF-8
       # OS, itens, estoque e serviços da oficina vivem só nos microsserviços.
       Integracoes__OsService__BaseUrl: http://os-service:8080
       Integracoes__ExecucaoService__BaseUrl: http://execucao:8080
