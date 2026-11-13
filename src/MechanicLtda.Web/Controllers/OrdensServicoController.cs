@@ -9,27 +9,21 @@ namespace MechanicLtda.Web.Controllers
 {
     public class OrdensServicoController : RazorControllerBase
     {
-        private readonly IOrdemServicoAppService _ordemServicoAppService;
+        private readonly IOrdemServicoCliente _ordemServicoAppService;
         private readonly IClienteAppService _clienteAppService;
         private readonly IVeiculoAppService _veiculoAppService;
-        private readonly IItensOrdemServicoWeb _itemAppService;
-        private readonly IOrcamentoAppService _orcamentoAppService;
-        private readonly IOrdemServicoRemoto? _ordemServicoRemoto;
+        private readonly IItensOrdemServicoCliente _itemAppService;
 
         public OrdensServicoController(
-            IOrdemServicoAppService ordemServicoAppService,
+            IOrdemServicoCliente ordemServicoAppService,
             IClienteAppService clienteAppService,
             IVeiculoAppService veiculoAppService,
-            IItensOrdemServicoWeb itemAppService,
-            IOrcamentoAppService orcamentoAppService,
-            IOrdemServicoRemoto? ordemServicoRemoto = null)
+            IItensOrdemServicoCliente itemAppService)
         {
-            _ordemServicoRemoto = ordemServicoRemoto;
             _ordemServicoAppService = ordemServicoAppService;
             _clienteAppService = clienteAppService;
             _veiculoAppService = veiculoAppService;
             _itemAppService = itemAppService;
-            _orcamentoAppService = orcamentoAppService;
         }
 
         public async Task<IActionResult> Index()
@@ -58,28 +52,16 @@ namespace MechanicLtda.Web.Controllers
             var itens = await _itemAppService.ListarAsync(id);
             FlashErrors(itens);
 
-            var model = new OrdemServicoDetalheViewModel
+            // O orçamento e o pagamento são do Billing; a OS traz só os ids que a Saga gravou.
+            var historico = await _ordemServicoAppService.ObterHistoricoAsync(id);
+            FlashErrors(historico);
+
+            return View(new OrdemServicoDetalheViewModel
             {
                 Ordem = ordem.getResponse,
                 Itens = itens.hasErrors ? Enumerable.Empty<ItemOrdemServicoDto>() : itens.getResponse,
-                ViaOsService = _ordemServicoRemoto is not null
-            };
-
-            if (_ordemServicoRemoto is not null)
-            {
-                // Os ids do OS Service não são os deste banco: o orçamento local da mesma
-                // numeração seria de outra OS. Com a Saga, o orçamento é do Billing.
-                var historico = await _ordemServicoRemoto.ObterHistoricoAsync(id);
-                FlashErrors(historico);
-                model.Historico = historico.hasErrors ? [] : historico.getResponse;
-            }
-            else
-            {
-                var orcamento = await _orcamentoAppService.ObterPorOrdemServicoIdAsync(id);
-                model.Orcamento = orcamento.hasErrors ? null : orcamento.getResponse;
-            }
-
-            return View(model);
+                Historico = historico.hasErrors ? [] : historico.getResponse
+            });
         }
 
         public async Task<IActionResult> Create()
@@ -183,7 +165,7 @@ namespace MechanicLtda.Web.Controllers
                 "execucao" => await _ordemServicoAppService.IniciarExecucaoAsync(id.ToString()),
                 "finalizar" => await _ordemServicoAppService.FinalizarAsync(id.ToString()),
                 "entregar" => await _ordemServicoAppService.EntregarAsync(id.ToString()),
-                "cancelar" when _ordemServicoRemoto is not null => await _ordemServicoRemoto.CancelarAsync(id, motivoCancelamento),
+                "cancelar" => await _ordemServicoAppService.CancelarAsync(id, motivoCancelamento),
                 _ => new ResponseDto<OrdemServicoDto>().addError("Ação de status inválida.")
             };
 

@@ -15,8 +15,7 @@ if (builder.Environment.IsDevelopment())
 builder.Services.AddControllersWithViews();
 builder.Services.AddDatabase(builder.Configuration);
 builder.Services.AddDependencyInjection();
-// Depois do AddDependencyInjection: com Integracoes:*:Habilitado=true, troca o código em
-// processo pelos microsserviços da Fase 4 (OS e Execução).
+// OS, itens, estoque e serviços da oficina vivem nos microsserviços da Fase 4 (OS e Execução).
 builder.Services.AddIntegracoesMicrosservicos(builder.Configuration);
 builder.Services.AddAutoMapperProfiles();
 builder.Services.AddCookieAuthentication();

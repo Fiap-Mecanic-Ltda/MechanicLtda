@@ -11,7 +11,7 @@ Este compose sobe o sistema da Fase 4 ligado de ponta a ponta, sem AWS:
 | `rabbitmq` | Broker único da Saga | 5672, painel em 15672 |
 | `sqlserver` | `MechanicLtdaDb` e `OsServiceDb` na mesma instância | 1433 |
 | `dynamodb` | DynamoDB Local da Execução | 8000 |
-| `carga-execucao` | Copia estoque e serviços do monólito para a Execução e sai | - |
+| `carga-execucao` | Cadastra peças, insumos e serviços de exemplo na Execução e sai | - |
 
 O **Billing ainda é simulado** pelo OS Service (`Simuladores__Billing=true`): o
 OrcamentoPagamento-service não consome os comandos da Saga pelo RabbitMQ. O "cliente" paga
@@ -58,18 +58,14 @@ No `.env`:
 
 | Variável | Efeito |
 |---|---|
-| `WEB_USA_OS_SERVICE=false` | O Web volta a usar as OS deste repositório |
-| `WEB_USA_EXECUCAO=false` | O Web volta a usar estoque e serviços deste repositório |
 | `SAGA_HABILITADA=false` | OS e Execução funcionam sozinhos; a oficina ganha os botões manuais |
 | `MODO_AUTOMATICO=true` | A Execução avança diagnóstico e reparo sozinha |
 
-Fora do compose, a mesma configuração vale para o Web em qualquer ambiente:
+O Web não tem mais OS, itens, estoque nem serviços em processo. Em qualquer ambiente ele
+precisa dos endereços dos dois serviços, e não sobe sem eles:
 
 ```text
-Integracoes__OsService__Habilitado=true
 Integracoes__OsService__BaseUrl=http://<OS Service ou API Gateway>
-Integracoes__ExecucaoService__Habilitado=true
 Integracoes__ExecucaoService__BaseUrl=http://<Execução ou API Gateway>
+Integracoes__SagaHabilitada=true   # false mostra os botões manuais na tela da oficina
 ```
-
-Desligadas (o padrão), nada muda no comportamento do Web.

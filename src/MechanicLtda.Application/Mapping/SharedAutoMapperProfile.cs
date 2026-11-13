@@ -18,23 +18,11 @@ namespace MechanicLtda.Application.Mapping
             CreateMap<UsuarioUpdateDto, Usuario>();
             CreateMap<ClienteUpdateDto, Cliente>();
             CreateMap<VeiculoUpdateDto, Veiculo>();
-            CreateMap<OrdemServicoUpdateDto, OrdemServico>();
-            CreateMap<ItemOrdemServicoUpdateDto, ItemOrdemServico>();
-            CreateMap<EstoqueCreateDto, Estoque>();
-            CreateMap<EstoqueUpdateDto, Estoque>();
-            CreateMap<ServicoOficinaCreateDto, ServicoOficina>();
-            CreateMap<ServicoOficinaUpdateDto, ServicoOficina>();
-            CreateMap<OrcamentoUpdateDto, Orcamento>();
 
             // Entidade → DTO  (Domain → Application)
             CreateMap<Usuario, UsuarioDto>();
             CreateMap<Cliente, ClienteDto>();
             CreateMap<Veiculo, VeiculoDto>();
-            CreateMap<OrdemServico, OrdemServicoDto>()
-                .ForMember(dest => dest.TempoExecucaoMinutos, opt => opt.MapFrom(src => src.TempoExecucao.HasValue ? src.TempoExecucao.Value.TotalMinutes : (double?)null));
-            CreateMap<ItemOrdemServico, ItemOrdemServicoDto>();
-            CreateMap<Orcamento, OrcamentoDto>();
-            CreateMap<ServicoOficina, ServicoOficinaDto>();
         }
     }
 }

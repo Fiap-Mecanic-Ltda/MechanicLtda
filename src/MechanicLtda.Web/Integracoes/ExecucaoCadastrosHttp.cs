@@ -1,15 +1,13 @@
 using System.Net.Http.Json;
-using MechanicLtda.Application.AppServices.Interfaces;
 using MechanicLtda.Application.DTOs;
-using MechanicLtda.Domain.Enums;
 
 namespace MechanicLtda.Web.Integracoes
 {
     /// <summary>
-    /// IEstoqueAppService atendido pelo ExecucaoProducao-service (/api/estoque). A diferença
-    /// visível é a reserva: o diagnóstico reserva e só o início da execução baixa.
+    /// Estoque no ExecucaoProducao-service (/api/estoque). O diagnóstico reserva e só o
+    /// início da execução baixa.
     /// </summary>
-    public class EstoqueHttpAppService : IEstoqueAppService
+    public class EstoqueHttpAppService : IEstoqueCliente
     {
         public const string NomeServico = "serviço de Execução";
         private const string Rota = "api/estoque";
@@ -32,9 +30,6 @@ namespace MechanicLtda.Web.Integracoes
 
         public Task<ResponseDto<IEnumerable<EstoqueDto>>> ObterTodosAsync() => Lista(() => _http.GetAsync(Rota));
 
-        public Task<ResponseDto<IEnumerable<EstoqueDto>>> ObterPorTipoAsync(TipoEstoque tipo) =>
-            Lista(() => _http.GetAsync($"{Rota}/tipo/{tipo}"));
-
         public Task<ResponseDto<EstoqueDto>> ObterPorIdAsync(string id) => Item(() => _http.GetAsync($"{Rota}/{id}"));
 
         public Task<ResponseDto<EstoqueDto>> ReporQuantidadeAsync(string id, EstoqueReposicaoDto dto) =>
@@ -50,8 +45,8 @@ namespace MechanicLtda.Web.Integracoes
         }
     }
 
-    /// <summary>IServicoOficinaAppService atendido pelo ExecucaoProducao-service (/api/servicos-oficina).</summary>
-    public class ServicoOficinaHttpAppService : IServicoOficinaAppService
+    /// <summary>Catálogo de serviços no ExecucaoProducao-service (/api/servicos-oficina).</summary>
+    public class ServicoOficinaHttpAppService : IServicoOficinaCliente
     {
         private const string Rota = "api/servicos-oficina";
 

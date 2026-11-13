@@ -1,6 +1,5 @@
 using System.Net;
 using MechanicLtda.Application.DTOs;
-using MechanicLtda.Domain.Enums;
 using MechanicLtda.Web.Integracoes;
 using MechanicLtda.Web.ViewModels;
 using Xunit;

@@ -203,21 +203,14 @@ Pontos em que o serviço **não** é idêntico ao código daqui:
 
 ## 6. Estado atual deste repositório
 
-O Web já sabe falar com a Execução, mas só com a chave ligada
-(`Integracoes:ExecucaoService:Habilitado=true` e `Integracoes:ExecucaoService:BaseUrl`).
-Desligada, que é o padrão, nada muda. Com ela ligada, estoque e serviços vão para a Execução
-(`EstoqueHttpAppService` e `ServicoOficinaHttpAppService`), a tela de estoque mostra reservada e
-disponível, e o menu ganha a **Oficina** (`OficinaController`): fila, assumir e registrar o
-diagnóstico, iniciar e finalizar o reparo, e as rotas manuais quando a Saga está desligada.
+Estoque e serviços da oficina saíram daqui: o Web só fala com a Execução
+(`Integracoes:ExecucaoService:BaseUrl`, obrigatória), por `EstoqueHttpAppService` e
+`ServicoOficinaHttpAppService`. A tela de estoque mostra reservada e disponível, e o menu tem a
+**Oficina** (`OficinaController`): fila, assumir e registrar o diagnóstico, iniciar e finalizar
+o reparo. Com `Integracoes:SagaHabilitada=false`, ela mostra também as rotas manuais.
 
-Fora isso, o código de estoque daqui continua intacto:
-
-- As rotas `/api/estoque/*` e `/api/servicos-oficina/*` continuam respondendo.
-- `MechanicLtda.Web` (`EstoquesController`, `ServicosOficinaController`,
-  `ItensOrdemServicoController` e `HomeController`) continua usando `IEstoqueAppService` e
-  `IServicoOficinaAppService` em processo.
-- As tabelas `Estoques` e `ServicosOficina` continuam em `MechanicLtdaDb`, e `ItensOrdemServico`
-  tem chave estrangeira para as duas.
+A API deste repositório não tem mais `/api/estoque/*` nem `/api/servicooficina/*`. As tabelas
+`Estoques` e `ServicosOficina` continuam em `MechanicLtdaDb` como histórico.
 
 ## TODO — ordem segura de execução
 
@@ -250,55 +243,27 @@ removido daqui enquanto o OS deste repositório ainda apontar para `Estoque` e `
 - [ ] `rotear_trafego_alb = true` no ExecucaoProducao-InfraKubernete (regra de prioridade 110).
 - [x] `MechanicLtda.Web`: trocar `IEstoqueAppService` e `IServicoOficinaAppService` por
       `HttpClient` tipado em `EstoquesController`, `ServicosOficinaController`,
-      `ItensOrdemServicoController` e `HomeController`, atrás de
-      `Integracoes:ExecucaoService:Habilitado`. Quantidade reservada na tela de estoque.
+      `ItensOrdemServicoController` e `HomeController`. Quantidade reservada na tela de estoque.
 - [x] Tela para o mecânico (Oficina): fila de execução, diagnóstico, iniciar e finalizar.
-- [ ] Ligar a chave no Web do cluster (ConfigMap do InfraKubernete).
+- [ ] `Integracoes__ExecucaoService__BaseUrl` no ConfigMap do Web (InfraKubernete).
 - [ ] `Mensageria__Habilitada="true"` no ConfigMap da Execução, junto com a Saga do OS Service
       (`Saga__Habilitada="true"` e `Simuladores__Execucao=false`).
 - [x] Atualizar a cópia de `docs/contratos-eventos.md` do ExecucaoProducao-service para ficar
       igual à do OS Service (PR #8 do ExecucaoProducao-service).
 
-### TODO 4 — Remover o que foi externalizado
+### TODO 4 — Remover o que foi externalizado (feito)
 
-Só depois de 1 a 3 estáveis **e** da remoção da OS ([ordem-servico.md](ordem-servico.md)),
-porque `ItemOrdemServico` tem chave estrangeira para `Estoque` e `ServicoOficina`.
-
-**Remover por completo:**
-
-- [ ] `src/MechanicLtda.Domain/Entities/Estoque.cs`, `ServicoOficina.cs`
-- [ ] `src/MechanicLtda.Domain/Enums/TipoEstoque.cs`
-- [ ] `src/MechanicLtda.Domain/Interfaces/Repositories/IEstoqueRepository.cs`, `IServicoOficinaRepository.cs`
-- [ ] `src/MechanicLtda.Domain/Interfaces/Services/IEstoqueService.cs`, `IServicoOficinaService.cs`
-- [ ] `src/MechanicLtda.Domain/Services/EstoqueService.cs`, `ServicoOficinaService.cs`
-- [ ] `src/MechanicLtda.Application/AppServices/EstoqueAppService.cs`, `ServicoOficinaAppService.cs` e as interfaces
-- [ ] `src/MechanicLtda.Application/DTOs/EstoqueDtos.cs`, `ServicoOficinaDtos.cs`
-- [ ] `src/MechanicLtda.Infrastructure/Repositories/EstoqueRepository.cs`, `ServicoOficinaRepository.cs`
-- [ ] `src/MechanicLtda.Infrastructure/FluentAPI/ConfiguracaoTabelas/EstoqueConfig.cs`, `ServicoOficinaConfig.cs`
-- [ ] `src/MechanicLtda.API/Controllers/EstoqueController.cs`, `ServicoOficinaController.cs`
-- [ ] `src/MechanicLtda.API/ViewModels/EstoqueViewModels.cs`, `ServicoOficinaViewModels.cs`
-- [ ] Testes: `EstoqueServiceTests`, `ServicoOficinaServiceTests`, `EstoqueAppServiceTests`,
-      `ServicoOficinaAppServiceTests`, `EstoqueControllerTests`, `ServicoOficinaControllerTests`
-
-**Editar (remover apenas o trecho):**
-
-| Arquivo | O que sai |
-|---|---|
-| `src/MechanicLtda.Infrastructure/BancoAPIContext.cs` | linhas ~27–28: `DbSet` de `Estoques` e `ServicosOficina` |
-| `src/MechanicLtda.Bootstrap/Extensions/DependencyInjectionExtension.cs` | linhas ~26, ~27, ~47, ~48, ~58 e ~59: repositórios, serviços e AppServices |
-| `src/MechanicLtda.Bootstrap/Extensions/DataSeederExtension.cs` | linhas ~78–89: seed de `Estoques` |
-| `src/MechanicLtda.Application/Mapping/SharedAutoMapperProfile.cs` | linhas ~23–26 e ~37 (`EstoqueDto` é montado à mão no AppService) |
-| `src/MechanicLtda.API/Extensions/AutoMapperProfile.cs` | linhas ~25–29 |
-| `src/MechanicLtda.Web/ViewModels/RazorViewModels.cs` | `EstoqueFormViewModel`, `EstoqueReposicaoRazorViewModel`, `ServicoOficinaFormViewModel` viram modelos do cliente HTTP |
-
-**Banco e documentação:**
-
-- [ ] Migration nova com `DROP TABLE` de `Estoques` e `ServicosOficina`, depois do drop de
-      `ItensOrdemServico`. **Não** apagar `AddEstoque` nem `AddServicoOficinaTempoExecucao`.
-- [ ] Antes do drop, conferir que as tabelas da Execução têm todos os itens (ou rodar a carga de
-      novo).
-- [ ] Atualizar o `README.md` (endpoints, modelo de domínio, repositórios do projeto) e os
-      diagramas em [docs/arquitetura](../arquitetura/README.md).
+- [x] Domínio, aplicação, API, repositórios, configurações do EF, seed e testes de estoque e
+      serviços da oficina saíram deste repositório.
+- [x] O Web chama só a Execução: sem `Integracoes:ExecucaoService:BaseUrl` ele não sobe, e a
+      tela da Oficina aparece sempre.
+- [x] Migration `SaidaOsEstoqueParaMicrosservicos`: as tabelas `Estoques` e `ServicosOficina`
+      ficam no banco como histórico, sem perda de dados.
+- [x] A carga `tools/ExecucaoService.Carga` lê os endpoints de estoque e serviços do monólito,
+      que não existem mais. Quem precisar copiar os dados antigos roda a carga contra a versão
+      anterior da API. No compose de `integracao/`, o `carga-execucao` passou a cadastrar itens
+      de exemplo.
+- [ ] Diagramas em [docs/arquitetura](../arquitetura/README.md).
 
 ## Referências
 

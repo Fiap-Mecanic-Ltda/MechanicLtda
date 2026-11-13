@@ -1,6 +1,5 @@
 using System.Net;
 using MechanicLtda.Application.DTOs;
-using MechanicLtda.Domain.Enums;
 using MechanicLtda.Web.Integracoes;
 using Xunit;
 
@@ -114,16 +113,6 @@ namespace MechanicLtda.Web.Tests
             Assert.Equal("/api/ordemservico/7/cancelar", handler.Chamadas[0].Url);
             Assert.Contains("Cliente desistiu", handler.Chamadas[0].Corpo);
             Assert.Equal("Usuario", historico.getResponse.Single().Origem);
-        }
-
-        [Fact]
-        public async Task Aprovacao_por_token_nao_existe_no_servico()
-        {
-            var app = new OrdemServicoHttpAppService(new HandlerFalso().Cliente());
-
-            var resposta = await app.ConfirmarAprovacaoPorTokenAsync("abc", true, null);
-
-            Assert.True(resposta.hasErrors);
         }
     }
 }

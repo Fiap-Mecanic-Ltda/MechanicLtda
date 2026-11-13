@@ -1,27 +1,13 @@
 using System.Net.Http.Json;
-using MechanicLtda.Application.AppServices.Interfaces;
 using MechanicLtda.Application.DTOs;
-using MechanicLtda.Domain.Enums;
 
 namespace MechanicLtda.Web.Integracoes
 {
-    /// <summary>Operações do OS Service que não existem no código em processo.</summary>
-    public interface IOrdemServicoRemoto
-    {
-        Task<ResponseDto<IEnumerable<HistoricoStatusOrdemServicoDto>>> ObterHistoricoAsync(int id);
-        Task<ResponseDto<OrdemServicoDto>> CancelarAsync(int id, string? motivo);
-    }
-
-    public record HistoricoStatusOrdemServicoDto(
-        int? StatusAnterior, string? StatusAnteriorDescricao, int StatusNovo, string StatusNovoDescricao,
-        DateTime DataAlteracao, string Origem, string? Motivo);
-
     /// <summary>
-    /// IOrdemServicoAppService atendido pelo OrdemServico-service. Mesmas rotas
-    /// /api/ordemservico/* da API deste repositório; a diferença é que, com a Saga ligada no
-    /// serviço, as transições que ela comanda respondem 409 com a explicação.
+    /// Cliente do OrdemServico-service (/api/ordemservico/*). Com a Saga ligada no serviço, as
+    /// transições que ela comanda respondem 409 com a explicação.
     /// </summary>
-    public class OrdemServicoHttpAppService : IOrdemServicoAppService, IOrdemServicoRemoto
+    public class OrdemServicoHttpAppService : IOrdemServicoCliente
     {
         public const string NomeServico = "serviço de Ordem de Serviço";
         private const string Rota = "api/ordemservico";
@@ -72,15 +58,8 @@ namespace MechanicLtda.Web.Integracoes
         public Task<ResponseDto<OrdemServicoDto>> CancelarAsync(int id, string? motivo) =>
             Transicao(id.ToString(), "cancelar", new { Motivo = string.IsNullOrWhiteSpace(motivo) ? null : motivo });
 
-        public Task<ResponseDto<OrdemServicoDto>> ConfirmarAprovacaoPorTokenAsync(string token, bool aprovado, string? motivoRecusa) =>
-            Task.FromResult(new ResponseDto<OrdemServicoDto>()
-                .addError("A aprovação por link não existe no OS Service: o cliente aprova o orçamento pagando no Billing."));
-
         public async Task<ResponseDto<IEnumerable<OrdemServicoDto>>> ObterTodosAsync() =>
             await Lista(() => _http.GetAsync(Rota));
-
-        public async Task<ResponseDto<IEnumerable<OrdemServicoDto>>> ObterPorClienteIdAsync(string clienteId) =>
-            await Lista(() => _http.GetAsync($"{Rota}/cliente/{clienteId}"));
 
         public Task<ResponseDto<OrdemServicoDto>> ObterPorIdAsync(string id) =>
             Ordem(() => _http.GetAsync($"{Rota}/{id}"));

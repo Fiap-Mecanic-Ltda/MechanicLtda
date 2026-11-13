@@ -1,6 +1,5 @@
 using MechanicLtda.Application.AppServices.Interfaces;
 using MechanicLtda.Application.DTOs;
-using MechanicLtda.Domain.Enums;
 using MechanicLtda.Web.Integracoes;
 using MechanicLtda.Web.ViewModels;
 using Microsoft.AspNetCore.Mvc;
@@ -9,25 +8,24 @@ using Microsoft.Extensions.Options;
 namespace MechanicLtda.Web.Controllers
 {
     /// <summary>
-    /// Tela do mecânico: fila de diagnóstico e de reparo do ExecucaoProducao-service. Só existe
-    /// com Integracoes:ExecucaoService:Habilitado=true.
+    /// Tela do mecânico: fila de diagnóstico e de reparo do ExecucaoProducao-service.
     /// </summary>
     public class OficinaController : RazorControllerBase
     {
         public const int LinhasDiagnostico = 6;
 
-        private readonly IExecucaoCliente? _execucao;
-        private readonly IOrdemServicoAppService _ordens;
-        private readonly IEstoqueAppService _estoque;
-        private readonly IServicoOficinaAppService _servicos;
+        private readonly IExecucaoCliente _execucao;
+        private readonly IOrdemServicoCliente _ordens;
+        private readonly IEstoqueCliente _estoque;
+        private readonly IServicoOficinaCliente _servicos;
         private readonly IntegracoesOptions _integracoes;
 
         public OficinaController(
-            IOrdemServicoAppService ordens,
-            IEstoqueAppService estoque,
-            IServicoOficinaAppService servicos,
-            IOptions<IntegracoesOptions> integracoes,
-            IExecucaoCliente? execucao = null)
+            IOrdemServicoCliente ordens,
+            IEstoqueCliente estoque,
+            IServicoOficinaCliente servicos,
+            IExecucaoCliente execucao,
+            IOptions<IntegracoesOptions> integracoes)
         {
             _ordens = ordens;
             _estoque = estoque;
@@ -38,9 +36,6 @@ namespace MechanicLtda.Web.Controllers
 
         public async Task<IActionResult> Index(string? status = null)
         {
-            if (_execucao is null)
-                return NotFound();
-
             var fila = await _execucao.FilaAsync(status);
             FlashErrors(fila);
 
@@ -48,15 +43,12 @@ namespace MechanicLtda.Web.Controllers
             {
                 Fila = fila.hasErrors ? [] : fila.getResponse,
                 Status = status,
-                SagaNoOsService = _integracoes.OsService.Habilitado
+                SagaHabilitada = _integracoes.SagaHabilitada
             });
         }
 
         public async Task<IActionResult> Details(int id)
         {
-            if (_execucao is null)
-                return NotFound();
-
             var execucao = await _execucao.ObterAsync(id);
             if (execucao.hasErrors)
             {
@@ -75,9 +67,6 @@ namespace MechanicLtda.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Receber(int ordemServicoId)
         {
-            if (_execucao is null)
-                return NotFound();
-
             var ordem = await _ordens.ObterPorIdAsync(ordemServicoId.ToString());
             if (ordem.hasErrors)
             {
@@ -94,9 +83,6 @@ namespace MechanicLtda.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Acao(int id, string acao, string? texto = null)
         {
-            if (_execucao is null)
-                return NotFound();
-
             var resposta = acao switch
             {
                 "assumir" => await _execucao.IniciarDiagnosticoAsync(id),
@@ -116,9 +102,6 @@ namespace MechanicLtda.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Diagnostico(int id, DiagnosticoFormViewModel form)
         {
-            if (_execucao is null)
-                return NotFound();
-
             var itens = new List<ItemDiagnosticoDto>();
             var erros = new ResponseDto<ExecucaoDto>();
             var estoques = await _estoque.ObterTodosAsync();
@@ -170,7 +153,7 @@ namespace MechanicLtda.Web.Controllers
             var model = new OficinaDetalheViewModel
             {
                 Execucao = execucao,
-                SagaNoOsService = _integracoes.OsService.Habilitado,
+                SagaHabilitada = _integracoes.SagaHabilitada,
                 Diagnostico = new DiagnosticoFormViewModel
                 {
                     Itens = Enumerable.Range(0, LinhasDiagnostico).Select(_ => new LinhaDiagnosticoViewModel()).ToList()

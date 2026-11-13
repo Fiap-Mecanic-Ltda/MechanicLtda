@@ -1,7 +1,5 @@
 using System.Net;
-using MechanicLtda.Application.AppServices.Interfaces;
 using MechanicLtda.Application.DTOs;
-using MechanicLtda.Domain.Enums;
 using MechanicLtda.Web.Integracoes;
 using Moq;
 using Xunit;
@@ -14,8 +12,8 @@ namespace MechanicLtda.Web.Tests
             {"id":3,"descricao":"Filtro de Ar","tipo":"Peca","quantidade":2,"valorUnitario":40,"valorTotal":80,"estoqueId":2,"servicoOficinaId":null}
             """;
 
-        private readonly Mock<IEstoqueAppService> _estoque = new();
-        private readonly Mock<IServicoOficinaAppService> _servicos = new();
+        private readonly Mock<IEstoqueCliente> _estoque = new();
+        private readonly Mock<IServicoOficinaCliente> _servicos = new();
 
         private ItensOrdemServicoHttp Criar(HandlerFalso handler) => new(handler.Cliente(), _estoque.Object, _servicos.Object);
 
