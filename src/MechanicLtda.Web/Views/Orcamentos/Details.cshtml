@@ -1,0 +1,173 @@
+@model OrcamentoDetalheViewModel
+@{
+    ViewData["Title"] = $"Orçamento da ordem #{Model.Ordem.Id}";
+    var o = Model.Orcamento;
+    string BadgeOrcamento(StatusOrcamento s) => s switch
+    {
+        StatusOrcamento.Pago => "badge badge-ok",
+        StatusOrcamento.Recusado or StatusOrcamento.Cancelado => "badge badge-muted",
+        _ => "badge badge-warn"
+    };
+    string BadgePagamento(StatusPagamento s) => s switch
+    {
+        StatusPagamento.Aprovado => "badge badge-ok",
+        StatusPagamento.Pendente or StatusPagamento.EmProcessamento or StatusPagamento.Autorizado => "badge badge-warn",
+        _ => "badge badge-muted"
+    };
+}
+
+<section class="page-header">
+    <div>
+        <h1>Orçamento da ordem #@Model.Ordem.Id</h1>
+        <p>@Model.Ordem.DescricaoProblema</p>
+    </div>
+    <div class="actions">
+        <a class="btn btn-secondary" asp-controller="OrdensServico" asp-action="Details" asp-route-id="@Model.Ordem.Id">Voltar para a OS</a>
+        @if (o is not null)
+        {
+            <a class="btn btn-secondary" asp-action="Pdf" asp-route-id="@o.Id" asp-route-ordemServicoId="@Model.Ordem.Id">Baixar PDF</a>
+        }
+    </div>
+</section>
+
+@if (o is null)
+{
+    <section class="panel">
+        <h2>Orçamento ainda não gerado</h2>
+        <p class="muted">
+            A OS está em <strong>@Model.Ordem.StatusDescricao</strong>. Com a Saga ligada, o orçamento é gerado
+            depois do diagnóstico, quando a OS vai para Aguardando Aprovação.
+        </p>
+    </section>
+}
+else
+{
+    <section class="grid grid-4">
+        <article class="card metric"><div class="label">Orçamento</div><div class="value" style="font-size: 1.25rem;">#@o.Id.ToString("D6")</div></article>
+        <article class="card metric"><div class="label">Situação</div><div class="value" style="font-size: 1.25rem;"><span class="@BadgeOrcamento(o.Status)">@o.Status.Descricao()</span></div></article>
+        <article class="card metric"><div class="label">Total</div><div class="value" style="font-size: 1.25rem;">@o.ValorTotalGeral.ToString("C")</div></article>
+        <article class="card metric"><div class="label">Validade</div><div class="value" style="font-size: 1.25rem;">@(o.Validade?.ToLocalTime().ToString("dd/MM/yyyy") ?? "-")</div></article>
+    </section>
+
+    @if (!string.IsNullOrWhiteSpace(o.MotivoStatus))
+    {
+        <p class="muted" style="margin-top: 10px;">Motivo: @o.MotivoStatus</p>
+    }
+
+    <section class="panel" style="margin-top: 18px;">
+        <h2>Decisão do cliente</h2>
+        @if (o.AceitaDecisao)
+        {
+            <div class="actions">
+                <a class="btn" asp-action="Pagar" asp-route-id="@o.Id">Pagar com Mercado Pago</a>
+                @if (o.Status == StatusOrcamento.Aberto)
+                {
+                    <form asp-action="Aprovar" asp-route-id="@o.Id" method="post">
+                        <input type="hidden" name="ordemServicoId" value="@Model.Ordem.Id" />
+                        <button class="btn btn-secondary" type="submit">Aprovar sem pagar</button>
+                    </form>
+                }
+                <form asp-action="Recusar" asp-route-id="@o.Id" method="post" style="display:flex; gap:6px; align-items:center;"
+                      onsubmit="return confirm('Recusar o orçamento cancela a OS. Continuar?');">
+                    <input type="hidden" name="ordemServicoId" value="@Model.Ordem.Id" />
+                    <label for="motivo" class="sr-only">Motivo da recusa</label>
+                    <input type="text" id="motivo" name="motivo" placeholder="Motivo da recusa (opcional)" maxlength="500" />
+                    <button class="btn btn-danger" type="submit">Recusar orçamento</button>
+                </form>
+            </div>
+            <p class="muted" style="margin-top: 10px;">
+                O pagamento aprovado vale como aprovação e leva a OS para execução. Aprovar sem pagar só registra
+                a intenção do cliente. Recusar encerra o orçamento e a Saga cancela a OS.
+            </p>
+        }
+        else
+        {
+            <p class="muted">O orçamento está <strong>@o.Status.Descricao().ToLowerInvariant()</strong> e não aceita mais decisão nem pagamento.</p>
+        }
+    </section>
+
+    <section class="grid grid-2" style="margin-top: 18px;">
+        <article class="panel">
+            <h2>Itens</h2>
+            @if (!o.Itens.Any())
+            {
+                <div class="empty">Sem itens no orçamento.</div>
+            }
+            else
+            {
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Item</th><th>Tipo</th><th>Qtd.</th><th>Unitário</th><th>Total</th></tr></thead>
+                        <tbody>
+                        @foreach (var item in o.Itens)
+                        {
+                            <tr>
+                                <td>@item.Descricao</td>
+                                <td>@item.Categoria.Descricao()</td>
+                                <td>@item.Quantidade</td>
+                                <td>@item.ValorUnitario.ToString("C")</td>
+                                <td>@item.ValorTotal.ToString("C")</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </article>
+
+        <article class="panel">
+            <h2>Totais</h2>
+            <div class="stack">
+                <div><span class="muted">Peças</span><br /><strong>@o.ValorTotalPecas.ToString("C")</strong></div>
+                <div><span class="muted">Insumos</span><br /><strong>@o.ValorTotalInsumos.ToString("C")</strong></div>
+                <div><span class="muted">Serviços</span><br /><strong>@o.ValorTotalServicos.ToString("C")</strong></div>
+                <div><span class="muted">Total geral</span><br /><strong>@o.ValorTotalGeral.ToString("C")</strong></div>
+                <div class="muted">Gerado em @o.DataGeracao.ToLocalTime().ToString("dd/MM/yyyy HH:mm")@(o.AjustadoManualmente ? ", com ajuste manual" : "")</div>
+            </div>
+        </article>
+    </section>
+
+    <section class="panel" style="margin-top: 18px;">
+        <h2>Pagamentos</h2>
+        @if (!Model.Pagamentos.Any())
+        {
+            <div class="empty">Nenhuma tentativa de pagamento.</div>
+        }
+        else
+        {
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>#</th><th>Quando</th><th>Valor</th><th>Status</th><th>Forma</th><th>Mercado Pago</th><th></th></tr></thead>
+                    <tbody>
+                    @foreach (var p in Model.Pagamentos)
+                    {
+                        <tr>
+                            <td>@p.Id</td>
+                            <td>@p.CriadoEm.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@p.Valor.ToString("C")</td>
+                            <td>
+                                <span class="@BadgePagamento(p.Status)">@p.Status.Descricao()</span>
+                                @if (!string.IsNullOrWhiteSpace(p.StatusDetalhe))
+                                {
+                                    <br /><span class="muted">@p.StatusDetalhe</span>
+                                }
+                            </td>
+                            <td>@(p.MetodoPagamento ?? "-")@(p.Parcelas > 1 ? $" em {p.Parcelas}x" : "")</td>
+                            <td>@(p.IdExterno ?? "-")@(p.ModoTeste ? " (teste)" : "")</td>
+                            <td>
+                                @if (p.EmAberto)
+                                {
+                                    <form asp-action="Sincronizar" asp-route-id="@p.Id" method="post">
+                                        <input type="hidden" name="ordemServicoId" value="@Model.Ordem.Id" />
+                                        <button class="btn btn-small btn-secondary" type="submit">Atualizar status</button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+}

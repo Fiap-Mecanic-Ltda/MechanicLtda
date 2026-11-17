@@ -91,6 +91,21 @@ Pontos em que o serviço **não** é idêntico ao código daqui:
 
 ## 5. Estado atual deste repositório
 
+> **Atualização (Fase 4):** o Web já consome o OrcamentoPagamento-service por HTTP.
+> `Integracoes/OrcamentoPagamentoHttp.cs` chama `/api/orcamento` (por OS, PDF, `aprovar`,
+> `recusar`) e `/api/pagamento` (criar, listar, `sincronizar`); a tela fica em
+> `Controllers/OrcamentosController` e é aberta pelo botão "Ver orçamento e pagar" na OS. O
+> pagamento usa o SDK JS do Mercado Pago (CardForm): o cartão vira token no navegador e o Web
+> só repassa o token, sem valor. Configuração:
+>
+> | Chave | Local | Cluster |
+> |---|---|---|
+> | `Integracoes:OrcamentoService:BaseUrl` | `http://localhost:8083` | URL do API Gateway (`/api/orcamento` e `/api/pagamento` vão ao serviço pelo ALB) |
+> | `Integracoes:OrcamentoService:MercadoPagoPublicKey` | vazia = modo simulado (gateway fake do serviço) | public key **de teste** |
+>
+> Sem a `BaseUrl`, o Web sobe normalmente e as telas avisam que o serviço não está
+> configurado. O texto abaixo descreve o estado de antes da extração.
+
 Nada foi alterado aqui. Em particular:
 
 - `ItemOrdemServicoService` continua chamando `OrcamentoService.CriarOuAtualizarAsync` em

@@ -31,3 +31,4 @@ secrets/
 .env
 /env .env
 
+coverage/

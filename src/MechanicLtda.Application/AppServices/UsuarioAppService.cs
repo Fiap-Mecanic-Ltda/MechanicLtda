@@ -29,7 +29,23 @@ namespace MechanicLtda.Application.AppServices
 
             try
             {
+                // A senha é conferida antes de gravar: um usuário sem senha nunca consegue entrar.
+                var errosSenha = await ValidarSenhaAsync(dto);
+                if (errosSenha.Count > 0)
+                {
+                    errosSenha.ForEach(e => response.addError(e));
+                    return response;
+                }
+
                 var usuario = await _usuarioService.AdicionarAsnyc(dto.UserName, dto.Email, dto.Tipo);
+
+                var senha = await _userManager.AddPasswordAsync(usuario, dto.Senha);
+                if (!senha.Succeeded)
+                {
+                    await _usuarioService.RemoverAsync(usuario.Id);
+                    foreach (var erro in senha.Errors) response.addError(erro.Description);
+                    return response;
+                }
 
                 // Atribui o role correspondente ao tipo informado
                 var role = ObterRolePorTipo(dto.Tipo);
@@ -102,6 +118,24 @@ namespace MechanicLtda.Application.AppServices
                 await _userManager.RemoveFromRolesAsync(usuario, rolesAtuais);
 
             await _userManager.AddToRoleAsync(usuario, ObterRolePorTipo(novoTipo));
+        }
+
+        private async Task<List<string>> ValidarSenhaAsync(UsuarioCreateDto dto)
+        {
+            var erros = new List<string>();
+            if (string.IsNullOrWhiteSpace(dto.Senha))
+            {
+                erros.Add("Informe a senha.");
+                return erros;
+            }
+
+            var candidato = new Usuario { UserName = dto.UserName, Email = dto.Email };
+            foreach (var validador in _userManager.PasswordValidators)
+            {
+                var resultado = await validador.ValidateAsync(_userManager, candidato, dto.Senha);
+                erros.AddRange(resultado.Errors.Select(e => e.Description));
+            }
+            return erros;
         }
 
         private static string ObterRolePorTipo(TipoUsuario tipo) => tipo switch

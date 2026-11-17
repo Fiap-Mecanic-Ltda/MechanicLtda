@@ -1,3 +1,4 @@
+using MechanicLtda.Web.Integracoes;
 using MechanicLtda.Application.AppServices.Interfaces;
 using MechanicLtda.Application.DTOs;
 using MechanicLtda.Web.ViewModels;
@@ -7,9 +8,9 @@ namespace MechanicLtda.Web.Controllers
 {
     public class ServicosOficinaController : RazorControllerBase
     {
-        private readonly IServicoOficinaAppService _servicoAppService;
+        private readonly IServicoOficinaCliente _servicoAppService;
 
-        public ServicosOficinaController(IServicoOficinaAppService servicoAppService)
+        public ServicosOficinaController(IServicoOficinaCliente servicoAppService)
         {
             _servicoAppService = servicoAppService;
         }
@@ -53,6 +54,9 @@ namespace MechanicLtda.Web.Controllers
 
         public async Task<IActionResult> Edit(int id)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var response = await _servicoAppService.ObterPorIdAsync(id.ToString());
             if (response.hasErrors)
             {
@@ -100,6 +104,9 @@ namespace MechanicLtda.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var response = await _servicoAppService.RemoverAsync(id.ToString());
             if (response.hasErrors)
                 FlashErrors(response);

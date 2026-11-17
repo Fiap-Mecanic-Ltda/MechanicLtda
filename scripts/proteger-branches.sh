@@ -75,7 +75,7 @@ proteger Lambda         main            "Build, testes e empacotamento" "Terrafo
 proteger Lambda         homologacao     "Build, testes e empacotamento" "Terraform plan"
 
 proteger InfraKubernete main
-proteger InfraKubernete homolog
+proteger InfraKubernete homologacao
 
 proteger InfraSGBD      main
 proteger InfraSGBD      homologacao

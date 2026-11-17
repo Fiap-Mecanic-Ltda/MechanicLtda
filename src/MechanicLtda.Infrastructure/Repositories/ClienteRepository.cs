@@ -24,5 +24,17 @@ namespace MechanicLtda.Infrastructure.Repositories
         {
             return await _dbSet.AsNoTracking().FirstOrDefaultAsync(c => c.Email == email);
         }
+
+        /// <summary>O CPF/CNPJ é gravado cifrado; a unicidade é conferida pelo índice cego.</summary>
+        public async Task<bool> CpfCnpjHashEmUsoAsync(string cpfCnpjHash, int? ignorarClienteId = null)
+        {
+            return await _dbSet.AnyAsync(c => c.CpfCnpjHash == cpfCnpjHash
+                                           && (ignorarClienteId == null || c.Id != ignorarClienteId));
+        }
+
+        public async Task<bool> PossuiVeiculosAsync(int clienteId)
+        {
+            return await _dbSet.Where(c => c.Id == clienteId).SelectMany(c => c.Veiculos).AnyAsync();
+        }
     }
 }

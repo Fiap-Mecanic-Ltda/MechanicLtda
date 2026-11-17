@@ -18,16 +18,6 @@ namespace MechanicLtda.API.Extensions
             CreateMap<ClienteUpdateViewModel, ClienteUpdateDto>();
             CreateMap<VeiculoCreateViewModel, VeiculoCreateDto>();
             CreateMap<VeiculoUpdateViewModel, VeiculoUpdateDto>();
-            CreateMap<OrdemServicoCreateViewModel, OrdemServicoCreateDto>();
-            CreateMap<OrdemServicoUpdateViewModel, OrdemServicoUpdateDto>();
-            CreateMap<ItemOrdemServicoCreateViewModel, ItemOrdemServicoCreateDto>();
-            CreateMap<ItemOrdemServicoUpdateViewModel, ItemOrdemServicoUpdateDto>();
-            CreateMap<EstoqueCreateViewModel, EstoqueCreateDto>();
-            CreateMap<EstoqueUpdateViewModel, EstoqueUpdateDto>();
-            CreateMap<EstoqueReposicaoViewModel, EstoqueReposicaoDto>();
-            CreateMap<ServicoOficinaCreateViewModel, ServicoOficinaCreateDto>();
-            CreateMap<ServicoOficinaUpdateViewModel, ServicoOficinaUpdateDto>();
-            CreateMap<OrcamentoUpdateViewModel, OrcamentoUpdateDto>();
         }
     }
 }

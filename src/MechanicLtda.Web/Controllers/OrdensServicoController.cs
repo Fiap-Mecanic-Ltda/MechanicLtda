@@ -1,3 +1,4 @@
+using MechanicLtda.Web.Integracoes;
 using MechanicLtda.Web.ViewModels;
 using MechanicLtda.Application.AppServices.Interfaces;
 using MechanicLtda.Application.DTOs;
@@ -8,24 +9,24 @@ namespace MechanicLtda.Web.Controllers
 {
     public class OrdensServicoController : RazorControllerBase
     {
-        private readonly IOrdemServicoAppService _ordemServicoAppService;
+        private readonly IOrdemServicoCliente _ordemServicoAppService;
         private readonly IClienteAppService _clienteAppService;
         private readonly IVeiculoAppService _veiculoAppService;
-        private readonly IItemOrdemServicoAppService _itemAppService;
-        private readonly IOrcamentoAppService _orcamentoAppService;
+        private readonly IItensOrdemServicoCliente _itemAppService;
+        private readonly IOrcamentoCliente _orcamentoCliente;
 
         public OrdensServicoController(
-            IOrdemServicoAppService ordemServicoAppService,
+            IOrdemServicoCliente ordemServicoAppService,
             IClienteAppService clienteAppService,
             IVeiculoAppService veiculoAppService,
-            IItemOrdemServicoAppService itemAppService,
-            IOrcamentoAppService orcamentoAppService)
+            IItensOrdemServicoCliente itemAppService,
+            IOrcamentoCliente orcamentoCliente)
         {
+            _orcamentoCliente = orcamentoCliente;
             _ordemServicoAppService = ordemServicoAppService;
             _clienteAppService = clienteAppService;
             _veiculoAppService = veiculoAppService;
             _itemAppService = itemAppService;
-            _orcamentoAppService = orcamentoAppService;
         }
 
         public async Task<IActionResult> Index()
@@ -44,6 +45,9 @@ namespace MechanicLtda.Web.Controllers
 
         public async Task<IActionResult> Details(int id)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var ordem = await _ordemServicoAppService.ObterPorIdAsync(id.ToString());
             if (ordem.hasErrors)
             {
@@ -51,16 +55,23 @@ namespace MechanicLtda.Web.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            var itens = await _itemAppService.ObterPorOrdemServicoIdAsync(id);
+            var itens = await _itemAppService.ListarAsync(id);
             FlashErrors(itens);
 
-            var orcamento = await _orcamentoAppService.ObterPorOrdemServicoIdAsync(id);
+            var historico = await _ordemServicoAppService.ObterHistoricoAsync(id);
+            FlashErrors(historico);
+
+            // Orçamento e pagamento vivem no OrcamentoPagamento-service. Falha aqui não
+            // derruba a tela da OS: o painel mostra o motivo.
+            var orcamento = await _orcamentoCliente.ObterPorOrdemServicoAsync(id);
 
             return View(new OrdemServicoDetalheViewModel
             {
                 Ordem = ordem.getResponse,
                 Itens = itens.hasErrors ? Enumerable.Empty<ItemOrdemServicoDto>() : itens.getResponse,
-                Orcamento = orcamento.hasErrors ? null : orcamento.getResponse
+                Historico = historico.hasErrors ? [] : historico.getResponse,
+                Orcamento = orcamento.hasErrors ? null : orcamento.getResponse,
+                OrcamentoErro = orcamento.hasErrors ? string.Join(" ", orcamento.getErrors) : null
             });
         }
 
@@ -96,12 +107,15 @@ namespace MechanicLtda.Web.Controllers
                 return View(model);
             }
 
-            FlashSuccess("Ordem de servi�o aberta com sucesso.");
+            FlashSuccess("Ordem de serviço aberta com sucesso.");
             return RedirectToAction(nameof(Details), new { id = response.getResponse.Id });
         }
 
         public async Task<IActionResult> Edit(int id)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var response = await _ordemServicoAppService.ObterPorIdAsync(id.ToString());
             if (response.hasErrors)
             {
@@ -148,14 +162,17 @@ namespace MechanicLtda.Web.Controllers
                 return View(model);
             }
 
-            FlashSuccess("Ordem de servi�o atualizada com sucesso.");
+            FlashSuccess("Ordem de serviço atualizada com sucesso.");
             return RedirectToAction(nameof(Details), new { id });
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> AlterarStatus(int id, string acao, string? motivoRecusa = null)
+        public async Task<IActionResult> AlterarStatus(int id, string acao, string? motivoRecusa = null, string? motivoCancelamento = null)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var response = acao switch
             {
                 "diagnostico" => await _ordemServicoAppService.IniciarDiagnosticoAsync(id.ToString()),
@@ -165,7 +182,8 @@ namespace MechanicLtda.Web.Controllers
                 "execucao" => await _ordemServicoAppService.IniciarExecucaoAsync(id.ToString()),
                 "finalizar" => await _ordemServicoAppService.FinalizarAsync(id.ToString()),
                 "entregar" => await _ordemServicoAppService.EntregarAsync(id.ToString()),
-                _ => new ResponseDto<OrdemServicoDto>().addError("A��o de status inv�lida.")
+                "cancelar" => await _ordemServicoAppService.CancelarAsync(id, motivoCancelamento),
+                _ => new ResponseDto<OrdemServicoDto>().addError("Ação de status inválida.")
             };
 
             if (response.hasErrors)
@@ -180,11 +198,14 @@ namespace MechanicLtda.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var response = await _ordemServicoAppService.RemoverAsync(id.ToString());
             if (response.hasErrors)
                 FlashErrors(response);
             else
-                FlashSuccess("Ordem de servi�o removida com sucesso.");
+                FlashSuccess("Ordem de serviço removida com sucesso.");
 
             return RedirectToAction(nameof(Index));
         }

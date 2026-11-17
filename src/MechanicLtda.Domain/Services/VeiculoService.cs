@@ -29,11 +29,11 @@ namespace MechanicLtda.Domain.Services
             try
             {
                 var clienteExiste = await _clienteRepository.ObterPorIdAsync(clienteId.ToString())
-                    ?? throw new KeyNotFoundException($"Cliente com Id '{clienteId}' n„o encontrado.");
+                    ?? throw new KeyNotFoundException($"Cliente com Id '{clienteId}' n√£o encontrado.");
 
                 bool placaExiste = await _veiculoRepository.PlacaExisteAsync(placa);
                 if (placaExiste)
-                    throw new InvalidOperationException($"J· existe um veÌculo com a placa '{placa}'.");
+                    throw new InvalidOperationException($"J√° existe um ve√≠culo com a placa '{placa}'.");
 
                 var veiculo = new Veiculo
                 {
@@ -60,14 +60,14 @@ namespace MechanicLtda.Domain.Services
             try
             {
                 var existente = await _veiculoRepository.ObterPorIdAsync(veiculo.Id.ToString())
-                    ?? throw new KeyNotFoundException($"VeÌculo com Id '{veiculo.Id}' n„o encontrado.");
+                    ?? throw new KeyNotFoundException($"Ve√≠culo com Id '{veiculo.Id}' n√£o encontrado.");
 
                 var clienteExiste = await _clienteRepository.ObterPorIdAsync(veiculo.ClienteId.ToString())
-                    ?? throw new KeyNotFoundException($"Cliente com Id '{veiculo.ClienteId}' n„o encontrado.");
+                    ?? throw new KeyNotFoundException($"Cliente com Id '{veiculo.ClienteId}' n√£o encontrado.");
 
                 var placaEmUso = await _veiculoRepository.PlacaExisteAsync(veiculo.Placa);
                 if (placaEmUso && existente.Placa != veiculo.Placa)
-                    throw new InvalidOperationException($"J· existe um veÌculo com a placa '{veiculo.Placa}'.");
+                    throw new InvalidOperationException($"J√° existe um ve√≠culo com a placa '{veiculo.Placa}'.");
 
                 veiculo.Placa = veiculo.Placa.ToUpper();
                 veiculo.DataCriacao = existente.DataCriacao;
@@ -126,7 +126,7 @@ namespace MechanicLtda.Domain.Services
             try
             {
                 var existente = await _veiculoRepository.ObterPorIdAsync(id)
-                    ?? throw new KeyNotFoundException($"VeÌculo com Id '{id}' n„o encontrado.");
+                    ?? throw new KeyNotFoundException($"Ve√≠culo com Id '{id}' n√£o encontrado.");
 
                 await _veiculoRepository.RemoverAsync(id);
             }

@@ -1,3 +1,4 @@
+using MechanicLtda.Web.Integracoes;
 using MechanicLtda.Web.ViewModels;
 using MechanicLtda.Application.AppServices.Interfaces;
 using MechanicLtda.Application.DTOs;
@@ -8,14 +9,16 @@ namespace MechanicLtda.Web.Controllers
 {
     public class ItensOrdemServicoController : RazorControllerBase
     {
-        private readonly IItemOrdemServicoAppService _itemAppService;
-        private readonly IEstoqueAppService _estoqueAppService;
-        private readonly IServicoOficinaAppService _servicoAppService;
+        protected override string? ControllerDeRetorno => "OrdensServico";
+
+        private readonly IItensOrdemServicoCliente _itemAppService;
+        private readonly IEstoqueCliente _estoqueAppService;
+        private readonly IServicoOficinaCliente _servicoAppService;
 
         public ItensOrdemServicoController(
-            IItemOrdemServicoAppService itemAppService,
-            IEstoqueAppService estoqueAppService,
-            IServicoOficinaAppService servicoAppService)
+            IItensOrdemServicoCliente itemAppService,
+            IEstoqueCliente estoqueAppService,
+            IServicoOficinaCliente servicoAppService)
         {
             _itemAppService = itemAppService;
             _estoqueAppService = estoqueAppService;
@@ -24,6 +27,9 @@ namespace MechanicLtda.Web.Controllers
 
         public async Task<IActionResult> Create(int ordemServicoId)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var model = new ItemOrdemServicoFormViewModel { OrdemServicoId = ordemServicoId };
             await PopulateSelectionsAsync(model);
             return View(model);
@@ -59,9 +65,12 @@ namespace MechanicLtda.Web.Controllers
             return RedirectToAction("Details", "OrdensServico", new { id = model.OrdemServicoId });
         }
 
-        public async Task<IActionResult> Edit(int id)
+        public async Task<IActionResult> Edit(int id, int ordemServicoId)
         {
-            var response = await _itemAppService.ObterPorIdAsync(id.ToString());
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
+            var response = await _itemAppService.ObterAsync(ordemServicoId, id);
             if (response.hasErrors)
             {
                 FlashErrors(response);
@@ -94,7 +103,7 @@ namespace MechanicLtda.Web.Controllers
                 return View(model);
             }
 
-            var response = await _itemAppService.AtualizarAsync(id.ToString(), new ItemOrdemServicoUpdateDto
+            var response = await _itemAppService.AtualizarAsync(model.OrdemServicoId, id, new ItemOrdemServicoUpdateDto
             {
                 EstoqueId = model.EstoqueId,
                 ServicoOficinaId = model.ServicoOficinaId,
@@ -118,7 +127,10 @@ namespace MechanicLtda.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id, int ordemServicoId)
         {
-            var response = await _itemAppService.RemoverAsync(id.ToString());
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
+            var response = await _itemAppService.RemoverAsync(ordemServicoId, id);
             if (response.hasErrors)
                 FlashErrors(response);
             else

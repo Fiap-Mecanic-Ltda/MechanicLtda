@@ -75,7 +75,7 @@ namespace MechanicLtda.Application.AppServices
             try
             {
                 var veiculo = await _veiculoService.ObterPorIdAsync(id)
-                    ?? throw new KeyNotFoundException($"VeÌculo com Id '{id}' n„o encontrado.");
+                    ?? throw new KeyNotFoundException($"Ve√≠culo com Id '{id}' n√£o encontrado.");
                 return response.setResponse(_mapper.Map<VeiculoDto>(veiculo));
             }
             catch (KeyNotFoundException ex) { return response.addError(ex.Message); }

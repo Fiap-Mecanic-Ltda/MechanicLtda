@@ -21,7 +21,7 @@ instância RDS, divide CPU e banco com produção e exige porta, target group e 
 | Branch | Aplicação | Terraform (InfraKubernete, InfraSGBD, Lambda, observabilidade) |
 |---|---|---|
 | PR para qualquer branch de trabalho | Build e testes | `plan` |
-| Push em `desenvolvimento` ou `homologacao`/`homolog` | Build e testes | `plan` |
+| Push em `desenvolvimento` ou `homologacao` | Build e testes | `plan` |
 | Push em `main` | Build, testes, publicação no ECR e deploy no cluster | `plan` e **apply automático** |
 
 Salvaguardas:

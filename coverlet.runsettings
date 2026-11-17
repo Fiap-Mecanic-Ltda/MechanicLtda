@@ -4,8 +4,8 @@
     <DataCollectors>
       <DataCollector friendlyName="XPlat Code Coverage">
         <Configuration>
-          <Format>cobertura</Format>
-          <Exclude>[*]*Migrations*,[*]MechanicLtda.Infrastructure.FluentAPI.*</Exclude>
+          <Format>cobertura,opencover</Format>
+          <Exclude>[*]*Migrations*,[*]MechanicLtda.Infrastructure.FluentAPI.*,[*]AspNetCoreGeneratedDocument.*</Exclude>
           <ExcludeByFile>**/Migrations/**/*.cs,**/FluentAPI/**/*.cs,**/Debug/**/*.cs,**/Release/**/*.cs,**/obj/**/*.cs,**/bin/**/*.cs</ExcludeByFile>          
           <ExcludeByAttribute>GeneratedCodeAttribute,ExcludeFromCodeCoverageAttribute,MigrationAttribute</ExcludeByAttribute>
         </Configuration>

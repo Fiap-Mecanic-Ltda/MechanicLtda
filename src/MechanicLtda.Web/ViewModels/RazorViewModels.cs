@@ -1,5 +1,5 @@
-using MechanicLtda.Application.DTOs;
-using MechanicLtda.Domain.Enums;
+using MechanicLtda.Application.Validations;
+using MechanicLtda.Web.Integracoes;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.ComponentModel.DataAnnotations;
 
@@ -46,6 +46,7 @@ namespace MechanicLtda.Web.ViewModels
 
         [Required(ErrorMessage = "Informe o CPF ou CNPJ.")]
         [MaxLength(14)]
+        [CpfCnpj(ErrorMessage = "Informe um CPF ou CNPJ válido.")]
         public string CpfCnpj { get; set; } = string.Empty;
 
         public bool Ativo { get; set; } = true;
@@ -57,6 +58,7 @@ namespace MechanicLtda.Web.ViewModels
 
         [Required(ErrorMessage = "Informe a placa.")]
         [MaxLength(8)]
+        [PlacaVeiculo(ErrorMessage = "Informe a placa no formato ABC1234 ou ABC1D23.")]
         public string Placa { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Informe a marca.")]
@@ -153,7 +155,65 @@ namespace MechanicLtda.Web.ViewModels
     {
         public OrdemServicoDto Ordem { get; set; } = new();
         public IEnumerable<ItemOrdemServicoDto> Itens { get; set; } = [];
+        public IEnumerable<HistoricoStatusOrdemServicoDto> Historico { get; set; } = [];
+
+        /// <summary>Resumo do orçamento no OrcamentoPagamento-service. Nulo se não gerado ou indisponível.</summary>
         public OrcamentoDto? Orcamento { get; set; }
+
+        /// <summary>Por que o orçamento não pôde ser consultado (serviço fora do ar ou não configurado).</summary>
+        public string? OrcamentoErro { get; set; }
+    }
+
+    public class OrcamentoDetalheViewModel
+    {
+        public OrdemServicoDto Ordem { get; set; } = new();
+
+        /// <summary>Nulo enquanto a Saga não gerou o orçamento da OS.</summary>
+        public OrcamentoDto? Orcamento { get; set; }
+        public IEnumerable<PagamentoDto> Pagamentos { get; set; } = [];
+        public bool Pago => Pagamentos.Any(p => p.Status == StatusPagamento.Aprovado);
+    }
+
+    /// <summary>
+    /// Tela de pagamento. Os campos do cartão ficam nos iframes do SDK do Mercado Pago e nunca
+    /// chegam ao Web: o formulário só posta o token e os dados que o SDK devolve.
+    /// </summary>
+    public class PagamentoFormViewModel
+    {
+        public int OrcamentoId { get; set; }
+        public int OrdemServicoId { get; set; }
+
+        /// <summary>Gerado ao abrir a tela: reenviar o formulário não cobra duas vezes.</summary>
+        public Guid RequisicaoId { get; set; }
+
+        [Required(ErrorMessage = "O cartão não foi tokenizado. Confira os dados do cartão.")]
+        [MaxLength(200)]
+        public string Token { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Não foi possível identificar a bandeira do cartão.")]
+        [MaxLength(30)]
+        public string PaymentMethodId { get; set; } = string.Empty;
+
+        public long? IssuerId { get; set; }
+
+        [Range(1, 24, ErrorMessage = "O número de parcelas deve estar entre 1 e 24.")]
+        public int Installments { get; set; } = 1;
+
+        [Required(ErrorMessage = "Informe o e-mail do pagador.")]
+        [EmailAddress(ErrorMessage = "E-mail do pagador inválido.")]
+        [MaxLength(200)]
+        public string Email { get; set; } = string.Empty;
+
+        [MaxLength(10)]
+        public string? TipoDocumento { get; set; }
+
+        [MaxLength(30)]
+        public string? NumeroDocumento { get; set; }
+
+        // Só para exibir.
+        public OrcamentoDto? Orcamento { get; set; }
+        public string MercadoPagoPublicKey { get; set; } = string.Empty;
+        public bool ModoSimulado => string.IsNullOrWhiteSpace(MercadoPagoPublicKey);
     }
 
     public class ItemOrdemServicoFormViewModel
@@ -176,21 +236,73 @@ namespace MechanicLtda.Web.ViewModels
         public IEnumerable<SelectListItem> ServicosOficina { get; set; } = [];
     }
 
-    public class OrcamentoFormViewModel
-    {
-        public int Id { get; set; }
-        public int OrdemServicoId { get; set; }
-
-        [Range(0, 9999999, ErrorMessage = "Informe o valor de peças.")]
-        public decimal ValorTotalPecas { get; set; }
-
-        [Range(0, 9999999, ErrorMessage = "Informe o valor de insumos.")]
-        public decimal ValorTotalInsumos { get; set; }
-
-        public decimal ValorTotalGeral { get; set; }
-        public DateTime? Validade { get; set; }
-    }
 }
 
 
 
+
+namespace MechanicLtda.Web.ViewModels
+{
+    public class OficinaIndexViewModel
+    {
+        public IEnumerable<FilaExecucaoDto> Fila { get; set; } = [];
+        public string? Status { get; set; }
+        public bool SagaHabilitada { get; set; }
+
+        public static readonly string[] StatusExecucao =
+            ["AguardandoDiagnostico", "EmDiagnostico", "DiagnosticoConcluido", "NaFila", "EmExecucao", "Finalizada", "Cancelada"];
+    }
+
+    public class OficinaDetalheViewModel
+    {
+        public ExecucaoDto Execucao { get; set; } = default!;
+        public bool SagaHabilitada { get; set; }
+        public DiagnosticoFormViewModel Diagnostico { get; set; } = new();
+        public IReadOnlyList<EstoqueDto> Estoques { get; set; } = [];
+        public IReadOnlyList<ServicoOficinaDto> Servicos { get; set; } = [];
+
+        public bool Final => Execucao.Status is "Finalizada" or "Cancelada";
+    }
+
+    public class DiagnosticoFormViewModel
+    {
+        public List<LinhaDiagnosticoViewModel> Itens { get; set; } = [];
+
+        [MaxLength(1000)]
+        public string? Observacao { get; set; }
+    }
+
+    /// <summary>
+    /// Uma linha do diagnóstico. "Origem" junta estoque e catálogo num select só:
+    /// "E:{id}" (peça ou insumo) ou "S:{id}" (serviço do catálogo). A Execução só aceita
+    /// serviço que esteja no catálogo; a descrição é um complemento opcional.
+    /// </summary>
+    public class LinhaDiagnosticoViewModel
+    {
+        public string? Origem { get; set; }
+
+        [MaxLength(1000)]
+        public string? Descricao { get; set; }
+
+        public int? Quantidade { get; set; }
+        public decimal? ValorUnitario { get; set; }
+
+        public bool Vazia => string.IsNullOrWhiteSpace(Origem);
+
+        public ItemDiagnosticoDto? Converter(IReadOnlyDictionary<int, TipoEstoque> tiposEstoque)
+        {
+            var descricao = string.IsNullOrWhiteSpace(Descricao) ? null : Descricao.Trim();
+            var partes = (Origem ?? string.Empty).Split(':', 2);
+
+            if (partes.Length == 2 && int.TryParse(partes[1], out var id))
+            {
+                if (partes[0] == "E" && tiposEstoque.TryGetValue(id, out var tipo))
+                    return new ItemDiagnosticoDto(descricao, tipo == TipoEstoque.Peca ? "Peca" : "Insumo", Quantidade.GetValueOrDefault(), ValorUnitario, id, null);
+                if (partes[0] == "S")
+                    return new ItemDiagnosticoDto(descricao, "Servico", Quantidade.GetValueOrDefault(), ValorUnitario, null, id);
+            }
+
+            return null;
+        }
+    }
+}

@@ -1,7 +1,7 @@
+using MechanicLtda.Web.Integracoes;
 using MechanicLtda.Web.ViewModels;
 using MechanicLtda.Application.AppServices.Interfaces;
 using MechanicLtda.Application.DTOs;
-using MechanicLtda.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -9,9 +9,9 @@ namespace MechanicLtda.Web.Controllers
 {
     public class EstoquesController : RazorControllerBase
     {
-        private readonly IEstoqueAppService _estoqueAppService;
+        private readonly IEstoqueCliente _estoqueAppService;
 
-        public EstoquesController(IEstoqueAppService estoqueAppService)
+        public EstoquesController(IEstoqueCliente estoqueAppService)
         {
             _estoqueAppService = estoqueAppService;
         }
@@ -61,6 +61,9 @@ namespace MechanicLtda.Web.Controllers
 
         public async Task<IActionResult> Edit(int id)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var response = await _estoqueAppService.ObterPorIdAsync(id.ToString());
             if (response.hasErrors)
             {
@@ -112,6 +115,9 @@ namespace MechanicLtda.Web.Controllers
 
         public async Task<IActionResult> Repor(int id)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var response = await _estoqueAppService.ObterPorIdAsync(id.ToString());
             if (response.hasErrors)
             {
@@ -152,6 +158,9 @@ namespace MechanicLtda.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var response = await _estoqueAppService.RemoverAsync(id.ToString());
             if (response.hasErrors)
                 FlashErrors(response);
