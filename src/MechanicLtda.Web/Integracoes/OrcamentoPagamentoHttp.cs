@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Net;
 using System.Net.Http.Json;
+using System.Runtime.CompilerServices;
 using MechanicLtda.Application.DTOs;
 
 namespace MechanicLtda.Web.Integracoes
@@ -156,16 +157,17 @@ namespace MechanicLtda.Web.Integracoes
         public async Task<ResponseDto<OrcamentoDto?>> ObterPorOrdemServicoAsync(int ordemServicoId)
         {
             // 404 aqui é o caminho normal enquanto a Saga não pediu o orçamento.
-            var naoGerado = false;
+            // StrongBox: o valor é escrito dentro do delegate, depois da chamada HTTP.
+            var naoGerado = new StrongBox<bool>();
             var resposta = await ChamadaServico.ExecutarEnvelopeAsync<OrcamentoDto>(NomeServico, async () =>
             {
                 var http = await _http.GetAsync($"{Rota}/ordem-servico/{ordemServicoId}");
-                naoGerado = http.StatusCode == HttpStatusCode.NotFound;
+                naoGerado.Value = http.StatusCode == HttpStatusCode.NotFound;
                 return http;
             });
 
             var destino = new ResponseDto<OrcamentoDto?>();
-            if (naoGerado)
+            if (naoGerado.Value)
                 return destino;
             if (resposta.hasErrors)
             {
@@ -217,15 +219,15 @@ namespace MechanicLtda.Web.Integracoes
         public async Task<ResponseDto<PagamentoDto?>> SincronizarAsync(int id)
         {
             var destino = new ResponseDto<PagamentoDto?>();
-            var semMudanca = false;
+            var semMudanca = new StrongBox<bool>();
             var resposta = await ChamadaServico.ExecutarEnvelopeAsync<PagamentoDto>(OrcamentoHttpCliente.NomeServico, async () =>
             {
                 var http = await _http.PostAsync($"{Rota}/{id}/sincronizar", null);
-                semMudanca = http.StatusCode == HttpStatusCode.NoContent;
+                semMudanca.Value = http.StatusCode == HttpStatusCode.NoContent;
                 return http;
             });
 
-            if (semMudanca)
+            if (semMudanca.Value)
                 return destino;
             if (resposta.hasErrors)
             {

@@ -1,6 +1,6 @@
 // Gera o PDF de entrega da Fase 3 a partir de dados-entrega.json e modelo-entrega.html.
 //
-//   node docs/entrega/gerar-pdf.mjs [dados.json] [saida.pdf]
+//   node docs/entrega/gerar-pdf.mjs [dados.json] [saida.pdf]   (caminhos relativos a esta pasta)
 //
 // Sem argumentos, lê dados-entrega.json e grava MechanicLtda-Fase3-Entrega.pdf nesta pasta.
 // Usa o Chrome ou o Edge instalados, em modo headless. Para outro navegador baseado
@@ -8,12 +8,21 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve, isAbsolute } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const pasta = dirname(fileURLToPath(import.meta.url));
-const arquivoDados = resolve(process.argv[2] ?? join(pasta, "dados-entrega.json"));
-const saida = resolve(process.argv[3] ?? join(pasta, "MechanicLtda-Fase3-Entrega.pdf"));
+// Os caminhos da linha de comando ficam presos a esta pasta (docs/entrega): nada de
+// ler ou gravar fora dela por um argumento como ../../segredo.
+const dentroDaPasta = (caminho) => {
+  const absoluto = resolve(pasta, caminho);
+  const rel = relative(pasta, absoluto);
+  if (rel === "" || rel.startsWith("..") || isAbsolute(rel))
+    throw new Error(`${caminho} precisa ficar dentro de ${pasta}`);
+  return absoluto;
+};
+const arquivoDados = dentroDaPasta(process.argv[2] ?? "dados-entrega.json");
+const saida = dentroDaPasta(process.argv[3] ?? "MechanicLtda-Fase3-Entrega.pdf");
 const dados = JSON.parse(readFileSync(arquivoDados, "utf8"));
 const REPOSITORIOS = ["MechanicLtda", "Lambda", "InfraKubernete", "InfraSGBD"];
 

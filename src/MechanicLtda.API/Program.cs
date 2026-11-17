@@ -74,7 +74,7 @@ app.MapControllers();
 // (que espera a API concluir migrations/seed antes de iniciar).
 app.MapGet("/health", () => Results.Ok()).AllowAnonymous();
 
-app.Run();
+await app.RunAsync();
 
 // Expõe a classe Program para WebApplicationFactory
 public partial class Program { }

@@ -45,7 +45,7 @@ app.MapControllerRoute(
 // Usado pelo healthcheck do Docker Compose.
 app.MapGet("/health", () => Results.Ok()).AllowAnonymous();
 
-app.Run();
+await app.RunAsync();
 
 public partial class Program { }
 

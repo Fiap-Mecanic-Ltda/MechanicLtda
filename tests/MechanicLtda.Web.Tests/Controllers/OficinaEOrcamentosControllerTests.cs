@@ -250,7 +250,7 @@ namespace MechanicLtda.Web.Tests.Controllers
 
         private static PagamentoFormViewModel Form => new()
         {
-            OrcamentoId = 7, OrdemServicoId = 10, Token = "APRO", PaymentMethodId = "master",
+            OrcamentoId = 7, OrdemServicoId = 10, RequisicaoId = Guid.Empty, Token = "APRO", PaymentMethodId = "master",
             Email = " ana@x.com ", TipoDocumento = null, NumeroDocumento = "529.982.247-25"
         };
 

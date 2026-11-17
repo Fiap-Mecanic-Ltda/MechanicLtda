@@ -1,5 +1,7 @@
 using MechanicLtda.Application.Validations;
 using MechanicLtda.Web.Integracoes;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.ComponentModel.DataAnnotations;
 
@@ -102,7 +104,7 @@ namespace MechanicLtda.Web.ViewModels
 
     public class EstoqueReposicaoRazorViewModel
     {
-        public int Id { get; set; }
+        public required int Id { get; set; }
         public string Nome { get; set; } = string.Empty;
 
         [Range(1, int.MaxValue, ErrorMessage = "Informe uma quantidade maior que zero.")]
@@ -180,11 +182,11 @@ namespace MechanicLtda.Web.ViewModels
     /// </summary>
     public class PagamentoFormViewModel
     {
-        public int OrcamentoId { get; set; }
-        public int OrdemServicoId { get; set; }
+        public required int OrcamentoId { get; set; }
+        public required int OrdemServicoId { get; set; }
 
         /// <summary>Gerado ao abrir a tela: reenviar o formulário não cobra duas vezes.</summary>
-        public Guid RequisicaoId { get; set; }
+        public required Guid RequisicaoId { get; set; }
 
         [Required(ErrorMessage = "O cartão não foi tokenizado. Confira os dados do cartão.")]
         [MaxLength(200)]
@@ -210,8 +212,10 @@ namespace MechanicLtda.Web.ViewModels
         [MaxLength(30)]
         public string? NumeroDocumento { get; set; }
 
-        // Só para exibir.
+        // Só para exibir: preenchidos pelo controller, nunca pelo formulário.
+        [BindNever, ValidateNever]
         public OrcamentoDto? Orcamento { get; set; }
+        [BindNever, ValidateNever]
         public string MercadoPagoPublicKey { get; set; } = string.Empty;
         public bool ModoSimulado => string.IsNullOrWhiteSpace(MercadoPagoPublicKey);
     }
@@ -219,7 +223,7 @@ namespace MechanicLtda.Web.ViewModels
     public class ItemOrdemServicoFormViewModel
     {
         public int? Id { get; set; }
-        public int OrdemServicoId { get; set; }
+        public required int OrdemServicoId { get; set; }
         public int? EstoqueId { get; set; }
         public int? ServicoOficinaId { get; set; }
 
