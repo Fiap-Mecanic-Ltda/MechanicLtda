@@ -221,7 +221,7 @@ removido daqui enquanto o OS deste repositório ainda apontar para `Estoque` e `
 
 - [ ] Promover `desenvolvimento` → `homologacao` → `main` no ExecucaoProducao-service e
       `homologacao` → `main` nos dois repositórios de infra.
-- [ ] Promover a `homolog` do [InfraKubernete](https://github.com/Fiap-Mecanic-Ltda/InfraKubernete)
+- [ ] Promover a `homologacao` do [InfraKubernete](https://github.com/Fiap-Mecanic-Ltda/InfraKubernete)
       para a `main` (PR #12 e PR #13: porta 8082 no SG dos nós e RabbitMQ no namespace
       `mensageria`) e cadastrar o secret `RABBITMQ_SEGREDO`.
 - [ ] Ligar `PUBLICAR_AWS=true` e aplicar, nesta ordem: ExecucaoProducao-InfraSGBD (tabelas,
