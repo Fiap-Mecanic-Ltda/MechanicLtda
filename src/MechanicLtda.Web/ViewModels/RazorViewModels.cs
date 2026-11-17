@@ -284,7 +284,7 @@ namespace MechanicLtda.Web.ViewModels
         [MaxLength(1000)]
         public string? Descricao { get; set; }
 
-        public int Quantidade { get; set; }
+        public int? Quantidade { get; set; }
         public decimal? ValorUnitario { get; set; }
 
         public bool Vazia => string.IsNullOrWhiteSpace(Origem);
@@ -297,9 +297,9 @@ namespace MechanicLtda.Web.ViewModels
             if (partes.Length == 2 && int.TryParse(partes[1], out var id))
             {
                 if (partes[0] == "E" && tiposEstoque.TryGetValue(id, out var tipo))
-                    return new ItemDiagnosticoDto(descricao, tipo == TipoEstoque.Peca ? "Peca" : "Insumo", Quantidade, ValorUnitario, id, null);
+                    return new ItemDiagnosticoDto(descricao, tipo == TipoEstoque.Peca ? "Peca" : "Insumo", Quantidade.GetValueOrDefault(), ValorUnitario, id, null);
                 if (partes[0] == "S")
-                    return new ItemDiagnosticoDto(descricao, "Servico", Quantidade, ValorUnitario, null, id);
+                    return new ItemDiagnosticoDto(descricao, "Servico", Quantidade.GetValueOrDefault(), ValorUnitario, null, id);
             }
 
             return null;

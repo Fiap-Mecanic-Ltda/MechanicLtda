@@ -49,6 +49,9 @@ namespace MechanicLtda.Web.Controllers
 
         public async Task<IActionResult> Details(int id)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var execucao = await _execucao.ObterAsync(id);
             if (execucao.hasErrors)
             {
@@ -67,6 +70,9 @@ namespace MechanicLtda.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Receber(int ordemServicoId)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var ordem = await _ordens.ObterPorIdAsync(ordemServicoId.ToString());
             if (ordem.hasErrors)
             {
@@ -83,6 +89,9 @@ namespace MechanicLtda.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Acao(int id, string acao, string? texto = null)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var resposta = acao switch
             {
                 "assumir" => await _execucao.IniciarDiagnosticoAsync(id),
@@ -102,6 +111,9 @@ namespace MechanicLtda.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Diagnostico(int id, DiagnosticoFormViewModel form)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var itens = new List<ItemDiagnosticoDto>();
             var erros = new ResponseDto<ExecucaoDto>();
             var estoques = await _estoque.ObterTodosAsync();
@@ -112,7 +124,7 @@ namespace MechanicLtda.Web.Controllers
                 if (linha.Vazia)
                     continue;
 
-                if (linha.Quantidade < 1)
+                if (linha.Quantidade is null or < 1)
                 {
                     erros.addError($"Linha {numero}: informe a quantidade.");
                     continue;

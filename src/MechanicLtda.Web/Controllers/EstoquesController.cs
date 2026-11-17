@@ -61,6 +61,9 @@ namespace MechanicLtda.Web.Controllers
 
         public async Task<IActionResult> Edit(int id)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var response = await _estoqueAppService.ObterPorIdAsync(id.ToString());
             if (response.hasErrors)
             {
@@ -112,6 +115,9 @@ namespace MechanicLtda.Web.Controllers
 
         public async Task<IActionResult> Repor(int id)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var response = await _estoqueAppService.ObterPorIdAsync(id.ToString());
             if (response.hasErrors)
             {
@@ -152,6 +158,9 @@ namespace MechanicLtda.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var response = await _estoqueAppService.RemoverAsync(id.ToString());
             if (response.hasErrors)
                 FlashErrors(response);
