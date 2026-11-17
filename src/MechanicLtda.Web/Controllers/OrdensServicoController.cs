@@ -13,13 +13,16 @@ namespace MechanicLtda.Web.Controllers
         private readonly IClienteAppService _clienteAppService;
         private readonly IVeiculoAppService _veiculoAppService;
         private readonly IItensOrdemServicoCliente _itemAppService;
+        private readonly IOrcamentoCliente _orcamentoCliente;
 
         public OrdensServicoController(
             IOrdemServicoCliente ordemServicoAppService,
             IClienteAppService clienteAppService,
             IVeiculoAppService veiculoAppService,
-            IItensOrdemServicoCliente itemAppService)
+            IItensOrdemServicoCliente itemAppService,
+            IOrcamentoCliente orcamentoCliente)
         {
+            _orcamentoCliente = orcamentoCliente;
             _ordemServicoAppService = ordemServicoAppService;
             _clienteAppService = clienteAppService;
             _veiculoAppService = veiculoAppService;
@@ -52,15 +55,20 @@ namespace MechanicLtda.Web.Controllers
             var itens = await _itemAppService.ListarAsync(id);
             FlashErrors(itens);
 
-            // O orçamento e o pagamento são do Billing; a OS traz só os ids que a Saga gravou.
             var historico = await _ordemServicoAppService.ObterHistoricoAsync(id);
             FlashErrors(historico);
+
+            // Orçamento e pagamento vivem no OrcamentoPagamento-service. Falha aqui não
+            // derruba a tela da OS: o painel mostra o motivo.
+            var orcamento = await _orcamentoCliente.ObterPorOrdemServicoAsync(id);
 
             return View(new OrdemServicoDetalheViewModel
             {
                 Ordem = ordem.getResponse,
                 Itens = itens.hasErrors ? Enumerable.Empty<ItemOrdemServicoDto>() : itens.getResponse,
-                Historico = historico.hasErrors ? [] : historico.getResponse
+                Historico = historico.hasErrors ? [] : historico.getResponse,
+                Orcamento = orcamento.hasErrors ? null : orcamento.getResponse,
+                OrcamentoErro = orcamento.hasErrors ? string.Join(" ", orcamento.getErrors) : null
             });
         }
 

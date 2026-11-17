@@ -93,8 +93,23 @@
     <article class="panel">
         <h2>Orçamento</h2>
         <div class="stack">
-            <div><span class="muted">Orçamento no Billing</span><br /><strong>@(Model.Ordem.OrcamentoId?.ToString("'#'0") ?? "Ainda não gerado")</strong></div>
+            @if (Model.Orcamento is { } orcamento)
+            {
+                <div><span class="muted">Orçamento</span><br /><strong>#@orcamento.Id.ToString("D6")</strong> <span class="badge">@orcamento.Status.Descricao()</span></div>
+                <div><span class="muted">Total</span><br /><strong>@orcamento.ValorTotalGeral.ToString("C")</strong></div>
+            }
+            else if (Model.OrcamentoErro is not null)
+            {
+                <div class="muted">@Model.OrcamentoErro</div>
+            }
+            else
+            {
+                <div><span class="muted">Orçamento</span><br /><strong>Ainda não gerado</strong></div>
+            }
             <div><span class="muted">Pagamento</span><br /><strong>@(Model.Ordem.PagamentoId?.ToString("'#'0") ?? "Ainda não confirmado")</strong></div>
+            <div class="actions">
+                <a class="btn btn-small" asp-controller="Orcamentos" asp-action="Details" asp-route-id="@Model.Ordem.Id">Ver orçamento e pagar</a>
+            </div>
         </div>
     </article>
 </section>

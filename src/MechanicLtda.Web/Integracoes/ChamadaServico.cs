@@ -55,6 +55,33 @@ namespace MechanicLtda.Web.Integracoes
         public static Task<ResponseDto<T>> ExecutarAsync<T>(string servico, Func<Task<HttpResponseMessage>> chamada) =>
             ExecutarAsync(servico, chamada, async http => (await http.Content.ReadFromJsonAsync<T>(Json))!);
 
+        /// <summary>
+        /// Para servicos que respondem no envelope ResponseDto do monolito
+        /// ({ hasErrors, getErrors, getResponse }), caso do OrcamentoPagamento-service.
+        /// </summary>
+        public static async Task<ResponseDto<T>> ExecutarEnvelopeAsync<T>(string servico, Func<Task<HttpResponseMessage>> chamada)
+        {
+            var resposta = await ExecutarAsync(servico, chamada,
+                async http => (await http.Content.ReadFromJsonAsync<EnvelopeResponseDto<T>>(Json))!);
+            var destino = new ResponseDto<T>();
+            if (resposta.hasErrors)
+            {
+                resposta.getErrors.ForEach(e => destino.addError(e));
+                return destino;
+            }
+
+            var envelope = resposta.getResponse;
+            if (envelope.HasErrors || envelope.GetResponse is null)
+            {
+                foreach (var erro in envelope.GetErrors ?? [])
+                    destino.addError(erro);
+                return destino.hasErrors ? destino : destino.addError($"O {servico} respondeu sem conteúdo.");
+            }
+            return destino.setResponse(envelope.GetResponse);
+        }
+
+        private sealed record EnvelopeResponseDto<T>(bool HasErrors, List<string>? GetErrors, T? GetResponse);
+
         public static Task<ResponseDto<bool>> ExecutarSemCorpoAsync(string servico, Func<Task<HttpResponseMessage>> chamada) =>
             ExecutarAsync(servico, chamada, _ => Task.FromResult(true));
 
@@ -74,8 +101,12 @@ namespace MechanicLtda.Web.Integracoes
                     var raiz = doc.RootElement;
                     if (raiz.ValueKind == JsonValueKind.Object)
                     {
-                        if (raiz.TryGetProperty("errors", out var erros))
+                        // "errors" nos servicos da OS e da Execucao; "getErrors" no envelope
+                        // ResponseDto do OrcamentoPagamento-service.
+                        foreach (var nome in new[] { "errors", "getErrors" })
                         {
+                            if (!raiz.TryGetProperty(nome, out var erros))
+                                continue;
                             var mensagens = LerMensagens(erros);
                             if (mensagens.Count > 0)
                                 return mensagens;

@@ -156,6 +156,64 @@ namespace MechanicLtda.Web.ViewModels
         public OrdemServicoDto Ordem { get; set; } = new();
         public IEnumerable<ItemOrdemServicoDto> Itens { get; set; } = [];
         public IEnumerable<HistoricoStatusOrdemServicoDto> Historico { get; set; } = [];
+
+        /// <summary>Resumo do orçamento no OrcamentoPagamento-service. Nulo se não gerado ou indisponível.</summary>
+        public OrcamentoDto? Orcamento { get; set; }
+
+        /// <summary>Por que o orçamento não pôde ser consultado (serviço fora do ar ou não configurado).</summary>
+        public string? OrcamentoErro { get; set; }
+    }
+
+    public class OrcamentoDetalheViewModel
+    {
+        public OrdemServicoDto Ordem { get; set; } = new();
+
+        /// <summary>Nulo enquanto a Saga não gerou o orçamento da OS.</summary>
+        public OrcamentoDto? Orcamento { get; set; }
+        public IEnumerable<PagamentoDto> Pagamentos { get; set; } = [];
+        public bool Pago => Pagamentos.Any(p => p.Status == StatusPagamento.Aprovado);
+    }
+
+    /// <summary>
+    /// Tela de pagamento. Os campos do cartão ficam nos iframes do SDK do Mercado Pago e nunca
+    /// chegam ao Web: o formulário só posta o token e os dados que o SDK devolve.
+    /// </summary>
+    public class PagamentoFormViewModel
+    {
+        public int OrcamentoId { get; set; }
+        public int OrdemServicoId { get; set; }
+
+        /// <summary>Gerado ao abrir a tela: reenviar o formulário não cobra duas vezes.</summary>
+        public Guid RequisicaoId { get; set; }
+
+        [Required(ErrorMessage = "O cartão não foi tokenizado. Confira os dados do cartão.")]
+        [MaxLength(200)]
+        public string Token { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Não foi possível identificar a bandeira do cartão.")]
+        [MaxLength(30)]
+        public string PaymentMethodId { get; set; } = string.Empty;
+
+        public long? IssuerId { get; set; }
+
+        [Range(1, 24, ErrorMessage = "O número de parcelas deve estar entre 1 e 24.")]
+        public int Installments { get; set; } = 1;
+
+        [Required(ErrorMessage = "Informe o e-mail do pagador.")]
+        [EmailAddress(ErrorMessage = "E-mail do pagador inválido.")]
+        [MaxLength(200)]
+        public string Email { get; set; } = string.Empty;
+
+        [MaxLength(10)]
+        public string? TipoDocumento { get; set; }
+
+        [MaxLength(30)]
+        public string? NumeroDocumento { get; set; }
+
+        // Só para exibir.
+        public OrcamentoDto? Orcamento { get; set; }
+        public string MercadoPagoPublicKey { get; set; } = string.Empty;
+        public bool ModoSimulado => string.IsNullOrWhiteSpace(MercadoPagoPublicKey);
     }
 
     public class ItemOrdemServicoFormViewModel
