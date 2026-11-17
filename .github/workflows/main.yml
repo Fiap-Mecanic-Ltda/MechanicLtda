@@ -74,6 +74,8 @@ jobs:
       # A analise roda aqui no CI (o Automatic Analysis do SonarCloud foi desligado)
       # para que o Sonar receba a cobertura dos testes. As exclusoes de cobertura
       # seguem o coverlet.runsettings: migrations, FluentAPI e views Razor.
+      # docs/ e scripts/ (gerador do PDF de entrega e scripts de apoio) não são código da
+      # aplicação e não têm testes; ficam fora da cobertura, como tests/ e as migrations.
       - name: Inicio da analise do SonarCloud
         if: env.SONAR_TOKEN != ''
         run: >
@@ -83,7 +85,7 @@ jobs:
           /d:sonar.host.url="https://sonarcloud.io"
           /d:sonar.token="$SONAR_TOKEN"
           /d:sonar.cs.opencover.reportsPaths="coverage/**/coverage.opencover.xml"
-          /d:sonar.coverage.exclusions="**/Migrations/**,**/FluentAPI/**,tests/**"
+          /d:sonar.coverage.exclusions="**/Migrations/**,**/FluentAPI/**,tests/**,docs/**,scripts/**"
           /d:sonar.cpd.exclusions="**/Migrations/**"
           /d:sonar.qualitygate.wait=true
 
