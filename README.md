@@ -36,12 +36,43 @@ O contrato entre este repositório e os demais é o **ECR**: aqui as imagens sã
 (`mechanicltda-api` / `mechanicltda-web`, com as tags `latest` e o SHA do commit) e o deploy no
 cluster é feito pelo workflow do repositório de infra de Kubernetes.
 
-## Sobre esta fase (Tech Challenge — Fase 3)
+## Fase 4: microsserviços
+
+Na Fase 4, ordem de serviço, orçamento/pagamento e execução saíram deste repositório e viraram
+três microsserviços. Cada um tem o próprio repositório de aplicação, de infraestrutura no cluster
+e de banco, e a própria esteira de CI/CD. Este repositório continua com cadastros (clientes,
+veículos, usuários) e o Web.
+
+| Serviço | Aplicação | Infra no cluster | Banco |
+|---|---|---|---|
+| Ordem de Serviço (orquestra a Saga) | [OrdemServico-service](https://github.com/Fiap-Mecanic-Ltda/OrdemServico-service) | [OrdemServico-InfraKubernete](https://github.com/Fiap-Mecanic-Ltda/OrdemServico-InfraKubernete) | [OrdemServico-InfraSGBD](https://github.com/Fiap-Mecanic-Ltda/OrdemServico-InfraSGBD) (SQL Server) |
+| Orçamento e Pagamento (Mercado Pago) | [OrcamentoPagamento-service](https://github.com/Fiap-Mecanic-Ltda/OrcamentoPagamento-service) | [OrcamentoPagamento-InfraKubernete](https://github.com/Fiap-Mecanic-Ltda/OrcamentoPagamento-InfraKubernete) | [OrcamentoPagamento-InfraSGBD](https://github.com/Fiap-Mecanic-Ltda/OrcamentoPagamento-InfraSGBD) (SQL Server) |
+| Execução e Produção (estoque e fila) | [ExecucaoProducao-service](https://github.com/Fiap-Mecanic-Ltda/ExecucaoProducao-service) | [ExecucaoProducao-InfraKubernete](https://github.com/Fiap-Mecanic-Ltda/ExecucaoProducao-InfraKubernete) | [ExecucaoProducao-InfraSGBD](https://github.com/Fiap-Mecanic-Ltda/ExecucaoProducao-InfraSGBD) (DynamoDB) |
+
+Os serviços conversam por REST (pela API Gateway) e por mensageria (RabbitMQ com MassTransit),
+sem acessar o banco um do outro. A **Saga orquestrada** fica no OS Service e tem compensações
+para orçamento recusado, pagamento recusado e falha na execução (com estorno do pagamento). O
+fluxo e os contratos estão no
+[README do OS Service](https://github.com/Fiap-Mecanic-Ltda/OrdemServico-service#saga). O
+contexto de cada serviço também está em [`docs/microsservicos`](docs/microsservicos).
+
+### Ambiente publicado
+
+| O quê | Endereço |
+|---|---|
+| API Gateway (entrada da API) | `https://nxhycibvie.execute-api.us-east-1.amazonaws.com` |
+| Swagger pela gateway | `https://nxhycibvie.execute-api.us-east-1.amazonaws.com/swagger/index.html` |
+| Web | `http://54.82.143.17:8090` (Elastic IP do servidor k3s; o Web ainda não passa pela gateway) |
+
+O login usa o [usuário administrador do seed](#usuário-administrador). Troque a senha num ambiente
+que fique aberto por mais tempo.
+
+## Fase 3: borda, autenticação e observabilidade
 
 A Fase 1 entregou a API de gestão da oficina e a Fase 2 a levou para a AWS: containerizada,
 orquestrada em Kubernetes com HPA, provisionada por Terraform e publicada por uma esteira de
-CI/CD. Esta fase fecha o ambiente atrás de um ponto único de entrada, tira a autenticação do
-cliente de dentro do cluster e torna o sistema observável:
+CI/CD. A Fase 3 fechou o ambiente atrás de um ponto único de entrada, tirou a autenticação do
+cliente de dentro do cluster e tornou o sistema observável:
 
 - **API Gateway como única porta de entrada**: o AWS API Gateway (HTTP API) recebe o tráfego em
   HTTPS e alcança o cluster por VPC Link e ALB interno, com throttling e access log por rota — os
