@@ -65,9 +65,9 @@
     else
     {
         <div class="form-grid">
-            <div class="field field-full"><label>Número do cartão</label><div id="mp-cardNumber" class="mp-campo"></div></div>
-            <div class="field"><label>Validade</label><div id="mp-expirationDate" class="mp-campo"></div></div>
-            <div class="field"><label>Código de segurança</label><div id="mp-securityCode" class="mp-campo"></div></div>
+            <div class="field field-full"><span class="rotulo" id="rotulo-cardNumber">Número do cartão</span><div id="mp-cardNumber" class="mp-campo" role="group" aria-labelledby="rotulo-cardNumber"></div></div>
+            <div class="field"><span class="rotulo" id="rotulo-expirationDate">Validade</span><div id="mp-expirationDate" class="mp-campo" role="group" aria-labelledby="rotulo-expirationDate"></div></div>
+            <div class="field"><span class="rotulo" id="rotulo-securityCode">Código de segurança</span><div id="mp-securityCode" class="mp-campo" role="group" aria-labelledby="rotulo-securityCode"></div></div>
             <div class="field field-full"><label for="mp-cardholderName">Nome do titular</label><input type="text" id="mp-cardholderName" autocomplete="cc-name" /></div>
             <div class="field"><label for="mp-issuer">Banco emissor</label><select id="mp-issuer"></select></div>
             <div class="field"><label for="mp-installments">Parcelas</label><select id="mp-installments"></select></div>

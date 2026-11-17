@@ -1,5 +1,6 @@
 ﻿using MechanicLtda.Domain.Enums;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace MechanicLtda.API.ViewModels
 {
@@ -17,6 +18,7 @@ namespace MechanicLtda.API.ViewModels
         [MaxLength(50)]
         public string Senha { get; set; }
 
+        [JsonRequired]
         [Required]
         public TipoUsuario Tipo { get; set; }
     }
@@ -32,9 +34,11 @@ namespace MechanicLtda.API.ViewModels
         [MaxLength(255)]
         public string Email { get; set; }
 
+        [JsonRequired]
         [Required]
         public TipoUsuario Tipo { get; set; }
 
+        [JsonRequired]
         [Required]
         public bool Ativo { get; set; }
     }

@@ -1,5 +1,6 @@
 using MechanicLtda.Application.Validations;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace MechanicLtda.API.ViewModels
 {
@@ -42,6 +43,7 @@ namespace MechanicLtda.API.ViewModels
         [CpfCnpj]
         public string CpfCnpj { get; set; }
 
+        [JsonRequired]
         [Required]
         public bool Ativo { get; set; }
     }
