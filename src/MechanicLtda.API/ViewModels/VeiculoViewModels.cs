@@ -1,5 +1,6 @@
 using MechanicLtda.Application.Validations;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace MechanicLtda.API.ViewModels
 {
@@ -22,6 +23,7 @@ namespace MechanicLtda.API.ViewModels
         [Range(1900, 2100)]
         public int Ano { get; set; }
 
+        [JsonRequired]
         [Required]
         public int ClienteId { get; set; }
     }
@@ -45,9 +47,11 @@ namespace MechanicLtda.API.ViewModels
         [Range(1900, 2100)]
         public int Ano { get; set; }
 
+        [JsonRequired]
         [Required]
         public bool Ativo { get; set; }
 
+        [JsonRequired]
         [Required]
         public int ClienteId { get; set; }
     }

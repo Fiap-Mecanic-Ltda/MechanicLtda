@@ -15,7 +15,7 @@ set -uo pipefail
 ORG="Fiap-Mecanic-Ltda"
 APROVACOES="${APROVACOES:-1}"
 CONVIDAR_SOAT=false
-[ "${1:-}" = "--convidar-soat" ] && CONVIDAR_SOAT=true
+[[ "${1:-}" = "--convidar-soat" ]] && CONVIDAR_SOAT=true
 
 command -v gh >/dev/null 2>&1 || { echo "Instale o GitHub CLI: https://cli.github.com"; exit 1; }
 gh auth status >/dev/null 2>&1 || { echo "Autentique antes: gh auth login"; exit 1; }
@@ -33,7 +33,7 @@ proteger() {
   shift 2
 
   local checks="null"
-  if [ "$#" -gt 0 ]; then
+  if [[ "$#" -gt 0 ]]; then
     local contexts
     contexts=$(printf '"%s",' "$@")
     checks="{\"strict\": true, \"contexts\": [${contexts%,}]}"
@@ -80,7 +80,7 @@ proteger InfraKubernete homologacao
 proteger InfraSGBD      main
 proteger InfraSGBD      homologacao
 
-if [ "$CONVIDAR_SOAT" = true ]; then
+if [[ "$CONVIDAR_SOAT" = true ]]; then
   for repo in MechanicLtda Lambda InfraKubernete InfraSGBD; do
     if gh api -X PUT "repos/$ORG/$repo/collaborators/soat-architecture" -f permission=pull >/dev/null 2>/tmp/protecao-erro; then
       echo "ok     convite de leitura para soat-architecture em $repo"
@@ -91,7 +91,7 @@ if [ "$CONVIDAR_SOAT" = true ]; then
   done
 fi
 
-if [ "$falhas" -gt 0 ]; then
+if [[ "$falhas" -gt 0 ]]; then
   echo "$falhas operacao(oes) falharam. Em repositorio privado no plano Free, torne-o publico ou use GitHub Team para ter branch protection."
   exit 1
 fi
