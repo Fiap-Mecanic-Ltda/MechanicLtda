@@ -1,3 +1,4 @@
+using MechanicLtda.Web.Integracoes;
 using MechanicLtda.Application.AppServices.Interfaces;
 using MechanicLtda.Application.DTOs;
 using MechanicLtda.Web.ViewModels;
@@ -7,9 +8,9 @@ namespace MechanicLtda.Web.Controllers
 {
     public class ServicosOficinaController : RazorControllerBase
     {
-        private readonly IServicoOficinaAppService _servicoAppService;
+        private readonly IServicoOficinaCliente _servicoAppService;
 
-        public ServicosOficinaController(IServicoOficinaAppService servicoAppService)
+        public ServicosOficinaController(IServicoOficinaCliente servicoAppService)
         {
             _servicoAppService = servicoAppService;
         }

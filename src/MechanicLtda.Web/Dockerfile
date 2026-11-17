@@ -4,14 +4,8 @@
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 USER root
 
-# ✅ Dependências nativas exigidas pelo QuestPDF/SkiaSharp no Linux (exportação de PDF de orçamentos)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libfontconfig1 \
-    libfreetype6 \
-    fontconfig \
-    fonts-dejavu-core \
-    curl \
-    && fc-cache -f \
+# curl para o healthcheck do container.
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Agente APM do New Relic para .NET (instalação oficial via apt, imagem Debian).

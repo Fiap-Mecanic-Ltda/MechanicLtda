@@ -1,0 +1,164 @@
+@model PagamentoFormViewModel
+@{
+    ViewData["Title"] = $"Pagar orçamento #{Model.OrcamentoId:D6}";
+    var valor = Model.Orcamento?.ValorTotalGeral ?? 0m;
+    var valorSdk = valor.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+}
+
+<section class="page-header">
+    <div>
+        <h1>Pagar orçamento #@Model.OrcamentoId.ToString("D6")</h1>
+        <p>Ordem #@Model.OrdemServicoId · total de <strong>@valor.ToString("C")</strong>, lido do orçamento pelo serviço.</p>
+    </div>
+    <div class="actions">
+        <a class="btn btn-secondary" asp-action="Details" asp-route-id="@Model.OrdemServicoId">Voltar</a>
+    </div>
+</section>
+
+<form class="form" id="form-checkout" asp-action="Pagar" method="post">
+    <partial name="_ValidationSummary" />
+
+    @* Só o que o serviço precisa. Os campos do cartão não têm "name": ficam nos iframes do
+       SDK do Mercado Pago e nunca são enviados ao Web. *@
+    <input type="hidden" asp-for="OrcamentoId" />
+    <input type="hidden" asp-for="OrdemServicoId" />
+    <input type="hidden" asp-for="RequisicaoId" />
+    <input type="hidden" asp-for="Token" id="campo-token" />
+    <input type="hidden" asp-for="PaymentMethodId" id="campo-payment-method" />
+    <input type="hidden" asp-for="IssuerId" id="campo-issuer" />
+
+    @if (Model.ModoSimulado)
+    {
+        <div class="alert alert-error" style="margin-bottom: 16px;">
+            Modo simulado: sem <code>Integracoes:OrcamentoService:MercadoPagoPublicKey</code> o cartão não é tokenizado.
+            O Web manda um token de teste que só o gateway fake do serviço (<code>Pagamentos:Habilitado=false</code>) entende.
+        </div>
+        <div class="form-grid">
+            <div class="field">
+                <label for="simulacao">Resultado simulado</label>
+                <select id="simulacao">
+                    <option value="APRO">Aprovado (APRO)</option>
+                    <option value="CONT">Pendente, aprova ao atualizar (CONT)</option>
+                    <option value="FUND">Recusado por saldo (FUND)</option>
+                    <option value="SECU">Recusado por CVV (SECU)</option>
+                    <option value="OTHE">Recusado por erro geral (OTHE)</option>
+                </select>
+            </div>
+            <div class="field"><label asp-for="Installments">Parcelas</label><input asp-for="Installments" type="number" min="1" max="24" /></div>
+            <div class="field"><label asp-for="Email">E-mail do pagador</label><input asp-for="Email" type="email" /><span asp-validation-for="Email"></span></div>
+            <div class="field">
+                <label asp-for="NumeroDocumento">Documento (CPF/CNPJ)</label>
+                <input type="hidden" asp-for="TipoDocumento" />
+                <input asp-for="NumeroDocumento" />
+            </div>
+        </div>
+        <div class="form-actions"><button class="btn" type="submit">Pagar @valor.ToString("C")</button></div>
+
+        <script>
+            document.getElementById('form-checkout').addEventListener('submit', function () {
+                var codigo = document.getElementById('simulacao').value;
+                document.getElementById('campo-token').value = codigo + '-' + (crypto.randomUUID ? crypto.randomUUID() : Date.now());
+                document.getElementById('campo-payment-method').value = 'master';
+            });
+        </script>
+    }
+    else
+    {
+        <div class="form-grid">
+            <div class="field field-full"><label>Número do cartão</label><div id="mp-cardNumber" class="mp-campo"></div></div>
+            <div class="field"><label>Validade</label><div id="mp-expirationDate" class="mp-campo"></div></div>
+            <div class="field"><label>Código de segurança</label><div id="mp-securityCode" class="mp-campo"></div></div>
+            <div class="field field-full"><label for="mp-cardholderName">Nome do titular</label><input type="text" id="mp-cardholderName" autocomplete="cc-name" /></div>
+            <div class="field"><label for="mp-issuer">Banco emissor</label><select id="mp-issuer"></select></div>
+            <div class="field"><label for="mp-installments">Parcelas</label><select id="mp-installments"></select></div>
+            <div class="field"><label for="mp-identificationType">Tipo de documento</label><select id="mp-identificationType"></select></div>
+            <div class="field"><label for="mp-identificationNumber">Documento</label><input type="text" id="mp-identificationNumber" value="@Model.NumeroDocumento" /></div>
+            <div class="field field-full"><label for="mp-email">E-mail do pagador</label><input type="email" id="mp-email" value="@Model.Email" /></div>
+        </div>
+
+        @* Preenchidos a partir do SDK no envio. *@
+        <input type="hidden" asp-for="Installments" id="campo-installments" />
+        <input type="hidden" asp-for="Email" id="campo-email" />
+        <input type="hidden" asp-for="TipoDocumento" id="campo-tipo-documento" />
+        <input type="hidden" asp-for="NumeroDocumento" id="campo-numero-documento" />
+
+        <div class="form-actions">
+            <button class="btn" type="submit" id="mp-submit" disabled>Pagar @valor.ToString("C")</button>
+        </div>
+        <p class="muted" id="mp-status" style="margin-top: 10px;">Carregando o formulário do Mercado Pago...</p>
+        <p class="muted">Em teste, o nome do titular decide o resultado: APRO aprova, CONT fica pendente, FUND recusa.</p>
+
+        <style>
+            .mp-campo { height: 44px; border: 1px solid var(--line); border-radius: 8px; padding: 0 12px; background: #fff; }
+        </style>
+        <script src="https://sdk.mercadopago.com/js/v2"></script>
+        <script>
+            (function () {
+                var status = document.getElementById('mp-status');
+                var botao = document.getElementById('mp-submit');
+                var form = document.getElementById('form-checkout');
+                var enviando = false;
+
+                if (typeof MercadoPago === 'undefined') {
+                    status.textContent = 'Não foi possível carregar o SDK do Mercado Pago. Verifique a conexão e recarregue a página.';
+                    return;
+                }
+
+                var mp = new MercadoPago(@Json.Serialize(Model.MercadoPagoPublicKey), { locale: 'pt-BR' });
+                var cardForm = mp.cardForm({
+                    amount: @Json.Serialize(valorSdk),
+                    iframe: true,
+                    form: {
+                        id: 'form-checkout',
+                        cardNumber: { id: 'mp-cardNumber', placeholder: 'Número do cartão' },
+                        expirationDate: { id: 'mp-expirationDate', placeholder: 'MM/AA' },
+                        securityCode: { id: 'mp-securityCode', placeholder: 'CVV' },
+                        cardholderName: { id: 'mp-cardholderName', placeholder: 'Como está no cartão' },
+                        issuer: { id: 'mp-issuer', placeholder: 'Banco emissor' },
+                        installments: { id: 'mp-installments', placeholder: 'Parcelas' },
+                        identificationType: { id: 'mp-identificationType', placeholder: 'Tipo de documento' },
+                        identificationNumber: { id: 'mp-identificationNumber', placeholder: 'Número do documento' },
+                        cardholderEmail: { id: 'mp-email', placeholder: 'E-mail' }
+                    },
+                    callbacks: {
+                        onFormMounted: function (erro) {
+                            if (erro) {
+                                status.textContent = 'O formulário do Mercado Pago não carregou. Confira a public key.';
+                                return;
+                            }
+                            botao.disabled = false;
+                            status.textContent = 'Os dados do cartão vão direto para o Mercado Pago; o Web recebe só um token.';
+                        },
+                        onSubmit: async function (evento) {
+                            evento.preventDefault();
+                            if (enviando) return;
+                            enviando = true;
+                            botao.disabled = true;
+                            status.textContent = 'Gerando o token do cartão...';
+                            try {
+                                var dados = cardForm.getCardFormData();
+                                var token = dados.token;
+                                if (!token) {
+                                    token = (await cardForm.createCardToken()).token;
+                                }
+                                document.getElementById('campo-token').value = token || '';
+                                document.getElementById('campo-payment-method').value = dados.paymentMethodId || '';
+                                document.getElementById('campo-issuer').value = dados.issuerId || '';
+                                document.getElementById('campo-installments').value = dados.installments || '1';
+                                document.getElementById('campo-email').value = dados.cardholderEmail || '';
+                                document.getElementById('campo-tipo-documento').value = dados.identificationType || '';
+                                document.getElementById('campo-numero-documento').value = dados.identificationNumber || '';
+                                status.textContent = 'Enviando o pagamento...';
+                                HTMLFormElement.prototype.submit.call(form);
+                            } catch (e) {
+                                enviando = false;
+                                botao.disabled = false;
+                                status.textContent = 'Confira os dados do cartão: o Mercado Pago não gerou o token.';
+                            }
+                        }
+                    }
+                });
+            })();
+        </script>
+    }
+</form>

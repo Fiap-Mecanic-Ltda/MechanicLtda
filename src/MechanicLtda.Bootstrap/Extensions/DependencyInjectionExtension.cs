@@ -5,7 +5,6 @@ using MechanicLtda.Domain.Interfaces.Repositories;
 using MechanicLtda.Domain.Interfaces.Services;
 using MechanicLtda.Domain.Services;
 using MechanicLtda.Infrastructure.Repositories;
-using MechanicLtda.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MechanicLtda.Bootstrap.Extensions
@@ -21,19 +20,7 @@ namespace MechanicLtda.Bootstrap.Extensions
             services.AddScoped<IUsuarioRepository, UsuarioRepository>();
             services.AddScoped<IClienteRepository, ClienteRepository>();
             services.AddScoped<IVeiculoRepository, VeiculoRepository>();
-            services.AddScoped<IOrdemServicoRepository, OrdemServicoRepository>();
-            services.AddScoped<IItemOrdemServicoRepository, ItemOrdemServicoRepository>();
-            services.AddScoped<IEstoqueRepository, EstoqueRepository>();
-            services.AddScoped<IServicoOficinaRepository, ServicoOficinaRepository>();
-            services.AddScoped<IOrcamentoRepository, OrcamentoRepository>();
-            services.AddScoped<IOrdemServicoAprovacaoTokenRepository, OrdemServicoAprovacaoTokenRepository>();
 
-            // Serviços de Infraestrutura
-            services.AddScoped<IEmailService, EmailService>();
-
-            // Observabilidade: eventos de negócio para o New Relic. Singleton porque não
-            // guarda estado — só repassa para o agente.
-            services.AddSingleton<IMonitoramentoService, NewRelicMonitoramentoService>();
 
             // Segurança: índice cego do CPF/CNPJ (usado pela autenticação por CPF)
             services.AddScoped<IDocumentoHashService, DocumentoHashService>();
@@ -42,23 +29,12 @@ namespace MechanicLtda.Bootstrap.Extensions
             services.AddScoped<IUsuarioService, UsuarioService>();
             services.AddScoped<IClienteService, ClienteService>();
             services.AddScoped<IVeiculoService, VeiculoService>();
-            services.AddScoped<IOrdemServicoService, OrdemServicoService>();
-            services.AddScoped<IItemOrdemServicoService, ItemOrdemServicoService>();
-            services.AddScoped<IEstoqueService, EstoqueService>();
-            services.AddScoped<IServicoOficinaService, ServicoOficinaService>();
-            services.AddScoped<IOrcamentoService, OrcamentoService>();
 
             // App Services
             services.AddScoped<IAuthAppService, AuthAppService>();
             services.AddScoped<IUsuarioAppService, UsuarioAppService>();
             services.AddScoped<IClienteAppService, ClienteAppService>();
             services.AddScoped<IVeiculoAppService, VeiculoAppService>();
-            services.AddScoped<IOrdemServicoAppService, OrdemServicoAppService>();
-            services.AddScoped<IItemOrdemServicoAppService, ItemOrdemServicoAppService>();
-            services.AddScoped<IEstoqueAppService, EstoqueAppService>();
-            services.AddScoped<IServicoOficinaAppService, ServicoOficinaAppService>();
-            services.AddScoped<IOrcamentoAppService, OrcamentoAppService>();
-            services.AddScoped<IOrcamentoPdfAppService, OrcamentoPdfAppService>();
 
             return services;
         }

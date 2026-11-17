@@ -121,6 +121,31 @@ public class UsuarioControllerTests : IClassFixture<CustomWebApplicationFactory>
     }
 
     [Fact]
+    public async Task PostUsuario_DadosValidos_UsuarioConsegueEntrarComASenhaInformada()
+    {
+        await AutenticarAsync();
+        await _client.PostAsJsonAsync("/api/usuario", PayloadValido("10"));
+
+        var login = await _client.PostAsJsonAsync("/api/auth/login",
+            new { email = "usuario10@teste.com", senha = "Teste@123" });
+
+        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostUsuario_SenhaFraca_DeveRetornar400ESemCriarUsuario()
+    {
+        await AutenticarAsync();
+        var payload = new { userName = "usuario.fraco", email = "fraco@teste.com", senha = "123", tipo = 2 };
+
+        var response = await _client.PostAsJsonAsync("/api/usuario", payload);
+        var lista    = await _client.GetStringAsync("/api/usuario");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.DoesNotContain("fraco@teste.com", lista);
+    }
+
+    [Fact]
     public async Task PostUsuario_EmailDuplicado_DeveRetornar400()
     {
         // Arrange

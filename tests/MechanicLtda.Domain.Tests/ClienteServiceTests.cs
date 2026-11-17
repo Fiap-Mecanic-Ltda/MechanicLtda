@@ -97,6 +97,19 @@ public class ClienteServiceTests
     }
 
     [Fact]
+    public async Task AdicionarAsync_QuandoCpfCnpjJaCadastrado_DeveLancarInvalidOperationException()
+    {
+        _repositoryMock.Setup(r => r.EmailExisteAsync(It.IsAny<string>())).ReturnsAsync(false);
+        _repositoryMock.Setup(r => r.CpfCnpjHashEmUsoAsync("hash-de-teste", null)).ReturnsAsync(true);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _sut.AdicionarAsync("Nome", "novo@email.com", null, "52998224725"));
+
+        Assert.Contains("CPF/CNPJ", ex.Message);
+        _repositoryMock.Verify(r => r.AdicionarAsync(It.IsAny<Cliente>()), Times.Never);
+    }
+
+    [Fact]
     public async Task AdicionarAsync_QuandoTelefoneNulo_DeveRetornarClienteCriado()
     {
         // Arrange
@@ -431,6 +444,18 @@ public class ClienteServiceTests
 
         // Assert
         _repositoryMock.Verify(r => r.RemoverAsync(id), Times.Once);
+    }
+
+    [Fact]
+    public async Task RemoverAsync_QuandoClienteTemVeiculos_DeveLancarInvalidOperationException()
+    {
+        var cliente = new Cliente { Id = 1, CpfCnpj = "12345678901" };
+        _repositoryMock.Setup(r => r.ObterPorIdAsync("1")).ReturnsAsync(cliente);
+        _repositoryMock.Setup(r => r.PossuiVeiculosAsync(1)).ReturnsAsync(true);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.RemoverAsync("1"));
+
+        _repositoryMock.Verify(r => r.RemoverAsync(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]

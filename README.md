@@ -4,6 +4,23 @@ Sistema de gestão para uma oficina mecânica (ordens de serviço, veículos, cl
 orçamentos), desenvolvido em **.NET 9** seguindo princípios de DDD, Clean Architecture e
 Clean Code.
 
+## Documentação da arquitetura
+
+A documentação arquitetural da Fase 3 está em [`docs/arquitetura`](docs/arquitetura/README.md).
+Os diagramas são Mermaid e o GitHub os renderiza direto no navegador.
+
+| Item | Documento |
+|---|---|
+| Diagrama de componentes — nuvem, APIs, banco e monitoramento | [01 — Diagrama de componentes](docs/arquitetura/01-diagrama-de-componentes.md) |
+| Diagramas de sequência — autenticação e abertura de ordem de serviço | [02 — Diagramas de sequência](docs/arquitetura/02-diagramas-de-sequencia.md) |
+| Justificativa do banco, ajustes no modelo relacional, diagrama ER e relacionamentos | [03 — Banco de dados](docs/arquitetura/03-banco-de-dados.md) |
+| RFCs — nuvem, banco de dados, autenticação e API Gateway | [`docs/rfc`](docs/rfc) |
+| ADRs — padrão de comunicação, HPA e outras nove decisões permanentes | [`docs/adr`](docs/adr) |
+
+Também em `docs/`: a [coleção Postman](docs/postman/README.md) do fluxo pelo gateway, o
+[plano do API Gateway](docs/api-gateway/plano-api-gateway.md) e a
+[entrega da fase](docs/entrega/README.md) — roteiro do vídeo e gerador do PDF.
+
 ## Repositórios do projeto
 
 O projeto é distribuído em **quatro repositórios**, cada um com a sua própria esteira de CI/CD:
@@ -19,21 +36,29 @@ O contrato entre este repositório e os demais é o **ECR**: aqui as imagens sã
 (`mechanicltda-api` / `mechanicltda-web`, com as tags `latest` e o SHA do commit) e o deploy no
 cluster é feito pelo workflow do repositório de infra de Kubernetes.
 
-## Sobre esta fase (Tech Challenge — Fase 2)
+## Sobre esta fase (Tech Challenge — Fase 3)
 
-A Fase 1 entregou a API de gestão da oficina. Esta fase evolui essa base para suportar alta
-disponibilidade e volume de pico, sem alterar as regras de negócio já existentes:
+A Fase 1 entregou a API de gestão da oficina e a Fase 2 a levou para a AWS: containerizada,
+orquestrada em Kubernetes com HPA, provisionada por Terraform e publicada por uma esteira de
+CI/CD. Esta fase fecha o ambiente atrás de um ponto único de entrada, tira a autenticação do
+cliente de dentro do cluster e torna o sistema observável:
 
-- **Escalabilidade e resiliência**: containerização com Docker, orquestração em Kubernetes com
-  Horizontal Pod Autoscaler (HPA) por CPU/memória.
-- **Infraestrutura como código**: todo o ambiente (rede, banco, containers, registry, IAM) é
-  provisionado via Terraform, sem passos manuais no console da AWS.
-- **Automação do provisionamento e do deploy**: pipeline de CI/CD (GitHub Actions) cobrindo
-  build, testes, build/push da imagem Docker e deploy no cluster Kubernetes a cada push na
-  `main`.
-- **Novas funcionalidades na Ordem de Serviço**: aprovação/recusa de orçamento por link de
-  e-mail, notificação automática de mudança de status por e-mail, e listagem com ordenação por
-  prioridade de status e exclusão lógica das OS já concluídas.
+- **API Gateway como única porta de entrada**: o AWS API Gateway (HTTP API) recebe o tráfego em
+  HTTPS e alcança o cluster por VPC Link e ALB interno, com throttling e access log por rota — os
+  nós deixam de responder direto na internet. Ver
+  [ADR-001](docs/adr/ADR-001-api-gateway-http-api.md).
+- **Autenticação serverless por CPF**: uma Lambda valida o CPF, localiza o cliente pelo índice
+  cego e emite o JWT; uma segunda Lambda (*authorizer*) valida o token e filtra a role antes de a
+  requisição chegar ao cluster, e a API ainda confere a posse do recurso. Ver
+  [RFC-004](docs/rfc/RFC-004-estrategia-de-autenticacao.md) e
+  [ADR-002](docs/adr/ADR-002-autorizacao-em-duas-camadas.md).
+- **Banco de dados gerenciado**: SQL Server no RDS, cifrado em repouso, em sub-redes privadas e
+  com backup automático. Ver [RFC-003](docs/rfc/RFC-003-escolha-do-banco-de-dados.md).
+- **Observabilidade ponta a ponta**: APM, logs, traces e eventos de negócio no New Relic, com
+  painel, alertas e monitor sintético; alarmes do CloudWatch na borda serverless. Ver
+  [ADR-010](docs/adr/ADR-010-observabilidade-new-relic.md).
+- **Documentação da arquitetura**: diagramas de componentes e de sequência, modelo de dados,
+  RFCs e ADRs — indexados no início deste README.
 
 ## Arquitetura
 
@@ -47,15 +72,16 @@ domínio e aplicação:
 MechanicLtda/
 ├── src/
 │   ├── MechanicLtda.API            # Host REST: Controllers, ViewModels, Swagger, JWT
-│   ├── MechanicLtda.Web             # Host MVC: Controllers, Views Razor, autenticação por cookie
+│   ├── MechanicLtda.Web             # Host MVC: Views Razor, cookie, clientes HTTP dos microsserviços
 │   ├── MechanicLtda.Bootstrap      # Composition root compartilhado por API e Web (DI, DB, migrations, seed)
-│   ├── MechanicLtda.Application    # AppServices, DTOs, autenticação e geração de PDF
+│   ├── MechanicLtda.Application    # AppServices, DTOs e autenticação
 │   ├── MechanicLtda.Domain         # Entidades, enums, interfaces e serviços de domínio
-│   └── MechanicLtda.Infrastructure # Repositórios, DbContext, Fluent API, migrations, e-mail e criptografia
+│   └── MechanicLtda.Infrastructure # Repositórios, DbContext, Fluent API, migrations e criptografia
 ├── tests/
 │   ├── MechanicLtda.API.IntegrationTests
 │   ├── MechanicLtda.Application.Tests
-│   └── MechanicLtda.Domain.Tests
+│   ├── MechanicLtda.Domain.Tests
+│   └── MechanicLtda.Web.Tests
 └── .github/workflows/               # Pipeline de CI/CD (GitHub Actions): build, testes e push no ECR
 ```
 
@@ -64,11 +90,11 @@ MechanicLtda/
 | Projeto | Responsabilidade |
 |---|---|
 | `API` | Exposição dos endpoints HTTP, validações, Swagger, autenticação JWT e autorização por roles |
-| `Web` | Interface administrativa via Razor Views, autenticação por cookie |
+| `Web` | Interface administrativa via Razor Views, autenticação por cookie. OS, itens, estoque e serviços vêm do OrdemServico-service e do ExecucaoProducao-service por HTTP |
 | `Bootstrap` | Composition root: injeção de dependências, conexão com banco, migrations e seed — compartilhado por `API` e `Web` para não duplicar esse código entre os dois hosts |
-| `Application` | Orquestração dos casos de uso, DTOs, AutoMapper, login, troca de senha e exportação de PDF |
+| `Application` | Orquestração dos casos de uso, DTOs, AutoMapper, login e troca de senha |
 | `Domain` | Regras de negócio, entidades, enums, contratos de repositórios e serviços de domínio |
-| `Infrastructure` | EF Core, SQL Server, Identity, migrations, repositórios, envio de e-mail (MailKit) e criptografia de CPF/CNPJ |
+| `Infrastructure` | EF Core, SQL Server, Identity, migrations, repositórios e criptografia de CPF/CNPJ |
 
 ### Infraestrutura provisionada
 
@@ -118,8 +144,6 @@ mesmo mecanismo usado para qualquer acesso administrativo ao servidor (sem SSH).
 - Autorização por roles: `Administrador`, `Funcionario` e `Cliente`
 - AutoMapper
 - Swagger / OpenAPI com suporte a Bearer Token
-- QuestPDF para exportação de orçamentos em PDF
-- MailKit/SMTP para notificação e aprovação de Ordens de Serviço por e-mail
 - xUnit, Moq, `WebApplicationFactory` e EF Core InMemory nos testes
 - **Docker** e **Docker Compose** (desenvolvimento local)
 - **Kubernetes** (k3s) com Kustomize (`base` + `overlays`) e Horizontal Pod Autoscaler
@@ -133,6 +157,10 @@ mesmo mecanismo usado para qualquer acesso administrativo ao servidor (sem SSH).
 
 O SQL Server foi escolhido por oferecer um banco relacional robusto para o domínio da oficina, em que ordens de serviço, itens, estoque, clientes, veículos, orçamentos e usuários exigem integridade referencial, transações consistentes e consultas estruturadas. A escolha também se encaixa bem com o Entity Framework Core, ASP.NET Core Identity e migrations, reduzindo atrito na evolução do schema e facilitando execução local ou via Docker Compose com SQL Server 2022.
 
+A justificativa formal — por que relacional, por que SQL Server, por que gerenciado e os
+trade-offs aceitos — está em [03 — Banco de dados](docs/arquitetura/03-banco-de-dados.md),
+junto com o diagrama ER e os ajustes feitos no modelo relacional.
+
 ## Modelo de Domínio
 
 | Entidade | Descrição |
@@ -140,19 +168,16 @@ O SQL Server foi escolhido por oferecer um banco relacional robusto para o domí
 | `Usuario` | Usuário do sistema, baseado em Identity, com tipo e estado ativo/inativo |
 | `Cliente` | Cliente da mecânica, com CPF/CNPJ validado e criptografado no banco |
 | `Veiculo` | Veículo vinculado a um cliente, com validação de placa antiga ou Mercosul |
-| `OrdemServico` | Ordem de serviço vinculada a cliente e veículo, com status, problema e valor estimado |
-| `ItemOrdemServico` | Item de uma ordem de serviço, podendo consumir estoque ou referenciar um serviço cadastrado |
-| `Estoque` | Peça ou insumo gerenciado em estoque |
-| `ServicoOficina` | Catálogo de serviços prestados pela oficina, com descrição, valor base e estado ativo/inativo |
-| `Orcamento` | Orçamento gerado e recalculado a partir dos itens da ordem de serviço |
+
+Ordem de serviço, itens, estoque, serviços da oficina e orçamento estão nos microsserviços da
+Fase 4 (seção [Endpoints](#endpoints)). As tabelas antigas continuam no banco como histórico,
+mas este código não as lê mais.
 
 ### Enums principais
 
 | Enum | Valores |
 |---|---|
 | `TipoUsuario` | `1 = Administrador`, `2 = Funcionario`, `3 = Cliente` |
-| `TipoEstoque` | `1 = Insumo`, `2 = Peca` |
-| `StatusOrdemServico` | `1 = Recebida`, `2 = EmDiagnostico`, `3 = AguardandoAprovacao`, `4 = EmExecucao`, `5 = Finalizada`, `6 = Entregue` |
 
 ## Pré-requisitos
 
@@ -358,89 +383,23 @@ Todos os endpoints exigem autenticação, exceto `POST /api/auth/login`.
 | `PUT` | `/api/veiculo/{id}` | Administrador, Funcionario | Atualiza um veículo |
 | `DELETE` | `/api/veiculo/{id}` | Administrador, Funcionario | Remove um veículo |
 
-### Ordens de Serviço
+### Ordens de serviço, itens, estoque, serviços e orçamento
 
-| Método | Rota | Acesso | Descrição |
-|---|---|---|---|
-| `GET` | `/api/ordemservico` | Administrador, Funcionario | Lista as OS em andamento, ordenadas por prioridade de status (Execução primeiro) e, dentro do mesmo status, mais antigas primeiro. Finalizadas/Entregues não aparecem aqui (exclusão lógica) |
-| `GET` | `/api/ordemservico/{id}` | Administrador, Funcionario | Retorna uma ordem de serviço pelo Id (inclui Finalizadas/Entregues) |
-| `GET` | `/api/ordemservico/cliente/{clienteId}` | Administrador, Funcionario, Cliente | Lista ordens de serviço por cliente |
-| `POST` | `/api/ordemservico` | Administrador, Funcionario | Cria uma ordem de serviço com status inicial `Recebida` |
-| `PUT` | `/api/ordemservico/{id}` | Administrador, Funcionario | Atualiza uma ordem de serviço |
-| `PATCH` | `/api/ordemservico/{id}/iniciar-diagnostico` | Administrador, Funcionario | Move a OS para `EmDiagnostico` |
-| `PATCH` | `/api/ordemservico/{id}/aguardar-aprovacao` | Administrador, Funcionario | Move a OS para `AguardandoAprovacao` — dispara e-mail de notificação e o link de aprovação/recusa para o cliente |
-| `PATCH` | `/api/ordemservico/{id}/aprovar` | Administrador, Funcionario | Aprova a OS (`AguardandoAprovacao` → `EmExecucao`) |
-| `PATCH` | `/api/ordemservico/{id}/recusar` | Administrador, Funcionario | Recusa a OS (`AguardandoAprovacao` → `EmDiagnostico`), com motivo opcional |
-| `PATCH` | `/api/ordemservico/{id}/iniciar-execucao` | Administrador, Funcionario | Move a OS para `EmExecucao` |
-| `PATCH` | `/api/ordemservico/{id}/finalizar` | Administrador, Funcionario | Move a OS para `Finalizada` |
-| `PATCH` | `/api/ordemservico/{id}/entregar` | Administrador, Funcionario | Move a OS para `Entregue` |
-| `DELETE` | `/api/ordemservico/{id}` | Administrador, Funcionario | Remove uma ordem de serviço |
-
-Toda transição de status dispara um e-mail de notificação ao cliente (quando ele tem e-mail
-cadastrado). Ao entrar em `AguardandoAprovacao`, o e-mail inclui links de aprovação/recusa que
-não exigem login — ver seção seguinte.
-
-### Aprovação de Orçamento via E-mail
-
-Endpoint público (sem autenticação), acessado pelo link enviado por e-mail ao cliente quando a
-OS entra em `AguardandoAprovacao`. O token expira e só pode ser usado uma vez.
-
-| Método | Rota | Acesso | Descrição |
-|---|---|---|---|
-| `GET` | `/api/AprovacaoOrdemServico/{token}/aprovar` | Público (token) | Aprova a OS associada ao token |
-| `GET` | `/api/AprovacaoOrdemServico/{token}/recusar` | Público (token) | Recusa a OS associada ao token |
-
-### Serviços da Oficina
-
-| Método | Rota | Acesso | Descrição |
-|---|---|---|---|
-| `GET` | `/api/servicos-oficina` | Administrador, Funcionario | Lista todos os serviços cadastrados |
-| `GET` | `/api/servicos-oficina/ativos` | Administrador, Funcionario | Lista apenas os serviços ativos |
-| `GET` | `/api/servicos-oficina/{id}` | Administrador, Funcionario | Retorna um serviço pelo Id |
-| `POST` | `/api/servicos-oficina` | Administrador, Funcionario | Cadastra um novo serviço |
-| `PUT` | `/api/servicos-oficina/{id}` | Administrador, Funcionario | Atualiza um serviço |
-| `DELETE` | `/api/servicos-oficina/{id}` | Administrador, Funcionario | Remove um serviço |
-
-### Itens de Ordem de Serviço
-
-| Método | Rota | Acesso | Descrição |
-|---|---|---|---|
-| `GET` | `/api/ordem-servico/{ordemServicoId}/itens` | Administrador, Funcionario | Lista itens de uma ordem de serviço |
-| `GET` | `/api/ordem-servico/{ordemServicoId}/itens/{id}` | Administrador, Funcionario | Retorna um item pelo Id |
-| `POST` | `/api/ordem-servico/{ordemServicoId}/itens` | Administrador, Funcionario | Adiciona um item e recalcula a OS |
-| `PUT` | `/api/ordem-servico/{ordemServicoId}/itens/{id}` | Administrador, Funcionario | Atualiza um item e recalcula a OS |
-| `DELETE` | `/api/ordem-servico/{ordemServicoId}/itens/{id}` | Administrador, Funcionario | Remove um item e recalcula a OS |
-
-### Estoque
-
-| Método | Rota | Acesso | Descrição |
-|---|---|---|---|
-| `GET` | `/api/estoque` | Administrador, Funcionario | Lista todos os itens de estoque |
-| `GET` | `/api/estoque/{id}` | Administrador, Funcionario | Retorna um item de estoque pelo Id |
-| `GET` | `/api/estoque/tipo/{tipo}` | Administrador, Funcionario | Filtra itens por tipo (`1 = Insumo`, `2 = Peca`) |
-| `POST` | `/api/estoque` | Administrador, Funcionario | Cadastra um novo item no estoque |
-| `PUT` | `/api/estoque/{id}` | Administrador, Funcionario | Atualiza dados cadastrais do item |
-| `PATCH` | `/api/estoque/{id}/reposicao` | Administrador, Funcionario | Reposição de quantidade em estoque |
-| `DELETE` | `/api/estoque/{id}` | Administrador, Funcionario | Remove um item de estoque |
-
-### Orçamentos
-
-| Método | Rota | Acesso | Descrição |
-|---|---|---|---|
-| `GET` | `/api/orcamento/{id}` | Administrador, Funcionario | Retorna um orçamento pelo Id |
-| `GET` | `/api/orcamento/ordem-servico/{ordemServicoId}` | Administrador, Funcionario | Retorna o orçamento de uma ordem de serviço |
-| `PUT` | `/api/orcamento/{id}` | Administrador, Funcionario | Atualiza manualmente valores do orçamento |
-| `DELETE` | `/api/orcamento/{id}` | Administrador, Funcionario | Remove um orçamento |
-| `GET` | `/api/orcamento/{id}/pdf` | Administrador, Funcionario | Exporta o orçamento em PDF |
-
-Os orçamentos são gerados e atualizados automaticamente ao adicionar, atualizar ou remover itens de uma ordem de serviço.
+Saíram deste repositório na Fase 4. Ordem de serviço, itens e histórico de status estão no
+[OrdemServico-service](https://github.com/Fiap-Mecanic-Ltda/OrdemServico-service); estoque,
+catálogo de serviços e a fila da oficina, no
+[ExecucaoProducao-service](https://github.com/Fiap-Mecanic-Ltda/ExecucaoProducao-service);
+orçamento e pagamento, no
+[OrcamentoPagamento-service](https://github.com/Fiap-Mecanic-Ltda/OrcamentoPagamento-service).
+Cada serviço documenta as próprias rotas no Swagger. O Web continua com as mesmas telas, agora
+chamando os serviços por HTTP (`src/MechanicLtda.Web/Integracoes`). A aprovação do orçamento
+por link de e-mail deixou de existir: o cliente aprova pagando no Billing.
 
 ## Validações e Segurança
 
 - CPF/CNPJ de clientes é validado na API e criptografado no banco via `CpfCnpjEncryptionConverter`.
 - Além do valor cifrado, o cliente guarda o **índice cego** `CpfCnpjHash` (HMAC-SHA256 dos dígitos). É o que a Function serverless de autenticação usa para localizar o cliente pelo CPF sem descriptografar a coluna — que, por usar IV aleatório, não é pesquisável por igualdade. Ver [ADR-003](docs/adr/ADR-003-indice-cego-cpf.md).
 - A API aceita tokens de **dois emissores**: o próprio login por e-mail e senha e a Function serverless de autenticação por CPF (`JwtSettings:IssuerCpf`), ambos assinados com a mesma chave simétrica.
-- Rotas por cliente (`GET /api/ordemservico/cliente/{clienteId}`) verificam a **posse do recurso**: com role `Cliente`, o `clienteId` da rota precisa ser o do claim `clienteId` do token, senão a resposta é `403`. Ver [ADR-002](docs/adr/ADR-002-autorizacao-em-duas-camadas.md).
 - As rotas são geradas em minúsculas (`LowercaseUrls`), porque o roteamento do API Gateway é case-sensitive.
 - Requisições vindas do API Gateway trazem `X-Correlation-Id`; o middleware de correlação coloca esse id no escopo de log e o devolve na resposta.
 - Placas aceitam o formato antigo (`ABC1234`) e Mercosul (`ABC1D23`).
@@ -461,8 +420,9 @@ Os projetos de teste estão em `tests/` e cobrem regras de domínio, serviços d
 | Projeto | Cobertura |
 |---|---|
 | `MechanicLtda.Domain.Tests` | Serviços de domínio e regras de negócio |
-| `MechanicLtda.Application.Tests` | AppServices, autenticação, orçamento e exportação PDF |
+| `MechanicLtda.Application.Tests` | AppServices e autenticação |
 | `MechanicLtda.API.IntegrationTests` | Controllers, autenticação JWT, autorização e fluxo HTTP com banco InMemory |
+| `MechanicLtda.Web.Tests` | Clientes HTTP do Web para o OS Service e a Execução |
 
 ## Cobertura de Código
 
@@ -540,25 +500,8 @@ Use essas credenciais para realizar o primeiro login via `POST /api/auth/login`.
 | `GHI7F89` | Volkswagen | Polo | 2022 | Ricardo Souza |
 | `JKL0G12` | Chevrolet | Onix | 2020 | Carlos Oliveira |
 
-### Estoque
-
-| Nome | Tipo | Qtd. Atual | Qtd. Mínima |
-|---|---|---|---|
-| Óleo Motor 5W30 | Insumo | 50 | 10 |
-| Filtro de Ar | Peça | 30 | 5 |
-| Pastilha de Freio | Peça | 20 | 4 |
-| Fluido de Freio DOT 4 | Insumo | 15 | 3 |
-| Correia Dentada | Peça | 8 | 2 |
-
-### Ordens de Serviço
-
-| Cliente | Veículo | Problema | Status | Valor Estimado |
-|---|---|---|---|---|
-| Carlos Oliveira | Toyota Corolla | Troca de óleo e filtro de ar. | Em Execução | R$ 250,00 |
-| Fernanda Lima | Honda Civic | Revisão de freios dianteiros e traseiros. | Recebida | R$ 420,00 |
-| Ricardo Souza | Volkswagen Polo | Substituição de correia dentada. | Aguardando Aprovação | R$ 680,00 |
-
-Os itens das ordens de serviço e os orçamentos correspondentes também são gerados automaticamente no seed.
+Estoque e serviços da oficina agora são cadastrados na Execução. No compose de
+`integracao/`, o serviço `carga-execucao` cadastra alguns itens de exemplo.
 
 ## Documentação da API
 

@@ -40,7 +40,7 @@ public class VeiculoControllerTests : IClassFixture<CustomWebApplicationFactory>
         {
             nome     = "Cliente Veículo",
             email    = $"cliente.veiculo.{Guid.NewGuid():N}@teste.com",
-            cpfCnpj  = "52998224725",
+            cpfCnpj  = CpfTeste.Novo(),
             telefone = "11999999999"
         };
 

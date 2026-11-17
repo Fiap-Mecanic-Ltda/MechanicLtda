@@ -1,5 +1,6 @@
 using MechanicLtda.Bootstrap.Extensions;
 using MechanicLtda.Web.Extensions;
+using MechanicLtda.Web.Integracoes;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +15,8 @@ if (builder.Environment.IsDevelopment())
 builder.Services.AddControllersWithViews();
 builder.Services.AddDatabase(builder.Configuration);
 builder.Services.AddDependencyInjection();
+// OS, itens, estoque e serviços da oficina vivem nos microsserviços da Fase 4 (OS e Execução).
+builder.Services.AddIntegracoesMicrosservicos(builder.Configuration);
 builder.Services.AddAutoMapperProfiles();
 builder.Services.AddCookieAuthentication();
 

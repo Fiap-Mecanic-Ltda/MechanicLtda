@@ -1,4 +1,4 @@
-using MechanicLtda.API.Validations;
+using MechanicLtda.Application.Validations;
 using System.ComponentModel.DataAnnotations;
 
 namespace MechanicLtda.API.ViewModels
