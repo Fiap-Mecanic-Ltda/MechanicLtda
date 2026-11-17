@@ -7,7 +7,8 @@ name: Esteira de CI/CD - MechanicLtda (aplicacao)
 #   - repositorio de infra do banco gerenciado (RDS)
 # O deploy no cluster e feito la (workflow "Deploy no Kubernetes").
 #
-# - PR e push em desenvolvimento, homologacao e main: build, testes e cobertura minima de 80%.
+# - PR e push em desenvolvimento, homologacao e main: build, testes, cobertura minima de 80%
+#   e analise do SonarCloud com quality gate.
 # - push em main: alem disso, publica as imagens no ECR e dispara o deploy no
 #   cluster (repository_dispatch no InfraKubernete). Nao ha ambiente de
 #   homologacao na AWS (decisao do time), entao so a main chega a producao.
@@ -38,23 +39,59 @@ jobs:
   build-and-test:
     name: Build e testes
     runs-on: ubuntu-latest
+    env:
+      # Sem o secret (ex.: PR de fork), o Sonar e pulado com aviso; o resto da esteira roda.
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION || 'fiap-mecanic-ltda' }}
+      SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY || 'Fiap-Mecanic-Ltda_MechanicLtda' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # o Sonar usa o historico para saber o que e codigo novo
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Setup Java (SonarScanner)
+        if: env.SONAR_TOKEN != ''
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Ferramentas
+        run: |
+          dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.5.12
+          if [ -n "$SONAR_TOKEN" ]; then
+            dotnet tool install --global dotnet-sonarscanner --version 12.1.0
+          else
+            echo "::warning::SONAR_TOKEN nao configurado: analise do SonarCloud pulada."
+          fi
+
+      # A analise roda aqui no CI (o Automatic Analysis do SonarCloud foi desligado)
+      # para que o Sonar receba a cobertura dos testes. As exclusoes de cobertura
+      # seguem o coverlet.runsettings: migrations, FluentAPI e views Razor.
+      - name: Inicio da analise do SonarCloud
+        if: env.SONAR_TOKEN != ''
+        run: >
+          dotnet sonarscanner begin
+          /k:"$SONAR_PROJECT_KEY"
+          /o:"$SONAR_ORGANIZATION"
+          /d:sonar.host.url="https://sonarcloud.io"
+          /d:sonar.token="$SONAR_TOKEN"
+          /d:sonar.cs.opencover.reportsPaths="coverage/**/coverage.opencover.xml"
+          /d:sonar.coverage.exclusions="**/Migrations/**,**/FluentAPI/**,tests/**"
+          /d:sonar.cpd.exclusions="**/Migrations/**"
+          /d:sonar.qualitygate.wait=true
+
       - name: Restore
         run: dotnet restore MechanicLtda.sln
 
       - name: Build
         run: dotnet build MechanicLtda.sln --configuration Release --no-restore
-
-      - name: Ferramentas
-        run: dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.5.12
 
       - name: Testes automatizados
         run: >
@@ -72,6 +109,11 @@ jobs:
 
       - name: Cobertura minima de ${{ env.COBERTURA_MINIMA }}%
         run: python3 scripts/verificar-cobertura.py coverage/relatorio/Cobertura.xml "$COBERTURA_MINIMA"
+
+      # Com sonar.qualitygate.wait, este passo falha se o quality gate reprovar.
+      - name: Fim da analise e quality gate do SonarCloud
+        if: env.SONAR_TOKEN != ''
+        run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
 
       - name: Publica os resultados de cobertura
         if: always()
