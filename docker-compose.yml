@@ -71,6 +71,10 @@ services:
       # para subir tudo junto, use integracao/docker-compose.yml.
       - Integracoes__OsService__BaseUrl=${OS_SERVICE_URL:-http://host.docker.internal:8081}
       - Integracoes__ExecucaoService__BaseUrl=${EXECUCAO_SERVICE_URL:-http://host.docker.internal:8082}
+      # Orçamento e pagamento (OrcamentoPagamento-service, porta 8083). Sem public key do
+      # Mercado Pago, a tela de pagamento usa o modo simulado do gateway fake do serviço.
+      - Integracoes__OrcamentoService__BaseUrl=${ORCAMENTO_SERVICE_URL:-http://host.docker.internal:8083}
+      - Integracoes__OrcamentoService__MercadoPagoPublicKey=${MERCADOPAGO_PUBLIC_KEY:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
