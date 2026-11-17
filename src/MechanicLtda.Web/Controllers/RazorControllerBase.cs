@@ -24,6 +24,26 @@ namespace MechanicLtda.Web.Controllers
         {
             TempData["Success"] = message;
         }
+
+        /// <summary>
+        /// Controller para onde volta uma requisição com parâmetros inválidos (ex.: id que não
+        /// é número). Nulo = o próprio controller; quem não tem Index sobrescreve.
+        /// </summary>
+        protected virtual string? ControllerDeRetorno => null;
+
+        /// <summary>Resposta padrão quando o ModelState da action não é válido.</summary>
+        protected IActionResult RequisicaoInvalida()
+        {
+            var erros = ModelState.Values
+                .SelectMany(v => v.Errors)
+                .Select(e => e.ErrorMessage)
+                .Where(m => !string.IsNullOrWhiteSpace(m))
+                .Distinct();
+
+            var mensagem = string.Join(" ", erros);
+            TempData["Error"] = string.IsNullOrWhiteSpace(mensagem) ? "Requisição inválida." : mensagem;
+            return RedirectToAction("Index", ControllerDeRetorno);
+        }
     }
 }
 

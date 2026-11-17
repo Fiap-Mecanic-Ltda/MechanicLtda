@@ -45,6 +45,9 @@ namespace MechanicLtda.Web.Controllers
 
         public async Task<IActionResult> Details(int id)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var ordem = await _ordemServicoAppService.ObterPorIdAsync(id.ToString());
             if (ordem.hasErrors)
             {
@@ -110,6 +113,9 @@ namespace MechanicLtda.Web.Controllers
 
         public async Task<IActionResult> Edit(int id)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var response = await _ordemServicoAppService.ObterPorIdAsync(id.ToString());
             if (response.hasErrors)
             {
@@ -164,6 +170,9 @@ namespace MechanicLtda.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AlterarStatus(int id, string acao, string? motivoRecusa = null, string? motivoCancelamento = null)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var response = acao switch
             {
                 "diagnostico" => await _ordemServicoAppService.IniciarDiagnosticoAsync(id.ToString()),
@@ -189,6 +198,9 @@ namespace MechanicLtda.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var response = await _ordemServicoAppService.RemoverAsync(id.ToString());
             if (response.hasErrors)
                 FlashErrors(response);

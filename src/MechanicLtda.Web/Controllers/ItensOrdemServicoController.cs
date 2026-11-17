@@ -9,6 +9,8 @@ namespace MechanicLtda.Web.Controllers
 {
     public class ItensOrdemServicoController : RazorControllerBase
     {
+        protected override string? ControllerDeRetorno => "OrdensServico";
+
         private readonly IItensOrdemServicoCliente _itemAppService;
         private readonly IEstoqueCliente _estoqueAppService;
         private readonly IServicoOficinaCliente _servicoAppService;
@@ -25,6 +27,9 @@ namespace MechanicLtda.Web.Controllers
 
         public async Task<IActionResult> Create(int ordemServicoId)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var model = new ItemOrdemServicoFormViewModel { OrdemServicoId = ordemServicoId };
             await PopulateSelectionsAsync(model);
             return View(model);
@@ -62,6 +67,9 @@ namespace MechanicLtda.Web.Controllers
 
         public async Task<IActionResult> Edit(int id, int ordemServicoId)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var response = await _itemAppService.ObterAsync(ordemServicoId, id);
             if (response.hasErrors)
             {
@@ -119,6 +127,9 @@ namespace MechanicLtda.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id, int ordemServicoId)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var response = await _itemAppService.RemoverAsync(ordemServicoId, id);
             if (response.hasErrors)
                 FlashErrors(response);

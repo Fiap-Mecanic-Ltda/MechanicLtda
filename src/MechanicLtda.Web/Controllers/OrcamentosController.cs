@@ -13,6 +13,8 @@ namespace MechanicLtda.Web.Controllers
     /// </summary>
     public class OrcamentosController : RazorControllerBase
     {
+        protected override string? ControllerDeRetorno => "OrdensServico";
+
         private readonly IOrcamentoCliente _orcamentos;
         private readonly IPagamentoCliente _pagamentos;
         private readonly IOrdemServicoCliente _ordens;
@@ -36,6 +38,9 @@ namespace MechanicLtda.Web.Controllers
         /// <summary>Orçamento da OS <paramref name="id"/>, com itens, totais e tentativas de pagamento.</summary>
         public async Task<IActionResult> Details(int id)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var ordem = await _ordens.ObterPorIdAsync(id.ToString());
             if (ordem.hasErrors)
             {
@@ -69,6 +74,9 @@ namespace MechanicLtda.Web.Controllers
         /// </summary>
         public async Task<IActionResult> Pdf(int id, int ordemServicoId)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var pdf = await _orcamentos.ObterPdfAsync(id);
             if (pdf.hasErrors)
             {
@@ -82,6 +90,9 @@ namespace MechanicLtda.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Aprovar(int id, int ordemServicoId)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var resposta = await _orcamentos.AprovarAsync(id);
             if (resposta.hasErrors)
                 FlashErrors(resposta);
@@ -94,6 +105,9 @@ namespace MechanicLtda.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Recusar(int id, int ordemServicoId, string? motivo)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var resposta = await _orcamentos.RecusarAsync(id, motivo);
             if (resposta.hasErrors)
                 FlashErrors(resposta);
@@ -104,6 +118,9 @@ namespace MechanicLtda.Web.Controllers
 
         public async Task<IActionResult> Pagar(int id)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var orcamento = await _orcamentos.ObterPorIdAsync(id);
             if (orcamento.hasErrors)
             {
@@ -185,6 +202,9 @@ namespace MechanicLtda.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Sincronizar(int id, int ordemServicoId)
         {
+            if (!ModelState.IsValid)
+                return RequisicaoInvalida();
+
             var resposta = await _pagamentos.SincronizarAsync(id);
             if (resposta.hasErrors)
                 FlashErrors(resposta);

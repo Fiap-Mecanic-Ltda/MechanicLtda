@@ -7,7 +7,7 @@ name: Esteira de CI/CD - MechanicLtda (aplicacao)
 #   - repositorio de infra do banco gerenciado (RDS)
 # O deploy no cluster e feito la (workflow "Deploy no Kubernetes").
 #
-# - PR e push em desenvolvimento, homologacao e main: build e testes.
+# - PR e push em desenvolvimento, homologacao e main: build, testes e cobertura minima de 80%.
 # - push em main: alem disso, publica as imagens no ECR e dispara o deploy no
 #   cluster (repository_dispatch no InfraKubernete). Nao ha ambiente de
 #   homologacao na AWS (decisao do time), entao so a main chega a producao.
@@ -20,6 +20,7 @@ on:
 
 env:
   DOTNET_VERSION: "9.0.x"
+  COBERTURA_MINIMA: 80
   # Precisam bater com os defaults de infra/variables.tf do repositorio
   # InfraKubernete (aws_region, project_name, environment).
   AWS_REGION: us-east-1
@@ -52,8 +53,35 @@ jobs:
       - name: Build
         run: dotnet build MechanicLtda.sln --configuration Release --no-restore
 
+      - name: Ferramentas
+        run: dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.5.12
+
       - name: Testes automatizados
-        run: dotnet test MechanicLtda.sln --configuration Release --no-build --verbosity normal
+        run: >
+          dotnet test MechanicLtda.sln --configuration Release --no-build --verbosity normal
+          --settings coverlet.runsettings --collect:"XPlat Code Coverage" --results-directory coverage
+
+      # As views Razor (AspNetCoreGeneratedDocument), as migrations e o FluentAPI ficam fora
+      # da conta (coverlet.runsettings): sao template e codigo gerado, nao regra.
+      - name: Relatorio de cobertura
+        if: always()
+        run: |
+          reportgenerator -reports:"coverage/**/coverage.cobertura.xml" -targetdir:coverage/relatorio \
+            -reporttypes:"Cobertura;MarkdownSummaryGithub;Html"
+          cat coverage/relatorio/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Cobertura minima de ${{ env.COBERTURA_MINIMA }}%
+        run: python3 scripts/verificar-cobertura.py coverage/relatorio/Cobertura.xml "$COBERTURA_MINIMA"
+
+      - name: Publica os resultados de cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobertura
+          path: |
+            coverage/**/coverage.cobertura.xml
+            coverage/relatorio/
+          if-no-files-found: ignore
 
   # Confirma se a role de OIDC (provisionada pelo Terraform no repositorio de
   # infra) ja existe antes de tentar autenticar. Sem isso, um push antes do
