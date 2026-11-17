@@ -244,7 +244,7 @@ OS nenhuma.
 
 - [ ] Promover `desenvolvimento` → `homologacao` → `main` no OrdemServico-service e
       `homologacao` → `main` nos dois repositórios de infra.
-- [ ] Promover a `homolog` do [InfraKubernete](https://github.com/Fiap-Mecanic-Ltda/InfraKubernete)
+- [ ] Promover a `homologacao` do [InfraKubernete](https://github.com/Fiap-Mecanic-Ltda/InfraKubernete)
       para a `main` (PR #12: porta 8081, outputs para os microsserviços e o RabbitMQ no namespace
       `mensageria`) e cadastrar o secret `RABBITMQ_SEGREDO`.
 - [ ] Ligar `PUBLICAR_AWS=true` e aplicar, nesta ordem: OrdemServico-InfraSGBD (banco e SSM),
